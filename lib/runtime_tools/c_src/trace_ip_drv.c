@@ -135,7 +135,7 @@
 */
 #define OP_BINARY 0
 #define OP_DROP   1
-     
+
 /*
 ** State structure
 */
@@ -145,7 +145,7 @@ typedef struct trace_ip_message {
     int written; /* if only a part was written, when == siz, all is written */
     unsigned char bin[1]; /* The opcode, the Size and optionally the binary. */
 } TraceIpMessage;
-    
+
 
 typedef struct trace_ip_data {
     unsigned flags;
@@ -285,10 +285,10 @@ static ErlDrvData trace_ip_start(ErlDrvPort port, char *buff)
 
     if (flags > 3 || flags < 0 || portno < 0 || quesiz < 0)
 	return ERL_DRV_ERROR_GENERAL;
-    
+
     if (lookup_data_by_port(portno) != NULL)
 	return ERL_DRV_ERROR_GENERAL;
-    
+
     if (IS_INVALID_SOCKET(s = socket(AF_INET, SOCK_STREAM, 0)))
 	return ERL_DRV_ERROR_GENERAL;
 
@@ -303,7 +303,7 @@ static ErlDrvData trace_ip_start(ErlDrvPort port, char *buff)
     sin.sin_family = AF_INET;
     sin.sin_addr.s_addr = INADDR_ANY;
     sin.sin_port = htons((short) portno);
-    
+
     if (bind(s, (struct sockaddr *)&sin, sizeof(sin)) != 0) {
 	closesocket(s);
 	return ERL_DRV_ERROR_GENERAL;
@@ -332,12 +332,12 @@ static ErlDrvData trace_ip_start(ErlDrvPort port, char *buff)
 	closesocket(s);
 	return ERL_DRV_ERROR_GENERAL;
     }
-    
+
     /* OK, the socket is created, lets build the structure. */
     /* Deliberately one more pointer than the quesize specified... */
     ret = my_alloc(sizeof(TraceIpData) + 
 		   quesiz * sizeof(TraceIpMessage *));
-    
+
     ret->flags = flags | FLAG_LISTEN_PORT;
     ret->listen_portno = portno;
     ret->listenfd = s;
@@ -347,7 +347,7 @@ static ErlDrvData trace_ip_start(ErlDrvPort port, char *buff)
     ret->quesiz = quesiz+1;
     ret->questart = ret->questop = 0;
     memset(ret->que, 0, ret->quesiz);
-    
+
     first_data = ret;
 #ifdef __WIN32__
     ret->listen_event_mask = 0;
@@ -422,8 +422,11 @@ static void trace_ip_ready_input(ErlDrvData handle, ErlDrvEvent fd)
 	*/
         ASSERT(IS_INVALID_SOCKET(data->fd));
 	if (!IS_INVALID_SOCKET((client = my_accept(data->listenfd)))) {
+	    if (set_nonblocking(client) != 0) {
+		closesocket(client);
+		return;
+	    }
 	    data->fd = client;
-	    set_nonblocking(client);
 	    if (data->que[data->questart] != NULL) {
 		my_driver_select(data, data->fd, FLAG_WRITE | FLAG_READ, SELECT_ON);
 	    } else {
@@ -490,7 +493,7 @@ static void trace_ip_event(ErlDrvData handle, ErlDrvEvent event)
    }
 }
 #endif /* ifdef __WIN32__ */
-       
+
 /*
 ** We can write to a file descriptor
 */
@@ -504,7 +507,7 @@ static void trace_ip_ready_output(ErlDrvData handle, ErlDrvEvent fd)
     ASSERT(!(data->flags & FLAG_LISTEN_PORT) &&
 	   data->que[data->questart] != NULL &&
 	   event2sock(fd) == data->fd);
-    
+
     tim = data->que[data->questart];
     towrite = tim->siz - tim->written;
     while((res = write_until_done(data->fd, 
@@ -736,7 +739,7 @@ static void clean_que(TraceIpData *data)
     }
     data->questart = data->questop = 0;
 }
-    
+
 /*
 ** Cleanup closed client (or close the client and cleanup)
 */
@@ -921,16 +924,15 @@ static void stop_select(ErlDrvEvent event, void* _)
 /*
 ** Set socket nonblocking, keep this at end of file.
 */
-#undef ERRNO_BLOCK
-#undef ASSERT
-#ifndef WANT_NONBLOCKING
-#define WANT_NONBLOCKING
-#endif
-#include "sys.h"
 static int set_nonblocking(SOCKET sock)
 {
-    SET_NONBLOCKING(sock);
-    return 0;
+#ifdef __WIN32__
+    unsigned long enabled = 1;
+    return ioctlsocket(sock, FIONBIO, &enabled);
+#else
+    int flags = fcntl(sock, F_GETFL);
+    if (flags < 0)
+        return -1;
+    return fcntl(sock, F_SETFL, flags | O_NONBLOCK);
+#endif
 }
-
-

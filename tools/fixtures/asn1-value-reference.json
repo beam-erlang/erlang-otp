@@ -1,0 +1,20 @@
+{
+  "upstream_pin": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+  "archive": "references/erlang-otp-29-artifacts/linux-amd64-glibc-base/artifacts/release-tree.tar.gz",
+  "archive_sha256": "c182aeb6306397df6b7aa9e74e154035712f546e84ab46398aecf79f896535ca",
+  "schema_sha256": "03c1fb6dba8e61022a7b2cde347b16c5394be1747f3a979903f01c7f1fe0f9c9",
+  "rules": {
+    "ber": "roundtrip",
+    "per": "canonical SET value ordering; length/1 badarg",
+    "uper": "canonical SET value ordering; length/1 badarg"
+  },
+  "purpose": "OTP 29.0 generated-value compatibility oracle",
+  "generated_sha256": {
+    "ber/P-Record.erl": "cc8e12a01f3cd6fe425fbf2f606d26d8f2d7350aa25c33fa1552b44f30d6a1fd",
+    "ber/P-Record.hrl": "024b01211393368cd8ee8cb614201205d6cfa7425f36bfd287d8b862ad55d36f",
+    "per/P-Record.erl": "77c3f39858fb50170bda0b47d6576ef2b7ab5f3077f29aec8e97a08e4bb98087",
+    "per/P-Record.hrl": "166f62245cde4e3c87599a8d2b1038f04bbe1e7ef9ca94ac7a6479038a2e1ac7",
+    "uper/P-Record.erl": "2c46962c70c5cd94159e850075793f54660ffc07840e4c12f4355fa46b79103b",
+    "uper/P-Record.hrl": "166f62245cde4e3c87599a8d2b1038f04bbe1e7ef9ca94ac7a6479038a2e1ac7"
+  }
+}

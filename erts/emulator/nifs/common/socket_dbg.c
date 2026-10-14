@@ -25,9 +25,7 @@
  *
  */
 
-#ifdef HAVE_CONFIG_H
-#    include "config.h"
-#endif
+#include "otp_socket_support.h"
 
 #ifdef ESOCK_ENABLE
 
@@ -173,7 +171,7 @@ void esock_dbg_printf( const char* prefix, const char* format, ... )
       res = enif_snprintf(f, sizeof(f), "%s [%s] %s",
                           prefix, TSNAME(), format);
   }
-  
+
   if (res < sizeof(f)) {
       va_start (args, format);
       enif_vfprintf(esock_dbgout, f, args);

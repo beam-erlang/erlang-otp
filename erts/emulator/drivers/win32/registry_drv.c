@@ -26,7 +26,26 @@
 
 #include <windows.h>
 #include "erl_driver.h"
-#include "sys.h"
+#include "otp_nif_support.h"
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
+#ifdef DEBUG
+#define DEBUGF(arguments) printf arguments
+#else
+#define DEBUGF(arguments) ((void)0)
+#endif
+static uint32_t get_int32(const char *data)
+{
+    const unsigned char *p = (const unsigned char *)data;
+    return ((uint32_t)p[0]<<24) | ((uint32_t)p[1]<<16) | ((uint32_t)p[2]<<8) | p[3];
+}
+static void put_int32(uint32_t value, char *data)
+{
+    data[0] = (char)(value>>24); data[1] = (char)(value>>16);
+    data[2] = (char)(value>>8); data[3] = (char)value;
+}
 
 /*
  * Commands recognised by this driver.
@@ -115,6 +134,11 @@ struct erl_drv_entry registry_driver_entry = {
     NULL,
 };
 
+DRIVER_INIT(registry)
+{
+    return &registry_driver_entry;
+}
+
 static int
 reg_init(void)
 {
@@ -197,7 +221,7 @@ reg_from_erlang(ErlDrvData clientData, char* buf, ErlDrvSizeT count)
 	     * [HKEY(DWORD), KeyString(string)]
 	     */
 
-	    hkey = (HKEY)(SWord) get_int32(buf+0);
+	    hkey = (HKEY)(intptr_t)(int32_t)get_int32(buf+0);
 	    rp->hkey_root = hkey;
 	    key = buf+4;
 	    result = RegOpenKeyEx(hkey, key, 0, rp->sam, &newKey);
@@ -219,7 +243,7 @@ reg_from_erlang(ErlDrvData clientData, char* buf, ErlDrvSizeT count)
 	    HKEY newKey;
 	    DWORD disposition;
 
-	    hkey = (HKEY)(SWord) get_int32(buf+0);
+	    hkey = (HKEY)(intptr_t)(int32_t)get_int32(buf+0);
 	    rp->hkey_root = hkey;
 	    key = buf+4;
 	    result = RegCreateKeyEx(hkey, key, 0, "", 0, rp->sam, NULL,
@@ -351,7 +375,7 @@ fix_value_result(RegPort* rp, LONG result, DWORD type,
 #ifdef DEBUG
 	if (ok != ERROR_SUCCESS) {
 	    char buff[256];
-	    erts_snprintf(buff, sizeof(buff), "Failure in registry_drv line %d, error = %d",
+	    snprintf(buff, sizeof(buff), "Failure in registry_drv line %d, error = %d",
 		    __LINE__, GetLastError());
 	    MessageBox(NULL, buff, "Internal error", MB_OK);
 	    ASSERT(ok == ERROR_SUCCESS);
@@ -521,7 +545,7 @@ state_reply(RegPort* rp,	/* Pointer to port structure. */
 
     s[0] = 's';
     i = 1;
-    put_int32((DWORD)(SWord) root, s+i);
+    put_int32((DWORD)(intptr_t) root, s+i);
     i += 4;
     memcpy(s+i, name, nameSize);
     ASSERT(i+nameSize == needed);

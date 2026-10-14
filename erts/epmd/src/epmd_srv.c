@@ -27,6 +27,7 @@
 #include "epmd.h"     /* Renamed from 'epmd_r4.h' */
 #include "epmd_int.h"
 #include "erl_printf.h" /* erts_snprintf */
+#include <time.h>
 
 #ifdef __clang_analyzer__
    /* CodeChecker does not seem to understand inline asm in FD_ZERO */
@@ -207,28 +208,29 @@ static EPMD_INLINE void select_fd_set(EpmdVars* g, int fd)
 }
 
 #ifdef HAVE_SOCKLEN_T
-static const char *epmd_ntop(struct sockaddr_storage *sa, char *buff, socklen_t len) {
+static const char *epmd_ntop(const void *address, char *buff, socklen_t len) {
 #else
-static const char *epmd_ntop(struct sockaddr_storage *sa, char *buff, size_t len) {
+static const char *epmd_ntop(const void *address, char *buff, size_t len) {
 #endif
+    const struct sockaddr *sa = address;
     /* Save errno so that it is not changed by inet_ntop */
     int myerrno = errno;
     const char *res;
 #if defined(EPMD6)
-    if (sa->ss_family == AF_INET6) {
-        struct sockaddr_in6 *addr = (struct sockaddr_in6 *)sa;
+    if (sa->sa_family == AF_INET6) {
+        const struct sockaddr_in6 *addr = (const struct sockaddr_in6 *)sa;
         res = inet_ntop(
             addr->sin6_family,
             (void*)&addr->sin6_addr,
             buff, len);
     } else {
-        struct sockaddr_in *addr = (struct sockaddr_in *)sa;
+        const struct sockaddr_in *addr = (const struct sockaddr_in *)sa;
         res = inet_ntop(
             addr->sin_family, &addr->sin_addr.s_addr,
             buff, len);
     }
 #else
-    struct sockaddr_in *addr = (struct sockaddr_in *)sa;
+    const struct sockaddr_in *addr = (const struct sockaddr_in *)sa;
     res = inet_ntoa(addr->sin_addr);
     erts_snprintf(buff,len,"%s", res);
     res = buff;
@@ -432,7 +434,7 @@ void run(EpmdVars *g)
 #if HAVE_DECL_IPV6_V6ONLY
       opt = 1;
       if (sa->sa_family == AF_INET6 &&
-          setsockopt(listensock[i],IPPROTO_IPV6,IPV6_V6ONLY,&opt,
+          setsockopt(listensock[i],IPPROTO_IPV6,IPV6_V6ONLY,(const char *)&opt,
               sizeof(opt)) <0)
 	{
 	  dbg_perror(g,"can't set IPv6 only socket option");
@@ -460,7 +462,10 @@ void run(EpmdVars *g)
 	 accept function is called. We set the listen socket
 	 to be non blocking to prevent us from being hanging
 	 in accept() waiting for the next request. */
-#if (defined(__WIN32__) || defined(NO_FCNTL))
+#if defined(__WIN32__)
+      u_long nonblocking = 1;
+      if (ioctlsocket(listensock[i], FIONBIO, &nonblocking) != 0)
+#elif defined(NO_FCNTL)
       opt = 1;
       if (ioctl(listensock[i], FIONBIO, &opt) != 0)
 #else

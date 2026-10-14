@@ -22,8 +22,8 @@
  */
 
 #include "erl_nif.h"
-#include "config.h"
-#include "sys.h"
+#include "otp_file_support.h"
+#include "erl_driver.h"
 
 #include "prim_file_nif.h"
 
@@ -31,6 +31,14 @@
 #include <windows.h>
 #include <strsafe.h>
 #include <wchar.h>
+
+#if defined(__MINGW32__)
+/* UCRT exports this function; MinGW's stdlib.h does not declare it. */
+_CRTIMP _invalid_parameter_handler __cdecl
+_set_thread_local_invalid_parameter_handler(_invalid_parameter_handler handler);
+#endif
+
+static posix_errno_t internal_read_link(HANDLE link_handle, efile_path_t *result);
 
 #define IS_SLASH(a)  ((a) == L'\\' || (a) == L'/')
 
@@ -50,12 +58,12 @@
 
 #define IS_LONG_PATH(length, data) \
     ((length) >= LP_PREFIX_LENGTH && \
-         (!sys_memcmp((data), LP_FILE_PREFIX, LP_PREFIX_SIZE) || \
-          !sys_memcmp((data), LP_DEV_PREFIX, LP_PREFIX_SIZE)))
+         (!memcmp((data), LP_FILE_PREFIX, LP_PREFIX_SIZE) || \
+          !memcmp((data), LP_DEV_PREFIX, LP_PREFIX_SIZE)))
 
 #define IS_LONG_UNC_PATH(length, data) \
     ((length) >= LP_UNC_PREFIX_LENGTH && \
-         !sys_memcmp((data), LP_UNC_PREFIX, LP_UNC_PREFIX_SIZE))
+         !memcmp((data), LP_UNC_PREFIX, LP_UNC_PREFIX_SIZE))
 
 #define PATH_LENGTH(path) (path->size / sizeof(WCHAR) - 1)
 
@@ -158,23 +166,23 @@ static posix_errno_t get_full_path(ErlNifEnv *env, WCHAR *input, efile_path_t *r
          * to always use long paths. */
 
         is_long_path = IS_LONG_PATH(actual_length, result->data);
-        maybe_unc_path = !sys_memcmp(result->data, L"\\\\", sizeof(WCHAR) * 2);
+        maybe_unc_path = !memcmp(result->data, L"\\\\", sizeof(WCHAR) * 2);
 
         if(maybe_unc_path && !is_long_path) {
             /* \\localhost\c$\gurka -> \\?\UNC\localhost\c$\gurka
              *
              * Note that the length is reduced by 2 as the "\\" is replaced by
              * the UNC prefix */
-            sys_memmove(result->data + LP_UNC_PREFIX_SIZE,
+            memmove(result->data + LP_UNC_PREFIX_SIZE,
                 &((WCHAR*)result->data)[2],
                 (actual_length + 1 - 2) * sizeof(WCHAR));
-            sys_memcpy(result->data, LP_UNC_PREFIX, LP_UNC_PREFIX_SIZE);
+            memcpy(result->data, LP_UNC_PREFIX, LP_UNC_PREFIX_SIZE);
             actual_length += LP_UNC_PREFIX_LENGTH - 2;
         } else if(!is_long_path) {
             /* C:\gurka -> \\?\C:\gurka */
-            sys_memmove(result->data + LP_PREFIX_SIZE, result->data,
+            memmove(result->data + LP_PREFIX_SIZE, result->data,
                 (actual_length + 1) * sizeof(WCHAR));
-            sys_memcpy(result->data, LP_FILE_PREFIX, LP_PREFIX_SIZE);
+            memcpy(result->data, LP_FILE_PREFIX, LP_PREFIX_SIZE);
             actual_length += LP_PREFIX_LENGTH;
         }
 
@@ -259,14 +267,14 @@ static int normalize_path_result(ErlNifBinary *path) {
     if(IS_LONG_UNC_PATH(length, path_start)) {
         /* The first two characters (\\) are the same for both long and short
          * UNC paths. */
-        sys_memmove(&path_start[2], &path_start[LP_UNC_PREFIX_LENGTH],
+        memmove(&path_start[2], &path_start[LP_UNC_PREFIX_LENGTH],
             (length - LP_UNC_PREFIX_LENGTH) * sizeof(WCHAR));
 
         length -= LP_UNC_PREFIX_LENGTH - 2;
     } else if(IS_LONG_PATH(length, path_start)) {
         length -= LP_PREFIX_LENGTH;
 
-        sys_memmove(path_start, &path_start[LP_PREFIX_LENGTH],
+        memmove(path_start, &path_start[LP_PREFIX_LENGTH],
             length * sizeof(WCHAR));
     }
 
@@ -321,7 +329,7 @@ static int has_file_attributes(const efile_path_t *path, DWORD mask) {
 static int is_ignored_name(int name_length, const WCHAR *name) {
     if(name_length == 1 && name[0] == L'.') {
         return 1;
-    } else if(name_length == 2 && !sys_memcmp(name, L"..", 2 * sizeof(WCHAR))) {
+    } else if(name_length == 2 && !memcmp(name, L"..", 2 * sizeof(WCHAR))) {
         return 1;
     }
 
@@ -571,7 +579,7 @@ int efile_close(efile_data_t *d, posix_errno_t *error) {
         fd = w->fd;
     }
     ASSERT(enif_thread_type() == ERL_NIF_THR_DIRTY_IO_SCHEDULER);
-    ASSERT(erts_atomic32_read_nob(&d->state) == EFILE_STATE_CLOSED);
+    ASSERT(atomic_load_explicit(&d->state, memory_order_relaxed) == EFILE_STATE_CLOSED);
     ASSERT(w->handle != INVALID_HANDLE_VALUE);
 
     handle = w->handle;
@@ -600,15 +608,15 @@ static void shift_overlapped(OVERLAPPED *overlapped, DWORD shift) {
     offset.HighPart = overlapped->OffsetHigh;
     offset.LowPart = overlapped->Offset;
 
-    /* ~(Uint64)0 is a magic value ("append to end of file") which needs to be
+    /* ~(uint64_t)0 is a magic value ("append to end of file") which needs to be
      * preserved. Other positions resulting in overflow would have errored out
      * just prior to this point. */
-    if(offset.QuadPart != ERTS_UINT64_MAX) {
+    if(offset.QuadPart != UINT64_MAX) {
         offset.QuadPart += shift;
     }
 
     /* All unused fields must be zeroed for the next call. */
-    sys_memset(overlapped, 0, sizeof(*overlapped));
+    memset(overlapped, 0, sizeof(*overlapped));
     overlapped->OffsetHigh = offset.HighPart;
     overlapped->Offset = offset.LowPart;
 }
@@ -635,13 +643,11 @@ static void shift_iov(SysIOVec **iov, int *iovlen, DWORD shift) {
     (*iov) = head_vec;
 }
 
-typedef BOOL (WINAPI *io_op_t)(HANDLE, LPVOID, DWORD, LPDWORD, LPOVERLAPPED);
-
-static Sint64 internal_sync_io(efile_win_t *w, io_op_t operation,
+static int64_t internal_sync_io(efile_win_t *w,
                                SysIOVec *iov, int iovlen, OVERLAPPED *overlapped,
                                int is_read) {
 
-    Sint64 bytes_processed = 0;
+    int64_t bytes_processed = 0;
 
     for(;;) {
         DWORD block_bytes_processed, last_error;
@@ -651,8 +657,11 @@ static Sint64 internal_sync_io(efile_win_t *w, io_op_t operation,
             return bytes_processed;
         }
 
-        succeeded = operation(w->handle, iov->iov_base, iov->iov_len,
-            &block_bytes_processed, overlapped);
+        succeeded = is_read
+            ? ReadFile(w->handle, iov->iov_base, iov->iov_len,
+                       &block_bytes_processed, overlapped)
+            : WriteFile(w->handle, iov->iov_base, iov->iov_len,
+                        &block_bytes_processed, overlapped);
         last_error = GetLastError();
 
         if(!succeeded) {
@@ -680,56 +689,56 @@ static Sint64 internal_sync_io(efile_win_t *w, io_op_t operation,
     }
 }
 
-Sint64 efile_readv(efile_data_t *d, SysIOVec *iov, int iovlen) {
+int64_t efile_readv(efile_data_t *d, SysIOVec *iov, int iovlen) {
     efile_win_t *w = (efile_win_t*)d;
 
-    return internal_sync_io(w, ReadFile, iov, iovlen, NULL, 1);
+    return internal_sync_io(w, iov, iovlen, NULL, 1);
 }
 
-Sint64 efile_writev(efile_data_t *d, SysIOVec *iov, int iovlen) {
+int64_t efile_writev(efile_data_t *d, SysIOVec *iov, int iovlen) {
     efile_win_t *w = (efile_win_t*)d;
 
     OVERLAPPED __overlapped, *overlapped;
-    Uint64 bytes_written;
+    uint64_t bytes_written;
 
     if(w->common.modes & EFILE_MODE_APPEND) {
         overlapped = &__overlapped;
 
-        sys_memset(overlapped, 0, sizeof(*overlapped));
+        memset(overlapped, 0, sizeof(*overlapped));
         overlapped->OffsetHigh = 0xFFFFFFFF;
         overlapped->Offset = 0xFFFFFFFF;
     } else {
         overlapped = NULL;
     }
 
-    return internal_sync_io(w, WriteFile, iov, iovlen, overlapped, 0);
+    return internal_sync_io(w, iov, iovlen, overlapped, 0);
 }
 
-Sint64 efile_preadv(efile_data_t *d, Sint64 offset, SysIOVec *iov, int iovlen) {
+int64_t efile_preadv(efile_data_t *d, int64_t offset, SysIOVec *iov, int iovlen) {
     efile_win_t *w = (efile_win_t*)d;
 
     OVERLAPPED overlapped;
 
-    sys_memset(&overlapped, 0, sizeof(overlapped));
+    memset(&overlapped, 0, sizeof(overlapped));
     overlapped.OffsetHigh = (offset >> 32) & 0xFFFFFFFF;
     overlapped.Offset = offset & 0xFFFFFFFF;
 
-    return internal_sync_io(w, ReadFile, iov, iovlen, &overlapped, 1);
+    return internal_sync_io(w, iov, iovlen, &overlapped, 1);
 }
 
-Sint64 efile_pwritev(efile_data_t *d, Sint64 offset, SysIOVec *iov, int iovlen) {
+int64_t efile_pwritev(efile_data_t *d, int64_t offset, SysIOVec *iov, int iovlen) {
     efile_win_t *w = (efile_win_t*)d;
 
     OVERLAPPED overlapped;
 
-    sys_memset(&overlapped, 0, sizeof(overlapped));
+    memset(&overlapped, 0, sizeof(overlapped));
     overlapped.OffsetHigh = (offset >> 32) & 0xFFFFFFFF;
     overlapped.Offset = offset & 0xFFFFFFFF;
 
-    return internal_sync_io(w, WriteFile, iov, iovlen, &overlapped, 0);
+    return internal_sync_io(w, iov, iovlen, &overlapped, 0);
 }
 
-int efile_seek(efile_data_t *d, enum efile_seek_t seek, Sint64 offset, Sint64 *new_position) {
+int efile_seek(efile_data_t *d, enum efile_seek_t seek, int64_t offset, int64_t *new_position) {
     efile_win_t *w = (efile_win_t*)d;
 
     LARGE_INTEGER large_offset, large_new_position;
@@ -739,7 +748,7 @@ int efile_seek(efile_data_t *d, enum efile_seek_t seek, Sint64 offset, Sint64 *n
         case EFILE_SEEK_BOF: whence = FILE_BEGIN; break;
         case EFILE_SEEK_CUR: whence = FILE_CURRENT; break;
         case EFILE_SEEK_EOF: whence = FILE_END; break;
-        default: ERTS_INTERNAL_ERROR("Invalid seek parameter");
+        default: OTP_FILE_INTERNAL_ERROR("Invalid seek parameter");
     }
 
     large_offset.QuadPart = offset;
@@ -768,7 +777,7 @@ int efile_sync(efile_data_t *d, int data_only) {
     return 1;
 }
 
-int efile_advise(efile_data_t *d, Sint64 offset, Sint64 length, enum efile_advise_t advise) {
+int efile_advise(efile_data_t *d, int64_t offset, int64_t length, enum efile_advise_t advise) {
     /* Windows doesn't support this, but we'll pretend it does since the call
      * is only a recommendation even on systems that do support it. */
 
@@ -780,7 +789,7 @@ int efile_advise(efile_data_t *d, Sint64 offset, Sint64 length, enum efile_advis
     return 1;
 }
 
-int efile_allocate(efile_data_t *d, Sint64 offset, Sint64 length) {
+int efile_allocate(efile_data_t *d, int64_t offset, int64_t length) {
     efile_win_t *w = (efile_win_t*)d;
 
     (void)d;
@@ -896,8 +905,8 @@ static void build_file_info(BY_HANDLE_FILE_INFORMATION *native_file_info, const 
     result->mode |= (result->mode & 0700) >> 6;
 
     result->size =
-        ((Uint64)native_file_info->nFileSizeHigh << 32ull) |
-        (Uint64)native_file_info->nFileSizeLow;
+        ((uint64_t)native_file_info->nFileSizeHigh << 32ull) |
+        (uint64_t)native_file_info->nFileSizeLow;
     result->links = MAX(1, native_file_info->nNumberOfLinks);
 
     result->major_device = get_drive_number(path);
@@ -931,7 +940,7 @@ posix_errno_t efile_read_info(const efile_path_t *path, int follow_links, efile_
     DWORD attributes;
     int is_link;
 
-    sys_memset(&native_file_info, 0, sizeof(native_file_info));
+    memset(&native_file_info, 0, sizeof(native_file_info));
     is_link = 0;
 
     attributes = GetFileAttributesW((WCHAR*)path->data);
@@ -1008,7 +1017,7 @@ posix_errno_t efile_read_handle_info(efile_data_t *d, efile_fileinfo_t *result) 
     efile_path_t path;
     int length;
 
-    sys_memset(&native_file_info, 0, sizeof(native_file_info));
+    memset(&native_file_info, 0, sizeof(native_file_info));
 
     posix_errno = internal_read_link(w->handle, &path);
     if(posix_errno != 0) {
@@ -1033,7 +1042,7 @@ posix_errno_t efile_read_handle_info(efile_data_t *d, efile_fileinfo_t *result) 
     return posix_errno;
 }
 
-posix_errno_t efile_set_permissions(const efile_path_t *path, Uint32 permissions) {
+posix_errno_t efile_set_permissions(const efile_path_t *path, uint32_t permissions) {
     DWORD attributes = GetFileAttributesW((WCHAR*)path->data);
 
     if(attributes == INVALID_FILE_ATTRIBUTES) {
@@ -1053,7 +1062,7 @@ posix_errno_t efile_set_permissions(const efile_path_t *path, Uint32 permissions
     return windows_to_posix_errno(GetLastError());
 }
 
-posix_errno_t efile_set_owner(const efile_path_t *path, Sint32 owner, Sint32 group) {
+posix_errno_t efile_set_owner(const efile_path_t *path, int32_t owner, int32_t group) {
     (void)path;
     (void)owner;
     (void)group;
@@ -1061,7 +1070,7 @@ posix_errno_t efile_set_owner(const efile_path_t *path, Sint32 owner, Sint32 gro
     return 0;
 }
 
-posix_errno_t efile_set_time(const efile_path_t *path, Sint64 a_time, Sint64 m_time, Sint64 c_time) {
+posix_errno_t efile_set_time(const efile_path_t *path, int64_t a_time, int64_t m_time, int64_t c_time) {
     FILETIME accessed, modified, created;
     DWORD last_error, attributes;
     HANDLE handle;
@@ -1201,7 +1210,7 @@ posix_errno_t efile_list_dir(ErlNifEnv *env, const efile_path_t *path, ERL_NIF_T
         return ENOMEM;
     }
 
-    sys_memcpy(search_path, path->data, path->size);
+    memcpy(search_path, path->data, path->size);
     search_path[PATH_LENGTH(path) + 0] = L'\\';
     search_path[PATH_LENGTH(path) + 1] = L'*';
     search_path[PATH_LENGTH(path) + 2] = L'\0';
@@ -1228,7 +1237,7 @@ posix_errno_t efile_list_dir(ErlNifEnv *env, const efile_path_t *path, ERL_NIF_T
             name_size = name_length * sizeof(WCHAR);
 
             name_bytes = enif_make_new_binary(env, name_size, &name_term);
-            sys_memcpy(name_bytes, data.cFileName, name_size);
+            memcpy(name_bytes, data.cFileName, name_size);
 
             list_head = enif_make_list_cell(env, name_term, list_head);
         }
@@ -1332,7 +1341,7 @@ posix_errno_t efile_rename(const efile_path_t *old_path, const efile_path_t *new
                  * we're avoiding GetTempFileNameW as it will fail on long
                  * paths. */
 
-                sys_memcpy(swap_path, (WCHAR*)new_path->data, new_path->size);
+                memcpy(swap_path, (WCHAR*)new_path->data, new_path->size);
                 swap_path_end = swap_path + PATH_LENGTH(new_path);
 
                 while(!IS_SLASH(*swap_path_end)) {
@@ -1544,7 +1553,7 @@ posix_errno_t efile_altname(ErlNifEnv *env, const efile_path_t *path, ERL_NIF_TE
             return ENOMEM;
         }
 
-        sys_memcpy(result_bin.data, path->data, path->size);
+        memcpy(result_bin.data, path->data, path->size);
     } else {
         WIN32_FIND_DATAW data;
         HANDLE handle;
@@ -1581,7 +1590,7 @@ posix_errno_t efile_altname(ErlNifEnv *env, const efile_path_t *path, ERL_NIF_TE
             return ENOMEM;
         }
 
-        sys_memcpy(result_bin.data, name_buffer, name_length * sizeof(WCHAR));
+        memcpy(result_bin.data, name_buffer, name_length * sizeof(WCHAR));
     }
 
     if(!normalize_path_result(&result_bin)) {

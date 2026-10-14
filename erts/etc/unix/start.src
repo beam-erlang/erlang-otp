@@ -59,7 +59,7 @@ else
 	else
 		LOGDIR="$XDG_STATE_HOME/erlang"
 	fi
-	mkdir -p $LOGDIR
+	mkdir -p "$LOGDIR"
 fi
 
 if [ -z "$ERL_ROOTDIR" ]
@@ -76,4 +76,7 @@ fi
 
 START_ERL_DATA=${1:-$RELDIR/start_erl.data}
 
-$ROOTDIR/bin/run_erl -daemon /tmp/ $LOGDIR "exec $ROOTDIR/bin/start_erl $ROOTDIR $RELDIR $START_ERL_DATA"
+# A private pipe directory permits independently owned embedded-system instances.
+# Retain the traditional /tmp/ selection when no explicit directory is supplied.
+export ROOTDIR RELDIR START_ERL_DATA
+"$ROOTDIR/bin/run_erl" -daemon "${RUN_ERL_PIPE_DIR:-/tmp/}" "$LOGDIR" 'exec "$ROOTDIR/bin/start_erl" "$ROOTDIR" "$RELDIR" "$START_ERL_DATA"'

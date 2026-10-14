@@ -29,7 +29,6 @@
 #define PRIM_SOCKET_INT_H__
 
 #include <erl_nif.h>
-#include <sys.h>
 
 #include "socket_int.h"
 #include "socket_dbg.h"
@@ -124,43 +123,43 @@
 
 #if ESOCK_COUNTER_SIZE == 16
 
-typedef Uint16                   ESockCounter;
+typedef uint16_t                   ESockCounter;
 #define ESOCK_COUNTER_MAX        ((ESockCounter) 0xFFFF)
 #define MKCNT(ENV, CNT)          MKUI((ENV), (CNT))
 #define MKCT(ENV, TAG, CNT)      MKT2((ENV), (TAG), MKCNT((CNT)))
-#define ESOCK_COUNTER_FORMAT_STR "%u"
+#define ESOCK_COUNTER_FORMAT_STR "%" PRIu16
 
 #elif ESOCK_COUNTER_SIZE == 24
 
-typedef Uint32                   ESockCounter;
+typedef uint32_t                   ESockCounter;
 #define ESOCK_COUNTER_MAX        ((ESockCounter) 0xFFFFFF)
 #define MKCNT(ENV, CNT)          MKUI((ENV), (CNT))
 #define MKCT(ENV, TAG, CNT)      MKT2((ENV), (TAG), MKCNT((ENV), (CNT)))
-#define ESOCK_COUNTER_FORMAT_STR "%lu"
+#define ESOCK_COUNTER_FORMAT_STR "%" PRIu32
 
 #elif ESOCK_COUNTER_SIZE == 32
 
-typedef Uint32 ESockCounter;
+typedef uint32_t ESockCounter;
 #define ESOCK_COUNTER_MAX        (~((ESockCounter) 0))
 #define MKCNT(ENV, CNT)          MKUI((ENV), (CNT))
 #define MKCT(ENV, TAG, CNT)      MKT2((ENV), (TAG), MKCNT((ENV), (CNT)))
-#define ESOCK_COUNTER_FORMAT_STR "%lu"
+#define ESOCK_COUNTER_FORMAT_STR "%" PRIu32
 
 #elif ESOCK_COUNTER_SIZE == 48
 
-typedef Uint64                   ESockCounter;
+typedef uint64_t                   ESockCounter;
 #define ESOCK_COUNTER_MAX        ((ESockCounter) 0xFFFFFFFFFFFF)
 #define MKCNT(ENV, CNT)          MKUI64((ENV), (CNT))
 #define MKCT(ENV, TAG, CNT)      MKT2((ENV), (TAG), MKCNT((ENV), (CNT)))
-#define ESOCK_COUNTER_FORMAT_STR "%llu"
+#define ESOCK_COUNTER_FORMAT_STR "%" PRIu64
 
 #elif ESOCK_COUNTER_SIZE == 64
 
-typedef Uint64                   ESockCounter;
+typedef uint64_t                   ESockCounter;
 #define ESOCK_COUNTER_MAX        (~((ESockCounter) 0))
 #define MKCNT(ENV, CNT)          MKUI64((ENV), (CNT))
 #define MKCT(ENV, TAG, CNT)      MKT2((ENV), (TAG), MKCNT((ENV), (CNT)))
-#define ESOCK_COUNTER_FORMAT_STR "%llu"
+#define ESOCK_COUNTER_FORMAT_STR "%" PRIu64
 
 #else
 
@@ -255,7 +254,7 @@ typedef struct {
      */
     SOCKET       sock;
     void*        dataP;
-    
+
 } ESockRequestor;
 
 typedef struct esock_request_queue_element {
@@ -302,10 +301,10 @@ typedef struct {
                          struct cmsghdr* cmsgP,
                          size_t          rem,
                          size_t*         usedP);
-    
+
     ERL_NIF_TERM *nameP; // Pointer to option name atom
 } ESockCmsgSpec;
-    
+
 
 /*----------------------------------------------------------------------------
  * Interface types and constants.
@@ -396,7 +395,7 @@ typedef struct {
      * We have two patterns. One is set when the descriptor is created
      * (allocated) and one is set when the descriptor is dtor'ed.
      */
-    Uint32             pattern;
+    uint32_t             pattern;
 
     /* +++ Stuff "about" the socket +++ */
 
@@ -557,7 +556,7 @@ typedef struct {
  * ======================================================================== *
  */
 
-extern char* erl_errno_id(int error); /* THIS IS JUST TEMPORARY??? */
+/* Error names are supplied by the public driver SDK. */
 
 
 /* ======================================================================== *
@@ -752,6 +751,16 @@ ACTIVATE_NEXT_FUNCS_DEFS
                                          const ErlNifPid* pidP);
 ESOCK_OPERATOR_FUNCS_DEFS
 #undef ESOCK_OPERATOR_FUNCS_DEF
+#ifdef __WIN32__
+#define ESOCK_GET_DECL(F) \
+    extern BOOLEAN_T esock_##F##_get(ErlNifEnv*, ESockDescriptor*, \
+                                          ERL_NIF_TERM*, const ErlNifPid*, ESockRequestor*);
+ESOCK_GET_DECL(acceptor)
+ESOCK_GET_DECL(writer)
+ESOCK_GET_DECL(reader)
+#undef ESOCK_GET_DECL
+#endif
+
 
 
 /* *** Environment wrapper functions ***
@@ -764,7 +773,6 @@ extern ErlNifEnv* esock_alloc_env(const char* slogan);
 
 /* *** Control Message utility functions ***
  */
-#ifndef __WIN32__
 extern void* esock_init_cmsghdr(struct cmsghdr* cmsgP,
                                 size_t          rem,
                                 size_t          size,
@@ -799,7 +807,7 @@ extern void esock_encode_msg_flags(ErlNifEnv*       env,
                                    ESockDescriptor* descP,
                                    int              msgFlags,
                                    ERL_NIF_TERM*    flags);
-#endif
+
 
 
 extern void esock_stop_handle_current(ErlNifEnv*       env,

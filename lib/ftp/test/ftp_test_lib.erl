@@ -34,7 +34,13 @@ make_cert_files(Dir) ->
           #{server_chain =>
                 #{root => [{key, hardcode_rsa_key(1)},{digest,appropriate_sha()}],
                   intermediates => [[{key, hardcode_rsa_key(2)},{digest,appropriate_sha()}]],
-                  peer => [{key, hardcode_rsa_key(3)},{digest,appropriate_sha()}]},
+                  peer => [{key, hardcode_rsa_key(3)},{digest,appropriate_sha()},
+                           {extensions,[#'Extension'{extnID = ?'id-ce-subjectAltName',
+                               critical = false,
+                               extnValue = [{dNSName,"localhost"},
+                                            {dNSName,net_adm:localhost()},
+                                            {iPAddress,<<127,0,0,1>>},
+                                            {iPAddress,<<0:120,1:8>>}]}]}]},
             client_chain =>
                 #{root => [{key, hardcode_rsa_key(1)},{digest,appropriate_sha()}],
                   intermediates => [[{key, hardcode_rsa_key(3)},{digest,appropriate_sha()}]],

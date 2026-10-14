@@ -26,14 +26,8 @@
  *
  */
 
-#define STATIC_ERLANG_NIF 1
-
-#ifndef WANT_NONBLOCKING
-#define WANT_NONBLOCKING
-#endif
-
-#include "config.h"
-#include "sys.h"
+#include "otp_tty_config.h"
+#include "otp_nif_support.h"
 #include "erl_nif.h"
 #include "erl_driver.h"
 
@@ -44,6 +38,9 @@
 #include <stdio.h>
 #include <signal.h>
 #include <locale.h>
+#include <limits.h>
+#include <fcntl.h>
+#include <stdlib.h>
 #if defined(HAVE_TERMCAP)
 #include <termios.h>
 #if defined(HAVE_NCURSES_CURSES_H)
@@ -121,7 +118,7 @@ typedef struct {
 #ifdef HARD_DEBUG
 static FILE *logFile = NULL;
 
-#define debug(fmt, ...) do { if (logFile) { erts_fprintf(logFile, fmt, __VA_ARGS__); fflush(logFile); } } while(0)
+#define debug(fmt, ...) do { if (logFile) { enif_fprintf(logFile, fmt, __VA_ARGS__); fflush(logFile); } } while(0)
 #else
 #define debug(...) do { } while(0)
 #endif
@@ -213,7 +210,9 @@ static ERL_NIF_TERM make_enotsup(ErlNifEnv *env) {
 
 static ERL_NIF_TERM make_errno(ErlNifEnv *env) {
 #ifdef __WIN32__
-    return enif_make_atom(env, last_error());
+    extern void _dosmaperr(unsigned long);
+    _dosmaperr(GetLastError());
+    return enif_make_atom(env, erl_errno_id(errno));
 #else
     return enif_make_atom(env, erl_errno_id(errno));
 #endif
@@ -243,7 +242,7 @@ static HANDLE tty_get_handle(ErlNifEnv *env, ERL_NIF_TERM atom) {
     HANDLE handle = INVALID_HANDLE_VALUE;
     int fd;
     if (tty_get_fd(env, atom, &fd)) {
-    
+
         switch (fd) {
             case 0: handle = GetStdHandle(STD_INPUT_HANDLE); break;
             case 1: handle = GetStdHandle(STD_OUTPUT_HANDLE); break;
@@ -260,7 +259,7 @@ static ERL_NIF_TERM isatty_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv
 
     if (handle == INVALID_HANDLE_VALUE)
         return atom_ebadf;
-    
+
     switch (GetFileType(handle)) {
         case FILE_TYPE_CHAR: return atom_true;
         case FILE_TYPE_PIPE:
@@ -381,7 +380,7 @@ static ERL_NIF_TERM tty_write_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM a
 #else
             res = 0;
             for (int i = 0; i < iovcnt; i++) {
-                ssize_t written;
+                DWORD written;
 #ifdef HARD_DEBUG
 		for (int y = 0; y < iov[i].iov_len; y++)
                     debug("Write %u\r\n",iov[i].iov_base[y]);
@@ -481,7 +480,8 @@ static ERL_NIF_TERM tty_read_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM ar
     if (GetFileType(tty->ifd) == FILE_TYPE_CHAR && tty->tty == enabled) {
         /* Input is a terminal and we are in "new shell"/"raw" mode */
 
-        ssize_t inputs_read, num_characters = 0;
+        DWORD inputs_read;
+        ssize_t num_characters = 0;
         wchar_t *characters = NULL;
         INPUT_RECORD inputs[128];
 
@@ -726,7 +726,7 @@ static ERL_NIF_TERM tty_is_open(ErlNifEnv* env, int argc, const ERL_NIF_TERM arg
     if (tty_get_fd(env, argv[1], &fd)) {
         struct pollfd fds[1];
         int ret;
-        
+
         fds[0].fd = fd;
         fds[0].events = POLLHUP;
         fds[0].revents = 0;
@@ -829,7 +829,7 @@ static ERL_NIF_TERM tty_tinfo_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM a
         tty_tinfo_make_map(env, (NCURSES_CONST char * const*)strnames, (NCURSES_CONST char * const*)strcodes, (NCURSES_CONST char * const*)strfnames)
     };
     ERL_NIF_TERM res;
-    
+
     enif_make_map_from_arrays(env, ks, vs, 3, &res);
 
     return res;
@@ -955,7 +955,7 @@ static ERL_NIF_TERM tty_tputs_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM a
         */
         ent = tparm((char*)cap.data, params[0], params[1], params[2], params[3],
                     params[4], params[5], params[6], params[7], params[8]);
-            
+
         if (!ent) {
             enif_mutex_unlock(tputs_mutex);
             return make_errno_error(env, "tparm");
@@ -1059,7 +1059,7 @@ static ERL_NIF_TERM tty_create_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM 
         */
         tty->tty = unavailable;
     }
-    
+
 #endif
 
     tty_term = enif_make_resource(env, tty);
@@ -1100,7 +1100,7 @@ static ERL_NIF_TERM tty_init_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM ar
 
 #ifndef __WIN32__
 
-    if (tty->tty == enabled || sys_memcmp(&tty->tty_smode, &tty->tty_rmode, sizeof(tty->tty_rmode)) != 0) {
+    if (tty->tty == enabled || memcmp(&tty->tty_smode, &tty->tty_rmode, sizeof(tty->tty_rmode)) != 0) {
 
         /* Restore the original mode, that is canonical echo mode */
         tty->tty_smode = tty->tty_rmode;
@@ -1136,7 +1136,7 @@ static ERL_NIF_TERM tty_init_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM ar
 #else
     DWORD dwOutMode = tty->dwOutMode;
     DWORD dwInMode = tty->dwInMode;
-    
+
     debug("origOutMode: %x origInMode: %x\r\n", 
           tty->dwOriginalOutMode, tty->dwOriginalInMode);
 
@@ -1151,7 +1151,7 @@ static ERL_NIF_TERM tty_init_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM ar
         return make_errno_error(env, "SetConsoleModeInitIn");
     }
 
-    
+
     if (!SetConsoleMode(tty->ofd, dwOutMode)) {
         /* If we cannot disable NEWLINE_AUTO_RETURN we continue anyway as things work */
         ;
@@ -1213,16 +1213,9 @@ static ERL_NIF_TERM tty_window_size_nif(ErlNifEnv* env, int argc, const ERL_NIF_
 static ERL_NIF_TERM tty_select_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
     TTYResource *tty;
 
-#ifndef __WIN32__
-    extern int using_oldshell; /* set this to let the rest of erts know */
-#endif
-
     if (!enif_get_resource(env, argv[0], tty_rt, (void **)&tty))
         return enif_make_badarg(env);
 
-#ifndef __WIN32__
-    using_oldshell = 0;
-#endif
     debug("Select on %d\r\n", tty->ifd);
     enif_select(env, tty->ifd, ERL_NIF_SELECT_READ, tty, NULL, argv[1]);
 

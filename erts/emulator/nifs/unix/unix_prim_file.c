@@ -21,9 +21,8 @@
  * %CopyrightEnd%
  */
 
+#include "otp_file_support.h"
 #include "erl_nif.h"
-#include "config.h"
-#include "sys.h"
 
 #ifdef VALGRIND
 #  include <valgrind/memcheck.h>
@@ -248,7 +247,7 @@ int efile_close(efile_data_t *d, posix_errno_t *error) {
     int fd;
 
     ASSERT(enif_thread_type() == ERL_NIF_THR_DIRTY_IO_SCHEDULER);
-    ASSERT(erts_atomic32_read_nob(&d->state) == EFILE_STATE_CLOSED);
+    ASSERT(atomic_load_explicit(&d->state, memory_order_relaxed) == EFILE_STATE_CLOSED);
     ASSERT(u->fd != -1);
 
     fd = u->fd;
@@ -289,10 +288,10 @@ static void shift_iov(SysIOVec **iov, int *iovlen, ssize_t shift) {
     (*iov) = head_vec;
 }
 
-Sint64 efile_readv(efile_data_t *d, SysIOVec *iov, int iovlen) {
+int64_t efile_readv(efile_data_t *d, SysIOVec *iov, int iovlen) {
     efile_unix_t *u = (efile_unix_t*)d;
 
-    Sint64 bytes_read;
+    int64_t bytes_read;
     ssize_t result;
 
     bytes_read = 0;
@@ -340,10 +339,10 @@ Sint64 efile_readv(efile_data_t *d, SysIOVec *iov, int iovlen) {
     return result;
 }
 
-Sint64 efile_writev(efile_data_t *d, SysIOVec *iov, int iovlen) {
+int64_t efile_writev(efile_data_t *d, SysIOVec *iov, int iovlen) {
     efile_unix_t *u = (efile_unix_t*)d;
 
-    Sint64 bytes_written;
+    int64_t bytes_written;
     ssize_t result;
 
     bytes_written = 0;
@@ -390,11 +389,11 @@ Sint64 efile_writev(efile_data_t *d, SysIOVec *iov, int iovlen) {
     return result;
 }
 
-Sint64 efile_preadv(efile_data_t *d, Sint64 offset, SysIOVec *iov, int iovlen) {
+int64_t efile_preadv(efile_data_t *d, int64_t offset, SysIOVec *iov, int iovlen) {
     efile_unix_t *u = (efile_unix_t*)d;
 
-    Uint64 bytes_read;
-    Sint64 result;
+    uint64_t bytes_read;
+    int64_t result;
 
 #if !defined(HAVE_PREADV) && !defined(HAVE_PREAD)
     /* This function is documented as leaving the file position undefined, but
@@ -449,10 +448,10 @@ Sint64 efile_preadv(efile_data_t *d, Sint64 offset, SysIOVec *iov, int iovlen) {
     return result;
 }
 
-Sint64 efile_pwritev(efile_data_t *d, Sint64 offset, SysIOVec *iov, int iovlen) {
+int64_t efile_pwritev(efile_data_t *d, int64_t offset, SysIOVec *iov, int iovlen) {
     efile_unix_t *u = (efile_unix_t*)d;
 
-    Sint64 bytes_written;
+    int64_t bytes_written;
     ssize_t result;
 
 #if !defined(HAVE_PWRITEV) && !defined(HAVE_PWRITE)
@@ -505,7 +504,7 @@ Sint64 efile_pwritev(efile_data_t *d, Sint64 offset, SysIOVec *iov, int iovlen) 
     return result;
 }
 
-int efile_seek(efile_data_t *d, enum efile_seek_t seek, Sint64 offset, Sint64 *new_position) {
+int efile_seek(efile_data_t *d, enum efile_seek_t seek, int64_t offset, int64_t *new_position) {
     efile_unix_t *u = (efile_unix_t*)d;
     off_t result;
     int whence;
@@ -514,7 +513,7 @@ int efile_seek(efile_data_t *d, enum efile_seek_t seek, Sint64 offset, Sint64 *n
         case EFILE_SEEK_BOF: whence = SEEK_SET; break;
         case EFILE_SEEK_CUR: whence = SEEK_CUR; break;
         case EFILE_SEEK_EOF: whence = SEEK_END; break;
-        default: ERTS_INTERNAL_ERROR("Invalid seek parameter");
+        default: OTP_FILE_INTERNAL_ERROR("Invalid seek parameter");
     }
 
     result = lseek(u->fd, offset, whence);
@@ -567,7 +566,7 @@ int efile_sync(efile_data_t *d, int data_only) {
     return 1;
 }
 
-int efile_advise(efile_data_t *d, Sint64 offset, Sint64 length, enum efile_advise_t advise) {
+int efile_advise(efile_data_t *d, int64_t offset, int64_t length, enum efile_advise_t advise) {
 #ifdef HAVE_POSIX_FADVISE
     efile_unix_t *u = (efile_unix_t*)d;
     int p_advise;
@@ -597,7 +596,7 @@ int efile_advise(efile_data_t *d, Sint64 offset, Sint64 length, enum efile_advis
 #endif
 }
 
-int efile_allocate(efile_data_t *d, Sint64 offset, Sint64 length) {
+int efile_allocate(efile_data_t *d, int64_t offset, int64_t length) {
     efile_unix_t *u = (efile_unix_t*)d;
     int ret = -1;
 
@@ -615,7 +614,7 @@ int efile_allocate(efile_data_t *d, Sint64 offset, Sint64 length) {
     off_t original_position, eof_offset;
     fstore_t fs = {};
 
-    if(offset < 0 || length < 0 || (offset > ERTS_SINT64_MAX - length)) {
+    if(offset < 0 || length < 0 || (offset > INT64_MAX - length)) {
         u->common.posix_errno = EINVAL;
         return 0;
     }
@@ -722,9 +721,9 @@ static void build_file_info(struct stat *data, efile_fileinfo_t *result) {
         result->type = EFILE_FILETYPE_OTHER;
     }
 
-    result->a_time = (Sint64)data->st_atime;
-    result->m_time = (Sint64)data->st_mtime;
-    result->c_time = (Sint64)data->st_ctime;
+    result->a_time = (int64_t)data->st_atime;
+    result->m_time = (int64_t)data->st_mtime;
+    result->c_time = (int64_t)data->st_ctime;
     result->size = data->st_size;
 
     result->major_device = data->st_dev;
@@ -818,7 +817,7 @@ posix_errno_t efile_read_handle_info(efile_data_t *d, efile_fileinfo_t *result) 
 #endif
 }
 
-posix_errno_t efile_set_permissions(const efile_path_t *path, Uint32 permissions) {
+posix_errno_t efile_set_permissions(const efile_path_t *path, uint32_t permissions) {
     const mode_t MUTABLE_MODES = (S_ISUID | S_ISGID | S_IRWXU | S_IRWXG | S_IRWXO);
     mode_t new_modes = permissions & MUTABLE_MODES;
 
@@ -833,7 +832,7 @@ posix_errno_t efile_set_permissions(const efile_path_t *path, Uint32 permissions
     return 0;
 }
 
-posix_errno_t efile_set_owner(const efile_path_t *path, Sint32 owner, Sint32 group) {
+posix_errno_t efile_set_owner(const efile_path_t *path, int32_t owner, int32_t group) {
     if(chown((const char*)path->data, owner, group) < 0) {
         return errno;
     }
@@ -841,7 +840,7 @@ posix_errno_t efile_set_owner(const efile_path_t *path, Sint32 owner, Sint32 gro
     return 0;
 }
 
-posix_errno_t efile_set_time(const efile_path_t *path, Sint64 a_time, Sint64 m_time, Sint64 c_time) {
+posix_errno_t efile_set_time(const efile_path_t *path, int64_t a_time, int64_t m_time, int64_t c_time) {
     struct utimbuf tval;
 
     tval.actime = (time_t)a_time;
@@ -928,7 +927,7 @@ posix_errno_t efile_list_dir(ErlNifEnv *env, const efile_path_t *path, ERL_NIF_T
             ERL_NIF_TERM name_term;
 
             name_bytes = enif_make_new_binary(env, name_length, &name_term);
-            sys_memcpy(name_bytes, dir_entry->d_name, name_length);
+            memcpy(name_bytes, dir_entry->d_name, name_length);
 
             list_head = enif_make_list_cell(env, name_term, list_head);
         }

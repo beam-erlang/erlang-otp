@@ -1,0 +1,36 @@
+{
+  "adaptations": {
+    "lib/crypto/test/engine_SUITE.erl": {
+      "kind": "test-setup",
+      "reason": "Map the test case name dsa to the public Crypto capability atom dss; retain DSA assertions and the ECDSA unsupported outcome.",
+      "sha256": "7d38bf5001ed19175c352cbee8cf8a8c610ea9a47bcb5877973b90bd31f23e99",
+      "upstream_sha256": "e11bae918ff0c1d9550254755810baf94fb8af1ca6ef0dcaa9ae7390f5c0d055"
+    },
+    "lib/eldap/test/eldap_basic_SUITE.erl": {
+      "kind": "test-setup",
+      "reason": "Accept explicit test CA options for LDAPS and STARTTLS; apply implicit TLS options only to SSL connections.",
+      "sha256": "c14df17f1f1885cd3891c9d9fa058428a135f807e3d115e02e51c3f1d445f577",
+      "upstream_sha256": "490eecdb8a0f539c3914f05a5597254506e5ce78f8970462c4005c87bbd3dbda"
+    },
+    "lib/ftp/test/ftp_SUITE.erl": {
+      "kind": "test-setup",
+      "reason": "Supply the generated test CA and retain peer verification for explicit and implicit TLS.",
+      "sha256": "fadd5460031776fc6ad433745429cc2fc7bd23097dd6a85dd6135bdf7aafb488",
+      "upstream_sha256": "c8c24d0bb65e8b07a578f06732cb2d49674857996331ad9b0654c61f7e009e72"
+    },
+    "lib/ftp/test/ftp_test_lib.erl": {
+      "kind": "test-setup",
+      "reason": "Include the local FTP fixture DNS and loopback IP identities in its generated certificate.",
+      "sha256": "84e97bda41ab6d2f2f706097ecbc368e0ea824531c6c53ce6b82f7ee2c470afa",
+      "upstream_sha256": "19ea56dbf104b153290ec0d96d427336da3f0c1675913b10657fe0706a9688da"
+    },
+    "lib/odbc/test/odbc_data_type_SUITE.erl": {
+      "kind": "test-setup",
+      "reason": "Use the selected PostgreSQL ODBC driver version for the existing Unicode group capability guard; preserve case assertions, SQL Server-only case guards and the legacy fallback for unidentified drivers.",
+      "sha256": "b4b320937d6d51fb16d67f85f5bf8179bddcd201c3d4b9284bb265dfa491e766",
+      "upstream_sha256": "af75545ea45f0c126cabf8e242775c469be7d0c308ef54cb01c2b4941429eb63"
+    }
+  },
+  "format": 1,
+  "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a"
+}

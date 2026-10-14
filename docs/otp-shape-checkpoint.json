@@ -1,0 +1,759 @@
+{
+  "date": "2026-10-20",
+  "status": "incomplete-public-boundary-stop",
+  "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+  "sources": {
+    "beam-erlang": {
+      "head": "a43b6ad094f6609b3523d84a221cfb1d8fe327f6",
+      "diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "inventory_sha256": "eb85c482f1ef538eff3e1217c7b0b1562d99bfdb6f7af90c95c1a0ae28e85c63",
+      "file_count": 1837
+    },
+    "erlang-otp": {
+      "head": "97524d891005750ae33de427063810ee49b89c5f",
+      "diff_sha256": "fcfc511641a8db59cc039973525fd2f6b385b868da162ac96f552e21cfe145ab",
+      "inventory_sha256": "a89d6fbd3ab4d26cc8cd3cce76eef77b90b09dec9dbea82de33e93b1650e450b",
+      "file_count": 11388
+    },
+    "playground": {
+      "head": "26376825638d8a3166686de84fbee85b7d6d14fe",
+      "diff_sha256": "280810d10142651e80fae98b2a830a4ff4bef8a5e63baad97c2aa4ecddbe4701",
+      "inventory_sha256": "7c3af57236fe4fcbde6136d6fc2212c4c378a794060d186a1fdc67c825e06edf",
+      "file_count": 191
+    },
+    "erlang-otp-artifacts": {
+      "head": "bd2bf8f57c9649ca7309bb23b0e2bc28fbc6cb35",
+      "diff_sha256": "f69e6552a588850890699607749c7ae0adafca6606f59e681a012a40d4ac2d44",
+      "inventory_sha256": "63a5005c1ad762189c7b6f7027aba1433c316f65a9b793310d7d0bc554236c1e",
+      "file_count": 11825
+    },
+    "dev-documents": {
+      "head": "873b07c00bbdbc489bcff5e4f8e6c5d19db7878e",
+      "diff_sha256": "30346bb071e085ae119dae33a5f93c0e10704588c03fbafc1083ac2d8effd1e9",
+      "inventory_sha256": "c7637b7018d8479017fb7d80f677b62f9ea5e2e0b2da63c99fd20af845e833a5",
+      "file_count": 17
+    }
+  },
+  "source_inventory_method": "SHA-256 of sorted-key JSON mapping tracked and nonignored untracked file paths to byte hashes. This evidence record itself is omitted to avoid self-reference. Installation comparisons omit no paths.",
+  "sdk_vm_sources_changed": false,
+  "candidate": {
+    "emu": {
+      "sdk": {
+        "build-id": "cd5cd244f2206c016dbbdbfabaa4d8418a7467becf4b63ee15472e093f36680f",
+        "runtime": "4ce9dfb3b131956ddded5558f3a5f169af365f0a1a8df60f1fe38b3b15cfc2bb",
+        "runtime.static": "fb202d529f5851ab103f75141c2a0bbfbd5b521cdb73fd31be4e0ab322cf2a31"
+      },
+      "sdk_selection_sha256": "3ab54be8df7f0d0f232a272e5b93847fbbe77b828bd52c4902bbb80d45653969",
+      "host_sha256": "dd1635fca995da4e7f7bedf8df91df3337da1780c5640ad881a268068c802edd",
+      "child_helper_sha256": "6723fd815abb80de17abae05c35af53b0dcad026f2bb561a1a8293da081f55ea",
+      "installed_entries": 3680,
+      "installed_inventory_sha256": "640c29f68f4f49e17bd10d8fcb4ed6c4dd53004dc12e92c4b9e207b99a9c9723",
+      "provenance_sha256": "7ea93dfd3d9314d3d23c4ee472bd6466e9decb2af25ba32eb9037f28e4884b0b",
+      "application_entries": 35,
+      "installed_beam_files": 1355
+    },
+    "jit": {
+      "sdk": {
+        "build-id": "9e844e6ee32ce396de94171be528673247db1b3f142fecab17e82730ae1131f5",
+        "runtime": "b3e5575e36457a632a81d7948fb17affde58b74afa2ccf89847ebe006e2ba3a0",
+        "runtime.static": "c012f33dcccd8cc4722ee8cc1a2b02362d09b55060f36ae3aa6c0096cf534fdd"
+      },
+      "sdk_selection_sha256": "e2cf914b3a1a9230c177ac2dfea20ca6ecfc65114e3b4e7d132a071bf07ea3fb",
+      "host_sha256": "5545c856e9d769cd809eb21c722f917efb825bb199a3901b117e9b1377b8a5ac",
+      "child_helper_sha256": "6723fd815abb80de17abae05c35af53b0dcad026f2bb561a1a8293da081f55ea",
+      "installed_entries": 3680,
+      "installed_inventory_sha256": "5ede6fbe1404c4ba3c60397b8e565823eea1e5db47431901985163d616dd2b69",
+      "provenance_sha256": "9eafb3d89a7d307d553f83adbe8e84f5738b727c9fc2011971dcd62f1ed6143d",
+      "application_entries": 35,
+      "installed_beam_files": 1355
+    }
+  },
+  "reference": {
+    "emu": {
+      "status": "passed",
+      "build": {
+        "commands_sha256": "e050a423767e758b14d4b0bd80d7c08db3b64f561fd7e91f520c5bb577097fb4",
+        "common_recipe_sha256": "24b99cc061264f15d77e9e38f1351647b6d741f75d980cf36fe7dffb44bde681",
+        "configure": [
+          "--disable-jit",
+          "--enable-builtin-zlib",
+          "--disable-pgo",
+          "--disable-parallel-configure"
+        ],
+        "finalization": [
+          "Install",
+          "-minimal"
+        ],
+        "flavor": "emu",
+        "make": [
+          "ODBC_CAN_BUILD_DRIVER=true"
+        ],
+        "makeflags": "-j1",
+        "ordinary_launcher_verified": true,
+        "producer": "erlang-otp-artifacts/scripts/build-linux-otp-distribution.sh",
+        "recipe_sha256": "21fb9ee057b1441ea99f6b761f5e60eddc5693a3ddbee40820521c2f84c6b756",
+        "source_attestation": "/home/intjelic/Workspace/beam-erlang/tmp/otp-shape-20261020/reference-source.json",
+        "source_attestation_sha256": "68c2a6a5a3e752cc6929ef6996216a6cd60aa272c59bd45c6d0e6e7a873c31b1",
+        "source_inventory_sha256": "137ca7ef9524b4bba8b114f14b00512b578270c4c81a02afa316bbd1398be1c0",
+        "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a"
+      },
+      "host_sha256": "c3a006dab688c809181f96170f94aac9fdb08e0ad62147243dac7ca84cbb3848",
+      "installed_entries": 3680,
+      "provenance_sha256": "887e4cc9ecb8a9459fd91d465c3db6c2027b57f6fd61edbf58b19b004345fcd3"
+    },
+    "jit": {
+      "status": "incomplete",
+      "reason": "Build interrupted after confirmed public startup boundary stop condition; no finalized reference claimed."
+    }
+  },
+  "bootstrap": {
+    "changes": {
+      "files": [
+        "build/ebin/otp_build_driver.beam"
+      ],
+      "sources": [
+        "tools/otp_build_driver.erl"
+      ],
+      "generated": []
+    },
+    "same_candidates_both_flavors": true,
+    "bootstrap_files": 278,
+    "modules": 277,
+    "intermediate": {
+      "path": "lib/erts-17.0/ebin/prim_eval.abstr",
+      "sha256": "eb62894611ce8d018de78511ebc2939f3cbead6aad5e5beb18344536c5f8f927",
+      "purpose": "otp_bootstrap.erl emits abstract-code intermediate before constructing canonical prim_eval.beam; not a checked seed artifact"
+    }
+  },
+  "build_commands": {
+    "emu-configure": {
+      "status": 0,
+      "command": [
+        "cmake",
+        "-S",
+        "/home/intjelic/Workspace/beam-erlang/erlang-otp",
+        "-B",
+        "/tmp/beam-otp-shape-20261020-8tc17h2c/otp-emu",
+        "-G",
+        "Ninja",
+        "-DCMAKE_BUILD_TYPE=Release",
+        "-DBUILD_TESTING=ON",
+        "-DCMAKE_INSTALL_PREFIX=/tmp/beam-otp-shape-20261020-8tc17h2c/install-emu",
+        "-DBEAM_SDK_ROOT=/home/intjelic/Workspace/beam-erlang/tmp/static-sdk-20261019/sdk-emu",
+        "-DOTP_BEAM_FLAVOR=emu",
+        "-DFLEX_EXECUTABLE=/home/intjelic/Workspace/beam-erlang/tmp/unpack-base-boot/dependencies/root/usr/bin/flex",
+        "-DOTP_REFERENCE_PREFIX=/tmp/beam-otp-shape-20261020-8tc17h2c/reference-emu/_release_root",
+        "-DOTP_REFERENCE_PROVENANCE=/home/intjelic/Workspace/beam-erlang/tmp/otp-shape-20261020/reference-emu-provenance.json",
+        "-DOTP_REBAR3_FILE=/home/intjelic/Applications/rebar3",
+        "-DOTP_LDAP_ROOT=/home/intjelic/Workspace/beam-erlang/tmp/vm-ownership-migration/dependencies/root",
+        "-DOTP_POSTGRES_ROOT=/home/intjelic/Workspace/beam-erlang/tmp/vm-ownership-migration/dependencies/root",
+        "-DOTP_FTP_SERVER=/home/intjelic/Workspace/beam-erlang/tmp/vm-ownership-migration/dependencies/root/usr/sbin/vsftpd",
+        "-DOTP_SHORT_TEST_ROOT=/tmp/beam-otp-shape-20261020-8tc17h2c/checks-emu"
+      ]
+    },
+    "emu-build": {
+      "status": 0,
+      "command": [
+        "cmake",
+        "--build",
+        "/tmp/beam-otp-shape-20261020-8tc17h2c/otp-emu",
+        "--parallel",
+        "2"
+      ]
+    },
+    "emu-install": {
+      "status": 0,
+      "command": [
+        "cmake",
+        "--install",
+        "/tmp/beam-otp-shape-20261020-8tc17h2c/otp-emu"
+      ]
+    },
+    "jit-configure": {
+      "status": 0,
+      "command": [
+        "cmake",
+        "-S",
+        "/home/intjelic/Workspace/beam-erlang/erlang-otp",
+        "-B",
+        "/tmp/beam-otp-shape-20261020-8tc17h2c/otp-jit",
+        "-G",
+        "Ninja",
+        "-DCMAKE_BUILD_TYPE=Release",
+        "-DBUILD_TESTING=ON",
+        "-DCMAKE_INSTALL_PREFIX=/tmp/beam-otp-shape-20261020-8tc17h2c/install-jit",
+        "-DBEAM_SDK_ROOT=/home/intjelic/Workspace/beam-erlang/tmp/static-sdk-20261019/sdk-jit",
+        "-DOTP_BEAM_FLAVOR=jit",
+        "-DFLEX_EXECUTABLE=/home/intjelic/Workspace/beam-erlang/tmp/unpack-base-boot/dependencies/root/usr/bin/flex",
+        "-DOTP_REFERENCE_PREFIX=/tmp/beam-otp-shape-20261020-8tc17h2c/reference-jit/_release_root",
+        "-DOTP_REFERENCE_PROVENANCE=/home/intjelic/Workspace/beam-erlang/tmp/otp-shape-20261020/reference-jit-provenance.json",
+        "-DOTP_REBAR3_FILE=/home/intjelic/Applications/rebar3",
+        "-DOTP_LDAP_ROOT=/home/intjelic/Workspace/beam-erlang/tmp/vm-ownership-migration/dependencies/root",
+        "-DOTP_POSTGRES_ROOT=/home/intjelic/Workspace/beam-erlang/tmp/vm-ownership-migration/dependencies/root",
+        "-DOTP_FTP_SERVER=/home/intjelic/Workspace/beam-erlang/tmp/vm-ownership-migration/dependencies/root/usr/sbin/vsftpd",
+        "-DOTP_SHORT_TEST_ROOT=/tmp/beam-otp-shape-20261020-8tc17h2c/checks-jit"
+      ]
+    },
+    "jit-build": {
+      "status": 0,
+      "command": [
+        "cmake",
+        "--build",
+        "/tmp/beam-otp-shape-20261020-8tc17h2c/otp-jit",
+        "--parallel",
+        "2"
+      ]
+    },
+    "jit-install": {
+      "status": 0,
+      "command": [
+        "cmake",
+        "--install",
+        "/tmp/beam-otp-shape-20261020-8tc17h2c/otp-jit"
+      ]
+    }
+  },
+  "layout_correction": {
+    "path": "lib/observer-2.19/priv",
+    "original_candidate_mode": "0755",
+    "upstream_and_corrected_mode": "0775",
+    "commands": [
+      "cmake -S erlang-otp -B BUILD",
+      "cmake --build BUILD --parallel 2",
+      "cmake --install BUILD"
+    ]
+  },
+  "tree_comparison_emu": {
+    "candidate_entries": 3680,
+    "reference_entries": 3680,
+    "differences": []
+  },
+  "reltool_target_comparison_emu": {
+    "candidate_entries": 344,
+    "reference_entries": 344,
+    "differences": []
+  },
+  "focused_examples": {
+    "candidate": {
+      "observer-configure": {
+        "command": [
+          "cmake",
+          "-S",
+          "/home/intjelic/Workspace/beam-erlang/dev-playground/erlang-otp/observer",
+          "-B",
+          "/tmp/beam-otp-shape-20261020-8tc17h2c/observer-candidate-emu",
+          "-G",
+          "Ninja",
+          "-DOTP_PREFIX=/tmp/beam-otp-shape-20261020-8tc17h2c/install-emu"
+        ],
+        "status": 0,
+        "log": "/home/intjelic/Workspace/beam-erlang/tmp/otp-shape-20261020/observer-candidate-emu-configure.log"
+      },
+      "observer-build": {
+        "command": [
+          "cmake",
+          "--build",
+          "/tmp/beam-otp-shape-20261020-8tc17h2c/observer-candidate-emu"
+        ],
+        "status": 0,
+        "log": "/home/intjelic/Workspace/beam-erlang/tmp/otp-shape-20261020/observer-candidate-emu-build.log"
+      },
+      "observer-check": {
+        "command": [
+          "ctest",
+          "--test-dir",
+          "/tmp/beam-otp-shape-20261020-8tc17h2c/observer-candidate-emu",
+          "--output-on-failure"
+        ],
+        "status": 0,
+        "log": "/home/intjelic/Workspace/beam-erlang/tmp/otp-shape-20261020/observer-candidate-emu-check.log"
+      },
+      "reltool-configure": {
+        "command": [
+          "cmake",
+          "-S",
+          "/home/intjelic/Workspace/beam-erlang/dev-playground/erlang-otp/reltool",
+          "-B",
+          "/tmp/beam-otp-shape-20261020-8tc17h2c/reltool-candidate-emu",
+          "-G",
+          "Ninja",
+          "-DOTP_PREFIX=/tmp/beam-otp-shape-20261020-8tc17h2c/install-emu",
+          "-DOTP_PROVENANCE_FILE=/home/intjelic/Workspace/beam-erlang/tmp/otp-shape-20261020/candidate-emu-provenance.json"
+        ],
+        "status": 0,
+        "log": "/home/intjelic/Workspace/beam-erlang/tmp/otp-shape-20261020/reltool-candidate-emu-configure.log"
+      },
+      "reltool-build": {
+        "command": [
+          "cmake",
+          "--build",
+          "/tmp/beam-otp-shape-20261020-8tc17h2c/reltool-candidate-emu"
+        ],
+        "status": 0,
+        "log": "/home/intjelic/Workspace/beam-erlang/tmp/otp-shape-20261020/reltool-candidate-emu-build.log"
+      },
+      "reltool-check": {
+        "command": [
+          "ctest",
+          "--test-dir",
+          "/tmp/beam-otp-shape-20261020-8tc17h2c/reltool-candidate-emu",
+          "--output-on-failure"
+        ],
+        "status": 0,
+        "log": "/home/intjelic/Workspace/beam-erlang/tmp/otp-shape-20261020/reltool-candidate-emu-check.log"
+      }
+    },
+    "reference": {
+      "observer-configure": {
+        "command": [
+          "cmake",
+          "-S",
+          "/home/intjelic/Workspace/beam-erlang/dev-playground/erlang-otp/observer",
+          "-B",
+          "/tmp/beam-otp-shape-20261020-8tc17h2c/observer-reference-emu",
+          "-G",
+          "Ninja",
+          "-DOTP_PREFIX=/tmp/beam-otp-shape-20261020-8tc17h2c/reference-emu/_release_root"
+        ],
+        "status": 0,
+        "log": "/home/intjelic/Workspace/beam-erlang/tmp/otp-shape-20261020/observer-reference-emu-configure.log"
+      },
+      "observer-build": {
+        "command": [
+          "cmake",
+          "--build",
+          "/tmp/beam-otp-shape-20261020-8tc17h2c/observer-reference-emu"
+        ],
+        "status": 0,
+        "log": "/home/intjelic/Workspace/beam-erlang/tmp/otp-shape-20261020/observer-reference-emu-build.log"
+      },
+      "observer-check": {
+        "command": [
+          "ctest",
+          "--test-dir",
+          "/tmp/beam-otp-shape-20261020-8tc17h2c/observer-reference-emu",
+          "--output-on-failure"
+        ],
+        "status": 0,
+        "log": "/home/intjelic/Workspace/beam-erlang/tmp/otp-shape-20261020/observer-reference-emu-check.log"
+      },
+      "reltool-configure": {
+        "command": [
+          "cmake",
+          "-S",
+          "/home/intjelic/Workspace/beam-erlang/dev-playground/erlang-otp/reltool",
+          "-B",
+          "/tmp/beam-otp-shape-20261020-8tc17h2c/reltool-reference-emu",
+          "-G",
+          "Ninja",
+          "-DOTP_PREFIX=/tmp/beam-otp-shape-20261020-8tc17h2c/reference-emu/_release_root",
+          "-DOTP_PROVENANCE_FILE=/home/intjelic/Workspace/beam-erlang/tmp/otp-shape-20261020/reference-emu-provenance.json"
+        ],
+        "status": 0,
+        "log": "/home/intjelic/Workspace/beam-erlang/tmp/otp-shape-20261020/reltool-reference-emu-configure.log"
+      },
+      "reltool-build": {
+        "command": [
+          "cmake",
+          "--build",
+          "/tmp/beam-otp-shape-20261020-8tc17h2c/reltool-reference-emu"
+        ],
+        "status": 0,
+        "log": "/home/intjelic/Workspace/beam-erlang/tmp/otp-shape-20261020/reltool-reference-emu-build.log"
+      },
+      "reltool-check": {
+        "command": [
+          "ctest",
+          "--test-dir",
+          "/tmp/beam-otp-shape-20261020-8tc17h2c/reltool-reference-emu",
+          "--output-on-failure"
+        ],
+        "status": 0,
+        "log": "/home/intjelic/Workspace/beam-erlang/tmp/otp-shape-20261020/reltool-reference-emu-check.log"
+      }
+    }
+  },
+  "ctest_runs": {
+    "retained-emu": {
+      "log_sha256": "e881523149de8b7735e3ede874f938f46ad1976012d430454c6d849d69e557b0",
+      "tests": [
+        {
+          "name": "installed-sdk-smoke",
+          "status": "Passed",
+          "seconds": 0.06
+        },
+        {
+          "name": "installed-sdk-boundary",
+          "status": "Passed",
+          "seconds": 0.17
+        },
+        {
+          "name": "source-built-compiler",
+          "status": "Passed",
+          "seconds": 0.2
+        },
+        {
+          "name": "otp-bootstrap-integrity",
+          "status": "Passed",
+          "seconds": 14.7
+        },
+        {
+          "name": "otp-host-public-boundary",
+          "status": "Passed",
+          "seconds": 0.33
+        },
+        {
+          "name": "initial-product",
+          "status": "***Failed",
+          "seconds": 30.29
+        },
+        {
+          "name": "isolated-product",
+          "status": "***Failed",
+          "seconds": 31.03
+        },
+        {
+          "name": "otp-native-public-boundary",
+          "status": "Passed",
+          "seconds": 11.55
+        },
+        {
+          "name": "otp-native-activation",
+          "status": "Passed",
+          "seconds": 2.57
+        },
+        {
+          "name": "otp-host-preparation",
+          "status": "Passed",
+          "seconds": 3.42
+        },
+        {
+          "name": "otp-terminal-lifecycle",
+          "status": "Passed",
+          "seconds": 2.63
+        },
+        {
+          "name": "otp-boot-observer",
+          "status": "Passed",
+          "seconds": 8.5
+        },
+        {
+          "name": "otp-compatibility-transfer",
+          "status": "Passed",
+          "seconds": 8.38
+        },
+        {
+          "name": "otp-development-support",
+          "status": "Passed",
+          "seconds": 2.25
+        },
+        {
+          "name": "asn1-value-generation",
+          "status": "Passed",
+          "seconds": 3.74
+        },
+        {
+          "name": "otp-command-policy",
+          "status": "Passed",
+          "seconds": 13.0
+        }
+      ]
+    },
+    "retained-jit": {
+      "log_sha256": "b2afef81bfe7fad9b704f2f39edc67c641b800d412995010990e620704c3ec91",
+      "tests": [
+        {
+          "name": "installed-sdk-smoke",
+          "status": "Passed",
+          "seconds": 0.05
+        },
+        {
+          "name": "installed-sdk-boundary",
+          "status": "Passed",
+          "seconds": 0.15
+        },
+        {
+          "name": "source-built-compiler",
+          "status": "Passed",
+          "seconds": 0.3
+        },
+        {
+          "name": "otp-bootstrap-integrity",
+          "status": "Passed",
+          "seconds": 6.54
+        },
+        {
+          "name": "otp-host-public-boundary",
+          "status": "Passed",
+          "seconds": 0.2
+        },
+        {
+          "name": "initial-product",
+          "status": "***Failed",
+          "seconds": 24.7
+        },
+        {
+          "name": "isolated-product",
+          "status": "***Failed",
+          "seconds": 24.64
+        },
+        {
+          "name": "otp-native-public-boundary",
+          "status": "Passed",
+          "seconds": 4.22
+        },
+        {
+          "name": "otp-native-activation",
+          "status": "Passed",
+          "seconds": 2.22
+        },
+        {
+          "name": "otp-host-preparation",
+          "status": "Passed",
+          "seconds": 2.42
+        },
+        {
+          "name": "otp-terminal-lifecycle",
+          "status": "Passed",
+          "seconds": 1.54
+        },
+        {
+          "name": "otp-boot-observer",
+          "status": "Passed",
+          "seconds": 4.93
+        },
+        {
+          "name": "otp-compatibility-transfer",
+          "status": "Passed",
+          "seconds": 5.61
+        },
+        {
+          "name": "otp-development-support",
+          "status": "Passed",
+          "seconds": 1.48
+        },
+        {
+          "name": "asn1-value-generation",
+          "status": "Passed",
+          "seconds": 2.98
+        },
+        {
+          "name": "otp-command-policy",
+          "status": "Passed",
+          "seconds": 8.76
+        }
+      ]
+    },
+    "new-gates-emu": {
+      "log_sha256": "0610609853fc2ded695f8f6c8d9cc25f3643e040240d912f0effd3065a633db6",
+      "tests": [
+        {
+          "name": "otp-installed-tree",
+          "status": "Passed",
+          "seconds": 2.87
+        },
+        {
+          "name": "upstream-observer_SUITE",
+          "status": "Passed",
+          "seconds": 3.3
+        },
+        {
+          "name": "otp-standard-release",
+          "status": "Passed",
+          "seconds": 6.79
+        },
+        {
+          "name": "upstream-ttb_SUITE",
+          "status": "***Failed",
+          "seconds": 10.21
+        },
+        {
+          "name": "upstream-etop_SUITE",
+          "status": "Passed",
+          "seconds": 51.32
+        },
+        {
+          "name": "upstream-reltool_app_SUITE",
+          "status": "Passed",
+          "seconds": 10.51
+        },
+        {
+          "name": "upstream-crashdump_viewer_SUITE",
+          "status": "***Failed",
+          "seconds": 68.05
+        },
+        {
+          "name": "upstream-reltool_server_SUITE",
+          "status": "***Failed",
+          "seconds": 171.08
+        }
+      ]
+    },
+    "rebar-candidate-emu": {
+      "log_sha256": "857bed598acab1e718e34f52f4817d40472cb18701392dccd6a7f24d4dfe9b13",
+      "tests": [
+        {
+          "name": "rebar3-compile",
+          "status": "Passed",
+          "seconds": 1.9
+        },
+        {
+          "name": "rebar3-eunit",
+          "status": "Passed",
+          "seconds": 1.32
+        },
+        {
+          "name": "rebar3-ct",
+          "status": "Passed",
+          "seconds": 2.78
+        },
+        {
+          "name": "rebar3-shell",
+          "status": "Passed",
+          "seconds": 1.28
+        },
+        {
+          "name": "rebar3-release",
+          "status": "Passed",
+          "seconds": 4.2
+        },
+        {
+          "name": "rebar3-edoc",
+          "status": "Passed",
+          "seconds": 1.26
+        },
+        {
+          "name": "rebar3-dialyzer",
+          "status": "Passed",
+          "seconds": 121.08
+        }
+      ]
+    }
+  },
+  "acceptance_commands": [
+    "ctest --test-dir BUILD --output-on-failure -E ^upstream-|^wx-product$|^otp-installed-tree$|^otp-standard-release$ (both flavors; regex is one argument)",
+    "ctest --test-dir EMU_BUILD --output-on-failure -j2 -R ^(otp-installed-tree|otp-standard-release|upstream-(observer|etop|ttb|crashdump_viewer|reltool_app|reltool_server)_SUITE)$ (regex is one argument)",
+    "ctest --test-dir REBAR_CANDIDATE_EMU_BUILD --output-on-failure"
+  ],
+  "rebar3": {
+    "version": "3.27.0",
+    "relx": "4.10.0",
+    "sha256": "af85aab41f9fd74bdd6341ebdf6fe9c88077aab9f8eac82371583fa02f2b0bdf",
+    "candidate_emu_stages_passed": 7,
+    "plt_input_files": 226,
+    "analyzed_project_files": 3,
+    "cold_warm_plt_hashes_equal": true,
+    "reference_baseline": "Verified original-build interpreter from prior checkpoint: initial run passed six stages, corrected filename discovery plus cold/warm rerun passed Dialyzer. Fresh complete-reference matrix not run."
+  },
+  "upstream_suite_results": {
+    "observer_SUITE": {
+      "passed": 2,
+      "failed": 0,
+      "skipped": 0
+    },
+    "etop_SUITE": {
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0
+    },
+    "reltool_app_SUITE": {
+      "passed": 6,
+      "failed": 0,
+      "skipped": 0
+    },
+    "ttb_SUITE": {
+      "passed": 4,
+      "failed": 45,
+      "skipped": 0,
+      "classification": "Harness localhost/machine-hostname mismatch; corrected orchestration remains unrerun."
+    },
+    "crashdump_viewer_SUITE": {
+      "passed": 0,
+      "failed": 0,
+      "auto_skipped": 6,
+      "gate": "failed",
+      "classification": "Suite setup cannot launch required +Muatags true peer."
+    },
+    "reltool_server_SUITE": {
+      "passed_before_interruption": 8,
+      "failed_before_interruption": 2,
+      "failed_cases": [
+        "create_target",
+        "create_target_unicode"
+      ],
+      "diagnostic": "failed_to_start_node / net_adm",
+      "classification": "Unclassified; interrupted during create_embedded after public-boundary stop condition."
+    }
+  },
+  "blocker": {
+    "kind": "public-sdk-startup-boundary",
+    "option": "+Muatags true",
+    "reproducer": "tools/fixtures/otp_allocator_tags_probe.py",
+    "reproducer_sha256": "15d3a1aa91e6ef0adb744d07dec0fc22e8332ef7d76c286c6552bf7c791cb84e",
+    "results": {
+      "candidate-emu": {
+        "command": [
+          "/tmp/beam-otp-shape-20261020-8tc17h2c/install-emu/bin/erl",
+          "+S2",
+          "+Muatags",
+          "true",
+          "-noshell",
+          "-eval",
+          "io:format(\"ALLOCATOR_TAGS_OK~n\"),halt()."
+        ],
+        "exit_status": 1,
+        "timed_out": false,
+        "stdout": "",
+        "stderr": "erl: emulator option is not implemented: +Muatags\n",
+        "status": "failed"
+      },
+      "candidate-jit": {
+        "command": [
+          "/tmp/beam-otp-shape-20261020-8tc17h2c/install-jit/bin/erl",
+          "+S2",
+          "+Muatags",
+          "true",
+          "-noshell",
+          "-eval",
+          "io:format(\"ALLOCATOR_TAGS_OK~n\"),halt()."
+        ],
+        "exit_status": 1,
+        "timed_out": false,
+        "stdout": "",
+        "stderr": "erl: emulator option is not implemented: +Muatags\n",
+        "status": "failed"
+      },
+      "reference-emu": {
+        "command": [
+          "/tmp/beam-otp-shape-20261020-8tc17h2c/reference-emu/_release_root/bin/erl",
+          "+S2",
+          "+Muatags",
+          "true",
+          "-noshell",
+          "-eval",
+          "io:format(\"ALLOCATOR_TAGS_OK~n\"),halt()."
+        ],
+        "exit_status": 0,
+        "timed_out": false,
+        "stdout": "ALLOCATOR_TAGS_OK\n",
+        "stderr": "",
+        "status": "passed"
+      }
+    },
+    "required_next_scope": "Reviewed generic public allocator-tagging startup control, OTP option adaptation, and tagged allocator/crash-dump/lifecycle acceptance on both flavors."
+  },
+  "remaining": [
+    "Fresh JIT upstream reference and exact tree comparison",
+    "New JIT workflows and unchanged upstream suites",
+    "TTB rerun after hostname correction",
+    "Complete crash-dump backend and Reltool server acceptance",
+    "All eight examples in place and isolated source copies, with Reltool/Relx tree comparisons"
+  ],
+  "retained_gaps": [
+    "ET event-file failures reproduced on both flavors",
+    "Socket-sendfile failures remain recorded, not rerun here",
+    "Other preexisting strict skip gates unchanged and not relabeled",
+    "wx and dependent GUI acceptance deferred",
+    "Release upgrades deferred"
+  ]
+}

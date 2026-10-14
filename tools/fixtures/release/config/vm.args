@@ -1,0 +1,5 @@
++S 2:2
++SDcpu 1
++SDio 1
+-sname otp_release_probe
+-setcookie otp_release_probe_fixture

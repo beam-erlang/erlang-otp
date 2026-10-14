@@ -1,0 +1,41 @@
+# SPDX-License-Identifier: Apache-2.0
+# Probe product file services independently of VM-private configuration.
+if(WIN32)
+    file(CONFIGURE OUTPUT "${PROJECT_BINARY_DIR}/generated/otp_file_config.h"
+        CONTENT "/* Windows file APIs are supplied by the selected Windows SDK. */\n" @ONLY)
+    return()
+endif()
+include(CMakePushCheckState)
+include(CheckIncludeFile)
+include(CheckSymbolExists)
+cmake_push_check_state(RESET)
+set(CMAKE_REQUIRED_DEFINITIONS -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64)
+set(_file_config "/* OTP-owned file platform probes. */\n")
+check_include_file(sys/uio.h OTP_FILE_HAS_SYS_UIO_H)
+if(NOT OTP_FILE_HAS_SYS_UIO_H)
+    message(FATAL_ERROR "OTP Linux file services require sys/uio.h")
+endif()
+string(APPEND _file_config "#define HAVE_SYS_UIO_H 1\n")
+check_include_file(linux/falloc.h OTP_FILE_HAS_LINUX_FALLOC_H)
+if(OTP_FILE_HAS_LINUX_FALLOC_H)
+    string(APPEND _file_config "#define HAVE_LINUX_FALLOC_H 1\n")
+endif()
+foreach(_function IN ITEMS fstat writev pread preadv pwrite pwritev fdatasync
+        fallocate posix_fallocate posix_fadvise)
+    string(TOUPPER "${_function}" _upper)
+    check_symbol_exists("${_function}" "sys/types.h;sys/stat.h;sys/uio.h;unistd.h;fcntl.h"
+        "OTP_FILE_HAS_${_upper}")
+    if(OTP_FILE_HAS_${_upper})
+        string(APPEND _file_config "#define HAVE_${_upper} 1\n")
+    endif()
+endforeach()
+# Check the public failure entry at link time, before building any native output.
+set(CMAKE_REQUIRED_LIBRARIES BEAM::RuntimeStatic BEAM::NIF)
+unset(OTP_FILE_HAS_NATIVE_FAILURE CACHE)
+check_symbol_exists(beam_native_fail "beam/native.h" OTP_FILE_HAS_NATIVE_FAILURE)
+if(NOT OTP_FILE_HAS_NATIVE_FAILURE)
+    message(FATAL_ERROR "OTP file services require the public beam_native_fail SDK entry")
+endif()
+cmake_pop_check_state()
+file(CONFIGURE OUTPUT "${PROJECT_BINARY_DIR}/generated/otp_file_config.h"
+    CONTENT "${_file_config}" @ONLY)

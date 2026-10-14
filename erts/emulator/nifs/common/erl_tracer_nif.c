@@ -27,11 +27,8 @@
  */
 
 
-#define STATIC_ERLANG_NIF 1
-
 #include "erl_nif.h"
-#include "config.h"
-#include "sys.h"
+#include "otp_nif_support.h"
 
 #ifdef VALGRIND
 #  include <valgrind/memcheck.h>

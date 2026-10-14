@@ -1,0 +1,47 @@
+# SPDX-License-Identifier: Apache-2.0
+if(POLICY CMP0207)
+    cmake_policy(SET CMP0207 NEW)
+endif()
+set(_root "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}")
+file(GLOB_RECURSE _executables "${_root}/*.exe")
+file(GLOB_RECURSE _libraries "${_root}/*.dll")
+set(CMAKE_GET_RUNTIME_DEPENDENCIES_PLATFORM windows+pe)
+set(CMAKE_GET_RUNTIME_DEPENDENCIES_TOOL objdump)
+set(CMAKE_GET_RUNTIME_DEPENDENCIES_COMMAND "@CMAKE_OBJDUMP@")
+file(GET_RUNTIME_DEPENDENCIES EXECUTABLES ${_executables} LIBRARIES ${_libraries}
+    DIRECTORIES "${_root}/bin" "${_root}/erts-@_erts_version@/bin" "@OTP_WINDOWS_RUNTIME_DIRECTORY@"
+    PRE_EXCLUDE_REGEXES "^[Aa][Pp][Ii]-[Mm][Ss]-" "^[Ee][Xx][Tt]-[Mm][Ss]-"
+    POST_EXCLUDE_REGEXES [=[.*[/\\][Ww][Ii][Nn][Dd][Oo][Ww][Ss][/\\].*]=]
+    CONFLICTING_DEPENDENCIES_PREFIX _conflicts
+    RESOLVED_DEPENDENCIES_VAR _resolved UNRESOLVED_DEPENDENCIES_VAR _unresolved)
+if(_unresolved)
+    message(FATAL_ERROR "Unresolved native Windows dependencies: ${_unresolved}")
+endif()
+foreach(_name IN LISTS _conflicts_FILENAMES)
+    set(_hash "")
+    set(_selected "")
+    foreach(_file IN LISTS _conflicts_${_name})
+        file(SHA256 "${_file}" _candidate_hash)
+        if(_hash AND NOT _hash STREQUAL _candidate_hash)
+            message(FATAL_ERROR "Conflicting Windows dependency contents for ${_name}: ${_conflicts_${_name}}")
+        endif()
+        set(_hash "${_candidate_hash}")
+        set(_selected "${_file}")
+    endforeach()
+    # Public launchers and the VM intentionally carry identical DLL copies.
+    list(APPEND _resolved "${_selected}")
+endforeach()
+foreach(_file IN LISTS _resolved)
+    get_filename_component(_name "${_file}" NAME)
+    string(TOLOWER "${_name}" _lower)
+    if(_lower STREQUAL "msys-2.0.dll")
+        message(FATAL_ERROR "Native OTP must not depend on msys-2.0.dll")
+    endif()
+    cmake_path(IS_PREFIX _root "${_file}" NORMALIZE _internal)
+    if(_internal)
+        continue()
+    endif()
+    # Public launchers and the actual VM have different executable directories.
+    file(INSTALL "${_file}" DESTINATION "${_root}/bin" TYPE FILE)
+    file(INSTALL "${_file}" DESTINATION "${_root}/erts-@_erts_version@/bin" TYPE FILE)
+endforeach()

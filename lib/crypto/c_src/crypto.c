@@ -262,6 +262,22 @@ static int initialize(ErlNifEnv* env, ERL_NIF_TERM load_info)
     }
 
 #ifdef HAS_3_0_API
+#ifdef OTP_BUNDLED_OPENSSL_MODULES
+    /* Windows development distributions carry their provider modules beside
+     * this NIF. Preserve an explicitly selected OpenSSL provider location. */
+    if (!getenv("OPENSSL_MODULES")) {
+        const char suffix[] = "ossl-modules";
+        size_t directory = lib_bin.size;
+        while (directory && lib_bin.data[directory-1] != '/' && lib_bin.data[directory-1] != '\\') --directory;
+        char *modules = enif_alloc(directory + sizeof(suffix));
+        if (!modules) { ret = __LINE__; goto done; }
+        memcpy(modules, lib_bin.data, directory);
+        memcpy(modules + directory, suffix, sizeof(suffix));
+        int selected = directory && OSSL_PROVIDER_set_default_search_path(NULL, modules);
+        enif_free(modules);
+        if (!selected) { ret = __LINE__; goto done; }
+    }
+#endif
     prov_cnt = 0;
 # ifdef FIPS_SUPPORT
     fips_provider = OSSL_PROVIDER_load(NULL, "fips");

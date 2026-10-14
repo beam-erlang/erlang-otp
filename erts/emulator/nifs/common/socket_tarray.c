@@ -26,9 +26,7 @@
  *
  */
 
-#ifdef HAVE_CONFIG_H
-#    include "config.h"
-#endif
+#include "otp_socket_support.h"
 
 #ifdef ESOCK_ENABLE
 
@@ -37,7 +35,6 @@
 #include <erl_nif.h>
 
 #include "socket_int.h"
-#include <sys.h>
 #include "socket_util.h"
 #include "socket_tarray.h"
 
@@ -48,8 +45,8 @@
  */
 
 typedef struct {
-  Uint32        sz;
-  Uint32        idx;
+  uint32_t        sz;
+  uint32_t        idx;
   ERL_NIF_TERM* array;
 } SocketTArrayInt;
 
@@ -59,7 +56,7 @@ typedef struct {
  */
 
 static void esock_tarray_add1(SocketTArrayInt* taP, ERL_NIF_TERM t);
-static void esock_tarray_ensure_fits(SocketTArrayInt* taP, Uint32 needs);
+static void esock_tarray_ensure_fits(SocketTArrayInt* taP, uint32_t needs);
 
 
 /* ----------------------------------------------------------------------
@@ -67,7 +64,7 @@ static void esock_tarray_ensure_fits(SocketTArrayInt* taP, Uint32 needs);
  */
 
 extern
-void* esock_tarray_create(Uint32 sz)
+void* esock_tarray_create(uint32_t sz)
 {
     SocketTArrayInt* tarrayP;
 
@@ -75,12 +72,12 @@ void* esock_tarray_create(Uint32 sz)
 
     tarrayP = MALLOC(sizeof(SocketTArrayInt));
     ESOCK_ASSERT( (tarrayP != NULL) );
-  
+
     tarrayP->array = MALLOC(sz * sizeof(ERL_NIF_TERM));
     ESOCK_ASSERT( (tarrayP->array != NULL) );
     tarrayP->sz   = sz;
     tarrayP->idx  = 0;
-    
+
     return ((SocketTArray) tarrayP);
 }
 
@@ -95,7 +92,7 @@ void esock_tarray_delete(SocketTArray ta)
 
 
 extern
-Uint32 esock_tarray_sz(SocketTArray a)
+uint32_t esock_tarray_sz(SocketTArray a)
 {
   return ( ((SocketTArrayInt*) a)->idx );
 }
@@ -133,14 +130,14 @@ void esock_tarray_add1(SocketTArrayInt* taP, ERL_NIF_TERM t)
 }
 
 static
-void esock_tarray_ensure_fits(SocketTArrayInt* taP, Uint32 needs)
+void esock_tarray_ensure_fits(SocketTArrayInt* taP, uint32_t needs)
 { 
   if (taP->sz < (taP->idx + needs)) {
-    Uint32 newSz = (needs < taP->sz) ? 2*taP->sz : 2*needs;
+    uint32_t newSz = (needs < taP->sz) ? 2*taP->sz : 2*needs;
     void*  mem   = REALLOC(taP->array, newSz * sizeof(ERL_NIF_TERM));
-    
+
     ESOCK_ASSERT( (mem != NULL) );
-    
+
     taP->sz    = newSz;
     taP->array = (ERL_NIF_TERM*) mem;
   }

@@ -133,6 +133,9 @@
 
 #include "ei.h"
 #include "odbcserver.h"
+#ifdef WIN32
+#include <process.h>
+#endif
 
 /* ---------------- Main functions ---------------------------------------*/
 static void spawn_sup(const char *port);
@@ -303,10 +306,17 @@ int main(void)
 }
 
 #ifdef WIN32
+static unsigned __stdcall supervise_windows(void *port)
+{
+    supervise((const char *)port);
+    return 0;
+}
+
 static void spawn_sup(const char *port)
 {
-    DWORD threadId;
-    _beginthreadex(NULL, 0, supervise, port, 0, &threadId);
+    unsigned threadId;
+    uintptr_t thread = _beginthreadex(NULL, 0, supervise_windows, (void *)port, 0, &threadId);
+    if (thread) CloseHandle((HANDLE)thread);
 }
 #elif defined(UNIX)
 static void spawn_sup(const char *port)
@@ -1800,7 +1810,7 @@ static int read_exact(byte *buffer, int len)
 {
     HANDLE standard_input = GetStdHandle(STD_INPUT_HANDLE);
     
-    unsigned read_result;
+    DWORD read_result;
     unsigned sofar = 0;
     
     if (!len) { /* Happens for "empty packages */

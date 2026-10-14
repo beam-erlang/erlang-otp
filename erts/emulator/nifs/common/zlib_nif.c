@@ -21,15 +21,13 @@
  * %CopyrightEnd%
  */
 
-#define STATIC_ERLANG_NIF 1
-
 #include <stdio.h>
 
-#include "erl_zlib.h"
+#include <zlib.h>
 
 #include "erl_nif.h"
-#include "config.h"
-#include "sys.h"
+#include "otp_nif_support.h"
+#include <errno.h>
 
 #ifdef VALGRIND
 #  include <valgrind/memcheck.h>
@@ -332,7 +330,7 @@ static void zlib_reset_input(zlib_data_t *d) {
     if(d->stash_env != NULL) {
         enif_free_env(d->stash_env);
         d->stash_env = NULL;
-        d->stash_term = NIL;
+        d->stash_term = 0; /* No owned term while stash_env is NULL. */
     }
 }
 
@@ -499,7 +497,7 @@ static ERL_NIF_TERM zlib_clearStash(ErlNifEnv *env, int argc, const ERL_NIF_TERM
 
     enif_free_env(d->stash_env);
     d->stash_env = NULL;
-    d->stash_term = NIL;
+    d->stash_term = 0; /* No owned term while stash_env is NULL. */
 
     return am_ok;
 }
@@ -553,7 +551,7 @@ static ERL_NIF_TERM zlib_open(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[
     d->input_crc = crc32(0L, Z_NULL, 0);
 
     d->stash_env = NULL;
-    d->stash_term = NIL;
+    d->stash_term = 0; /* No owned term while stash_env is NULL. */
 
     d->inflateChunk_buffer_size = 4000;
 

@@ -1162,9 +1162,10 @@ find_first_server(UseSSL, [{config,Key}|Ss]) ->
 	    find_first_server(UseSSL, Ss)
     end;
 find_first_server(UseSSL, [{Host,Port}|Ss]) ->
-    case eldap:open([Host],[{port,Port},{ssl,UseSSL},{timeout,10000}]) of
+    case eldap:open([Host],[{port,Port},{ssl,UseSSL},{timeout,10000}|
+                           ssl_options(UseSSL)]) of
 	{ok,H} when UseSSL==false, Ss=/=[] ->
-	    case eldap:start_tls(H, [], 10000) of
+	    case eldap:start_tls(H, tls_options(), 10000) of
 		ok ->
 		    ct:log("find_first_server ~p UseSSL=~p -> ok",[{Host,Port},UseSSL]),
 		    eldap:close(H),
@@ -1264,7 +1265,7 @@ start_tls(H, Config) ->
     KeyFile = filename:join([proplists:get_value(data_dir,Config),
 			     "certs/client/key.pem"
 			    ]),
-    case eldap:start_tls(H, [{keyfile, KeyFile}]) of
+    case eldap:start_tls(H, [{keyfile, KeyFile}|tls_options()]) of
 	ok ->
 	    [{start_tls_success,true} | Config];
 	Error ->
@@ -1282,9 +1283,15 @@ open_bind(Config) ->
 open(Config) ->
     {Host,Port} = proplists:get_value(server,Config),
     SSLflag = proplists:get_value(ssl_flag,Config),
-    {ok,H} = eldap:open([Host], [{port,Port},{ssl,SSLflag}]),
+    {ok,H} = eldap:open([Host], [{port,Port},{ssl,SSLflag}|ssl_options(SSLflag)]),
     cond_start_tls(H, Config),
     {ok,H}.
+
+tls_options() ->
+    ct:get_config(ldap_tls_options, []).
+
+ssl_options(true) -> [{sslopts,tls_options()}];
+ssl_options(_) -> [].
 
 %%%----------------------------------------------------------------
 supported_extension(OID, Config) ->

@@ -28,12 +28,7 @@
 
 
 #include <erl_nif.h>
-#include "config.h"
-#include "sys.h"
-#include "dtrace-wrapper.h"
-#if defined(USE_DYNAMIC_TRACE) && (defined(USE_DTRACE) || defined(USE_SYSTEMTAP))
-#  define HAVE_USE_DTRACE 1
-#endif
+#include "otp_nif_support.h"
 #if defined(USE_LTTNG)
 #  define HAVE_USE_LTTNG 1
 #  define TRACEPOINT_DEFINE
@@ -666,7 +661,7 @@ static ERL_NIF_TERM enabled_running_procs(ErlNifEnv *env, int argc, const ERL_NI
 
     if (LTTNG_ENABLED(process_scheduled))
         return atom_trace;
- 
+
     return atom_discard;
 }
 

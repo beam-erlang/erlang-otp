@@ -25,15 +25,9 @@
  * To update the Zstandard version, run erts/emulator/zstd/update.sh
  */
 
-#define STATIC_ERLANG_NIF 1
-
-#ifdef HAVE_CONFIG_H
-#  include "config.h"
-#endif
-
-#include "sys.h"
 #include "erl_nif.h"
-#include "config.h"
+#include <stdint.h>
+#include <string.h>
 #define ZSTD_STATIC_LINKING_ONLY
 
 #ifdef ERTS_USE_BUILTIN_ZSTD
@@ -365,7 +359,7 @@ static ERL_NIF_TERM set_compress_parameter_nif(
     if (!ctx) {
         return make_badarg(env);
     }
-        
+
     param = get_cparam(env, argv[1]);
 
     if (!param) {
@@ -771,7 +765,7 @@ static ERL_NIF_TERM decompress_stream_nif(ErlNifEnv *env,
             argc - 1,
             argv + 1,
             DECOMPRESS_CHUNK_SIZE);
-        
+
         if (enif_is_exception(env, result)) {
             reset_decompress_context(ctx);
         }
@@ -849,7 +843,7 @@ static ERL_NIF_TERM create_cdict_nif(
         binary_copy = enif_make_copy(dict.env, argv[0]);
 
         (void)enif_inspect_binary(dict.env, binary_copy, &bin);
-        
+
         dict.c = ZSTD_createCDict_advanced(bin.data, bin.size,
                     ZSTD_dlm_byRef, ZSTD_dct_auto,
                     ZSTD_getCParams(level, 0, bin.size),
@@ -886,12 +880,12 @@ static ERL_NIF_TERM create_ddict_nif(
     } else {
         ERL_NIF_TERM result, binary_copy;
         ZstdDict *dictp, dict;
-        
+
         dict.env = enif_alloc_env();
         binary_copy = enif_make_copy(dict.env, argv[0]);
 
         (void)enif_inspect_binary(dict.env, binary_copy, &bin);
-        
+
         dict.d = ZSTD_createDDict_advanced(bin.data, bin.size,
                     ZSTD_dlm_byRef, ZSTD_dct_auto, zstd_customMem);
 
@@ -1062,9 +1056,9 @@ static int load(ErlNifEnv *env, void **priv_data, ERL_NIF_TERM arg) {
 
     /* Compile-time checks to ensure ZSTD_EndDirective values
      * match Erlang defines. */
-    ERTS_CT_ASSERT(ZSTD_e_continue == 0);
-    ERTS_CT_ASSERT(ZSTD_e_flush == 1);
-    ERTS_CT_ASSERT(ZSTD_e_end == 2);
+    _Static_assert(ZSTD_e_continue == 0, "Zstandard continue directive changed");
+    _Static_assert(ZSTD_e_flush == 1, "Zstandard flush directive changed");
+    _Static_assert(ZSTD_e_end == 2, "Zstandard end directive changed");
 
     return 0;
 }

@@ -32,9 +32,7 @@
 #define STATIC_ERLANG_NIF 1
 
 
-#ifdef HAVE_CONFIG_H
-#    include "config.h"
-#endif
+#include "otp_socket_support.h"
 
 #ifndef ESOCK_ENABLE
 #    include <erl_nif.h>
@@ -138,7 +136,6 @@ ERL_NIF_INIT(prim_net, net_funcs, on_load, NULL, NULL, NULL)
 #include <mstcpip.h>
 
 #undef WANT_NONBLOCKING
-#include "sys.h"
 
 #else /* !__WIN32__ */
 
@@ -188,7 +185,6 @@ ERL_NIF_INIT(prim_net, net_funcs, on_load, NULL, NULL, NULL)
 #ifndef WANT_NONBLOCKING
 #define WANT_NONBLOCKING
 #endif
-#include "sys.h"
 
 #endif
 
@@ -946,13 +942,13 @@ ERL_NIF_TERM enet_command(ErlNifEnv*   env,
         data.debug = dbg;
 
         return esock_atom_ok;
-        
+
     }
 
     NDBG( ("NET", "enet_command -> invalid command: %T\r\n", cmd) );
 
     return esock_raise_invalid(env, MKT2(env, esock_atom_command, cmd));
-    
+
 }
 
 
@@ -970,7 +966,7 @@ ERL_NIF_TERM nif_gethostname(ErlNifEnv*         env,
                              const ERL_NIF_TERM argv[])
 {
     ERL_NIF_TERM result;
-    
+
     NDBG( ("NET", "nif_gethostname -> entry (%d)\r\n", argc) );
 
     if (argc != 0)
@@ -1272,11 +1268,11 @@ ERL_NIF_TERM enet_getaddrinfo(ErlNifEnv* env,
            "\r\n",
            ((host == NULL) ? "NULL" : host),
            ((serv == NULL) ? "NULL" : serv)) );
-    
+
     res = getaddrinfo(host, serv, NULL, &addrInfoP);
 
     NDBG( ("NET", "enet_getaddrinfo -> res: %d\r\n", res) );
-    
+
     switch (res) {
     case 0:
         {
@@ -1857,7 +1853,7 @@ void make_ifaddrs(ErlNifEnv*    env,
     } else {
         len--;
     }
-    
+
     /* *** Data (can be 'undefined' = NULL) *** */
     NDBG( ("NET", "make_ifaddrs -> data: %T\r\n", edata) );
     if (COMPARE(edata, esock_atom_undefined) != 0) {    
@@ -1944,7 +1940,7 @@ ERL_NIF_TERM nif_get_adapters_addresses(ErlNifEnv*         env,
            ("NET",
             "nif_get_adapters_addresses -> done when result: "
             "\r\n   %T\r\n", result) );
-    
+
     return result;
 #endif
 }
@@ -1970,7 +1966,7 @@ BOOLEAN_T enet_get_adapters_addresses_args_family(ErlNifEnv*         env,
 {
     ERL_NIF_TERM key = esock_atom_family;
     ERL_NIF_TERM eval;
-    DWORD        val;
+    unsigned int val;
 
     if (!GET_MAP_VAL(env, eargs, key, &eval)) {
 
@@ -2025,45 +2021,45 @@ BOOLEAN_T enet_get_adapters_addresses_args_flags(ErlNifEnv*         env,
         /* skip unicast */
         if (esock_get_bool_from_map(env, eflags, atom_skip_unicast, FALSE))
             val |= GAA_FLAG_SKIP_UNICAST;
-        
+
         /* skip anycast */
         if (esock_get_bool_from_map(env, eflags, atom_skip_anycast, TRUE))
             val |= GAA_FLAG_SKIP_ANYCAST;
-        
+
         /* skip multicast */
         if (esock_get_bool_from_map(env, eflags, atom_skip_multicast, TRUE))
             val |= GAA_FLAG_SKIP_MULTICAST;
-        
+
         /* skip dns-server */
         if (esock_get_bool_from_map(env, eflags, atom_skip_dns_server, TRUE))
             val |= GAA_FLAG_SKIP_DNS_SERVER;
-        
+
         /* skip fiendly-name */
         if (esock_get_bool_from_map(env, eflags, atom_skip_friendly_name, TRUE))
             val |= GAA_FLAG_SKIP_FRIENDLY_NAME;
-        
+
         /* include prefix */
         if (esock_get_bool_from_map(env, eflags, atom_include_prefix, TRUE))
             val |= GAA_FLAG_INCLUDE_PREFIX;
-        
+
         /* include wins-info */
         if (esock_get_bool_from_map(env, eflags, atom_include_wins_info, FALSE))
             val |= GAA_FLAG_INCLUDE_WINS_INFO;
-        
+
         /* include gateways */
         if (esock_get_bool_from_map(env, eflags, atom_include_gateways, FALSE))
             val |= GAA_FLAG_INCLUDE_GATEWAYS;
-        
+
         /* include all-interfaces */
         if (esock_get_bool_from_map(env, eflags,
                                     atom_include_all_interfaces, FALSE))
             val |= GAA_FLAG_INCLUDE_ALL_INTERFACES;
-        
+
         /* include all-compartments */
         if (esock_get_bool_from_map(env, eflags,
                                     atom_include_all_compartments, FALSE))
             val |= GAA_FLAG_INCLUDE_ALL_COMPARTMENTS;
-        
+
         /* include tunnel-bindingorder */
         if (esock_get_bool_from_map(env, eflags,
                                     atom_include_tunnel_bindingorder, FALSE))
@@ -2097,7 +2093,7 @@ ERL_NIF_TERM enet_get_adapters_addresses(ErlNifEnv* env,
 
     ipAdAddrsP = (IP_ADAPTER_ADDRESSES*) MALLOC(ipAdAddrsSz);
     for (i = 17;  i;  i--) {
-        
+
         NDBG2( dbg,
                ("NET", "enet_get_adapters_addresses -> [%d] try get adapters"
                 "\r\n", i) );
@@ -2170,7 +2166,7 @@ ERL_NIF_TERM enet_get_adapters_addresses(ErlNifEnv* env,
         result = esock_make_ok2(env, addrs);
 
     }
-    
+
     NDBG2( dbg,
            ("NET", "enet_get_adapters_addresses -> done with:"
             "\r\n   result: %T"
@@ -2203,7 +2199,7 @@ ERL_NIF_TERM enet_adapters_addresses_encode(ErlNifEnv*            env,
                      "\r\n", entry) );
 
         TARRAY_ADD(adapterArray, entry);
-        
+
         addrsP = addrsP->Next;
      }
 
@@ -2321,7 +2317,7 @@ ERL_NIF_TERM enet_adapter_addresses_encode(ErlNifEnv*            env,
 
         ESOCK_ASSERT( MKMA(env, keys, vals, numKeys, &map) );
     }
-    
+
     return map;
 }
 #endif // __WIN32__
@@ -2391,7 +2387,7 @@ ERL_NIF_TERM encode_adapter_flags(ErlNifEnv*            env,
 
         ESOCK_ASSERT( MKMA(env, keys, vals, numKeys, &eflags) );
     }
-    
+
     return eflags;
 }
 #endif // __WIN32__
@@ -2404,7 +2400,7 @@ ERL_NIF_TERM encode_adapter_unicast_addrs(ErlNifEnv*                  env,
     IP_ADAPTER_UNICAST_ADDRESS* tmp = firstP;
     SocketTArray                ta  = TARRAY_CREATE(16);
     ERL_NIF_TERM eaddrs;
-    
+
 
     while (tmp != NULL) {
         TARRAY_ADD(ta, encode_adapter_unicast_addr(env, tmp));
@@ -2689,7 +2685,7 @@ ERL_NIF_TERM encode_adapter_anycast_addrs(ErlNifEnv*                  env,
     IP_ADAPTER_ANYCAST_ADDRESS* tmp = firstP;
     SocketTArray                ta  = TARRAY_CREATE(16);
     ERL_NIF_TERM eaddrs;
-    
+
 
     while (tmp != NULL) {
         TARRAY_ADD(ta, encode_adapter_anycast_addr(env, tmp));
@@ -3097,7 +3093,7 @@ void make_adapter_index_map(ErlNifEnv*    env,
     NDBG( ("NET", "make_adapter_index_map -> name: %T\r\n", ename) );
     keys[1] = esock_atom_name;
     vals[1] = ename;
-    
+
     ESOCK_ASSERT( MKMA(env, keys, vals, len, emap) );
 }
 #endif // __WIN32__
@@ -3165,8 +3161,8 @@ BOOLEAN_T enet_get_if_entry_args_index(ErlNifEnv*         env,
 {
     ERL_NIF_TERM key = atom_index;
     ERL_NIF_TERM eval;
-    DWORD        val;
-    
+    unsigned int val;
+
     if (!GET_MAP_VAL(env, eargs, key, &eval)) {
         return FALSE;
     } else {
@@ -3208,7 +3204,7 @@ ERL_NIF_TERM enet_get_if_entry(ErlNifEnv* env,
            ("NET", "nif_get_if_entry -> entry with"
             "\r\n   index: %d\r\n", index) );
 
-    sys_memzero(&ifRow, sizeof(ifRow));
+    otp_socket_zero(&ifRow, sizeof(ifRow));
     ifRow.dwIndex = index;
     ret = GetIfEntry(&ifRow);
 
@@ -3354,10 +3350,10 @@ ERL_NIF_TERM enet_if_row_encode(ErlNifEnv* env,
         size_t       numVals = NUM(vals);
 
         ESOCK_ASSERT( numKeys == numVals );
-    
+
         ESOCK_ASSERT( MKMA(env, keys, vals, numKeys, &erow) );
     }
-    
+
     NDBG2( dbg,
            ("NET", "enet_if_row_encode -> done with:"
             "\r\n   result: %T"
@@ -3450,7 +3446,7 @@ ERL_NIF_TERM encode_if_row_description(ErlNifEnv* env,
 
     ESOCK_ASSERT( tmp != NULL );
 
-    sys_memcpy(tmp, buf, len);
+    memcpy(tmp, buf, len);
     tmp[len] = 0;
 
     edesc = MKS(env, tmp);
@@ -3664,7 +3660,7 @@ ERL_NIF_TERM enet_get_interface_info(ErlNifEnv* env,
 
         einfo  = enet_interface_info_encode(env, dbg, infoP);
         result = esock_make_ok2(env, einfo);
-        
+
         FREE(infoP);
     }
 
@@ -3778,6 +3774,11 @@ void encode_adapter_index_map(ErlNifEnv*            env,
  * {ok, [mib_ip_address_row()]} | {error, Reason :: term()}
  */
 
+#ifdef __WIN32__
+static BOOLEAN_T enet_get_ip_address_table_args_debug(ErlNifEnv*, ERL_NIF_TERM);
+static BOOLEAN_T enet_get_ip_address_table_args_sort(ErlNifEnv*, ERL_NIF_TERM);
+#endif
+
 static
 ERL_NIF_TERM nif_get_ip_address_table(ErlNifEnv*         env,
                                       int                argc,
@@ -3834,7 +3835,7 @@ BOOLEAN_T enet_get_ip_address_table_args_sort(ErlNifEnv*         env,
      * created when this function is called.
      */
     ERL_NIF_TERM sort = MKA(env, "sort");
-    
+
     return esock_get_bool_from_map(env, eargs, sort, FALSE);
 }
 #endif // __WIN32__
@@ -3912,7 +3913,7 @@ ERL_NIF_TERM enet_get_ip_address_table(ErlNifEnv* env,
 
         etable = enet_get_ip_address_table_encode(env, dbg, ipAddrTabP);
         result = esock_make_ok2(env, etable);
-        
+
         FREE(ipAddrTabP);
     }
 
@@ -4032,7 +4033,7 @@ ERL_NIF_TERM encode_ip_address_row_addr(ErlNifEnv*  env,
            ("NET",
             "encode_ip_address_row_addr -> entry with: "
             "\r\n   %s: %lu\r\n", descr, addr) );
-    
+
     a.s_addr = addr;
 
     esock_encode_in_addr(env, &a, &ea);
@@ -4061,7 +4062,7 @@ void make_ip_address_row(ErlNifEnv*    env,
     size_t       numKeys = NUM(keys);
 
     ESOCK_ASSERT( numKeys == NUM(vals) );
-    
+
     ESOCK_ASSERT( MKMA(env, keys, vals, numKeys, iar) );
 
 }
@@ -4775,7 +4776,7 @@ ERL_NIF_TERM encode_address_info(ErlNifEnv*       env,
                           (ESockAddress*) addrInfoP->ai_addr,
                           addrInfoP->ai_addrlen,
                           &addr);
-    
+
     make_address_info(env, fam, type, proto, addr, &addrInfo);
     return addrInfo;
 }
@@ -4836,7 +4837,7 @@ void make_address_info(ErlNifEnv*    env,
                             esock_atom_addr};
     ERL_NIF_TERM vals[]  = {fam, sockType, proto, addr};
     size_t       numKeys = NUM(keys);
-    
+
     ESOCK_ASSERT( numKeys == NUM(vals) );
     ESOCK_ASSERT( MKMA(env, keys, vals, numKeys, ai) );
 }
@@ -5006,7 +5007,7 @@ ErlNifFunc net_funcs[] =
     /* address and name translation in protocol-independent manner */
     {"nif_getnameinfo",      2, nif_getnameinfo,   0},
     {"nif_getaddrinfo",      3, nif_getaddrinfo,   0},
-    
+
     {"nif_getifaddrs",       1, nif_getifaddrs,       ERL_NIF_DIRTY_JOB_IO_BOUND},
     {"nif_get_adapters_addresses", 1, nif_get_adapters_addresses, ERL_NIF_DIRTY_JOB_IO_BOUND},
     {"nif_get_if_entry",       1, nif_get_if_entry,       ERL_NIF_DIRTY_JOB_IO_BOUND},
@@ -5087,7 +5088,7 @@ ERL_NIF_TERM encode_uchar(ErlNifEnv* env,
 
     p = enif_make_new_binary(env, len, &ebuf);
     ESOCK_ASSERT( p != NULL );
-    sys_memcpy(p, buf, len);
+    memcpy(p, buf, len);
 
     return ebuf;
 }
@@ -5103,7 +5104,7 @@ BOOLEAN_T get_debug(ErlNifEnv*   env,
      * created when this function is called.
      */
     ERL_NIF_TERM debug = MKA(env, "debug");
-    
+
     return esock_get_bool_from_map(env, map, debug, NET_NIF_DEBUG_DEFAULT);
 }
 

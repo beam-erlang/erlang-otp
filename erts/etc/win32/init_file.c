@@ -33,8 +33,8 @@
 typedef struct {
     HANDLE fd;
     int eof;
-    int num;
-    int pos;
+    DWORD num;
+    DWORD pos;
     char buff[CONTEXT_BUFFER_SIZE];
 } FileContext;
 
@@ -313,7 +313,7 @@ int store_init_file(InitFile *inif, wchar_t *filename)
 
     for(i = 0; i < inif->num_sections; ++i) {
 	int len;
-	int written;
+	DWORD written;
 	InitSection *inis = inif->sections[i];
 
 	if (!WriteFile(outfile,"[",1,&written,NULL) || written != 1) {

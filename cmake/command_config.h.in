@@ -1,0 +1,46 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+#ifndef OTP_COMMAND_CONFIG_H
+#define OTP_COMMAND_CONFIG_H
+#define EI_HIDE_REAL_ERRNO 1
+#define ETHR_HAVE___atomic_compare_exchange_n @OTP_EI_ATOMIC_SIZES@
+#define ETHR_HAVE___atomic_load_n @OTP_EI_ATOMIC_SIZES@
+#define ETHR_HAVE___atomic_store_n @OTP_EI_ATOMIC_SIZES@
+#cmakedefine HAVE_UNALIGNED_WORD_ACCESS 1
+#cmakedefine HAVE_SYS_TIME_H 1
+#cmakedefine HAVE_SYS_SELECT_H 1
+#cmakedefine HAVE_SYS_UIO_H 1
+#cmakedefine HAVE_PTHREAD_H 1
+#cmakedefine HAVE_WRITEV 1
+#cmakedefine HAVE_SYSCONF 1
+#cmakedefine HAVE_STRERROR 1
+#cmakedefine HAVE_FLOCKFILE 1
+#cmakedefine HAVE_PUTC_UNLOCKED 1
+#cmakedefine HAVE_FWRITE_UNLOCKED 1
+#cmakedefine HAVE_ISFINITE 1
+#cmakedefine HAVE_SOCKLEN_T 1
+#cmakedefine HAVE_GETHOSTBYNAME_R 1
+#cmakedefine HAVE_SYSLOG_H 1
+#cmakedefine HAVE_UNISTD_H 1
+#cmakedefine HAVE_STDLIB_H 1
+#cmakedefine HAVE_SETSID 1
+#cmakedefine HAVE_INET_PTON 1
+#cmakedefine HAVE_IN6 1
+#cmakedefine HAVE_IN6ADDR_ANY 1
+#cmakedefine HAVE_IN6ADDR_LOOPBACK 1
+#cmakedefine HAVE_DECL_IPV6_V6ONLY 1
+#cmakedefine HAVE_SYS_IOCTL_H 1
+#cmakedefine HAVE_PTY_H 1
+#cmakedefine HAVE_UTMP_H 1
+#cmakedefine HAVE_WORKING_POSIX_OPENPT 1
+#cmakedefine HAVE_VSYSLOG 1
+#cmakedefine OS_MONOTONIC_TIME_USING_CLOCK_GETTIME 1
+#ifdef OS_MONOTONIC_TIME_USING_CLOCK_GETTIME
+#define MONOTONIC_CLOCK_ID CLOCK_MONOTONIC
+#endif
+#define SIZEOF_INT @SIZEOF_INT@
+#define SIZEOF_CHAR @SIZEOF_CHAR@
+#define SIZEOF_SHORT @SIZEOF_SHORT@
+#define SIZEOF_LONG @SIZEOF_LONG@
+#define SIZEOF_LONG_LONG @SIZEOF_LONG_LONG@
+#define SIZEOF_VOID_P @SIZEOF_VOID_P@
+#endif

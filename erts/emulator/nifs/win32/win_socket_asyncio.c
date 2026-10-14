@@ -81,9 +81,7 @@
  */
 
 
-#ifdef HAVE_CONFIG_H
-#    include "config.h"
-#endif
+#include "otp_socket_support.h"
 
 #ifdef ESOCK_ENABLE
 
@@ -94,7 +92,7 @@
 #include <mswsock.h>
 #include <stdio.h>
 
-#include <sys.h>
+#include "otp_socket_support.h"
 
 #include "socket_int.h"
 #include "socket_io.h"
@@ -186,7 +184,7 @@
  * =================================================================== */
 
 typedef struct {
-    Uint16     id;      /* Thread id: mainly used for debugging,
+    uint16_t     id;      /* Thread id: mainly used for debugging,
                          * and name creation */
 
     /* Thread state(s) */
@@ -196,7 +194,7 @@ typedef struct {
 #define ESAIO_THREAD_STATE_TERMINATING  0x0002
 #define ESAIO_THREAD_STATE_TERMINATED   0x0003
 
-    Uint16     state;   /* State of the thread:
+    uint16_t     state;   /* State of the thread:
                          * undefined, initiating, operational, terminating */
 
     /* Thread error 'state(s)'.
@@ -209,7 +207,7 @@ typedef struct {
 #define ESAIO_THREAD_ERROR_GET          0x0003
 #define ESAIO_THREAD_ERROR_CMD          0x0004
     
-    Uint32       error; /* In case the thread exits, 
+    uint32_t       error; /* In case the thread exits,
                          * this is where the (error) reason is stored.
                          * Not sure i f we would ever be able to
                          * read this (if things are bad enough that the
@@ -225,7 +223,7 @@ typedef struct {
 
 #define ESAIO_THREAD_CNT_MAX 0xFFFFFFFF
 
-    Uint32       cnt;   /* Run-counter: mainly used for debugging */
+    uint32_t       cnt;   /* Run-counter: mainly used for debugging */
 
     unsigned int latest; /* Latest request (tag) */
 } ESAIOThreadData;
@@ -1543,7 +1541,7 @@ void esaio_finish()
          */
 
         if (opP != NULL) {
-            sys_memzero((char *) opP, sizeof(ESAIOOperation));
+            otp_socket_zero((char *) opP, sizeof(ESAIOOperation));
 
             opP->tag = ESAIO_OP_TERMINATE;
             /* This should never be accessed for this command, *
@@ -2026,7 +2024,7 @@ ERL_NIF_TERM esaio_connect_stream(ErlNifEnv*       env,
 
         opP = MALLOC( sizeof(ESAIOOperation) );
         ESOCK_ASSERT( opP != NULL);
-        sys_memzero((char*) opP, sizeof(ESAIOOperation));
+        otp_socket_zero((char*) opP, sizeof(ESAIOOperation));
 
         opP->tag = ESAIO_OP_CONNECT;
 
@@ -2313,7 +2311,7 @@ ERL_NIF_TERM esaio_accept(ErlNifEnv*       env,
                    descP->sock) );
     opP = MALLOC( sizeof(ESAIOOperation) );
     ESOCK_ASSERT( opP != NULL);
-    sys_memzero((char*) opP, sizeof(ESAIOOperation));
+    otp_socket_zero((char*) opP, sizeof(ESAIOOperation));
 
     opP->tag = ESAIO_OP_ACCEPT;
 
@@ -2707,11 +2705,11 @@ ERL_NIF_TERM esaio_send(ErlNifEnv*       env,
      */
     buf = MALLOC( toWrite );
     ESOCK_ASSERT( buf != NULL );
-    sys_memcpy(buf, sndDataP->data, toWrite);
+    memcpy(buf, sndDataP->data, toWrite);
 
     opP = MALLOC( sizeof(ESAIOOperation) );
     ESOCK_ASSERT( opP != NULL);
-    sys_memzero((char*) opP, sizeof(ESAIOOperation));
+    otp_socket_zero((char*) opP, sizeof(ESAIOOperation));
 
     opP->tag = ESAIO_OP_SEND;
     /* Its a bit annoying that we have to alloc an env and then
@@ -2818,11 +2816,11 @@ ERL_NIF_TERM esaio_sendto(ErlNifEnv*       env,
      */
     buf = MALLOC( toWrite );
     ESOCK_ASSERT( buf != NULL );
-    sys_memcpy(buf, sndDataP->data, toWrite);
+    memcpy(buf, sndDataP->data, toWrite);
 
     opP = MALLOC( sizeof(ESAIOOperation) );
     ESOCK_ASSERT( opP != NULL);
-    sys_memzero((char*) opP, sizeof(ESAIOOperation));
+    otp_socket_zero((char*) opP, sizeof(ESAIOOperation));
 
     opP->tag = ESAIO_OP_SENDTO;
     /* Its a bit annoying that we have to alloc an env and then
@@ -2961,7 +2959,7 @@ ERL_NIF_TERM esaio_sendmsg(ErlNifEnv*       env,
 
     opP = MALLOC( sizeof(ESAIOOperation) );
     ESOCK_ASSERT( opP != NULL);
-    sys_memzero((char*) opP, sizeof(ESAIOOperation));
+    otp_socket_zero((char*) opP, sizeof(ESAIOOperation));
 
     opP->tag = ESAIO_OP_SENDMSG;
 
@@ -3200,7 +3198,7 @@ BOOLEAN_T init_sendmsg_sockaddr(ErlNifEnv*       env,
 
         msgP->name    = (void*) addrP;
         msgP->namelen = sizeof(ESockAddress);
-        sys_memzero((char *) msgP->name, msgP->namelen);
+        otp_socket_zero((char *) msgP->name, msgP->namelen);
 
         if (! esock_decode_sockaddr(env, eAddr,
                                     (ESockAddress*) msgP->name,
@@ -3422,7 +3420,7 @@ ERL_NIF_TERM esaio_sendv(ErlNifEnv*       env,
             "\r\n",
             descP->sock, opP) );
     ESOCK_ASSERT( opP != NULL);
-    sys_memzero((char*) opP, sizeof(ESAIOOperation));
+    otp_socket_zero((char*) opP, sizeof(ESAIOOperation));
 
     opP->tag = ESAIO_OP_SENDV;
 
@@ -3918,7 +3916,7 @@ BOOLEAN_T decode_cmsghdr_data(ErlNifEnv*       env,
         }
 
         // Copy the binary data
-        sys_memcpy(p, bin.data, bin.size);
+        memcpy(p, bin.data, bin.size);
 
     } else if ((! esock_cmsg_decode_int(env, eData, cmsgP, rem, usedP)) &&
                (! esock_cmsg_decode_bool(env, eData, cmsgP, rem, usedP))) {
@@ -4248,7 +4246,7 @@ ERL_NIF_TERM esaio_recv(ErlNifEnv*       env,
     /* Allocate the operation */
     opP = MALLOC( sizeof(ESAIOOperation) );
     ESOCK_ASSERT( opP != NULL);
-    sys_memzero((char*) opP, sizeof(ESAIOOperation));
+    otp_socket_zero((char*) opP, sizeof(ESAIOOperation));
 
     opP->tag = ESAIO_OP_RECV;
     /* Its a bit annoying that we have to alloc an env and then
@@ -4731,7 +4729,7 @@ ERL_NIF_TERM esaio_recvfrom(ErlNifEnv*       env,
     /* Allocate the operation */
     opP = MALLOC( sizeof(ESAIOOperation) );
     ESOCK_ASSERT( opP != NULL);
-    sys_memzero((char*) opP, sizeof(ESAIOOperation));
+    otp_socket_zero((char*) opP, sizeof(ESAIOOperation));
 
     opP->tag = ESAIO_OP_RECVFROM;
     /* Its a bit annoying that we have to alloc an env and then
@@ -5095,7 +5093,7 @@ ERL_NIF_TERM esaio_recvmsg(ErlNifEnv*       env,
     /* Allocate the operation */
     opP = MALLOC( sizeof(ESAIOOperation) );
     ESOCK_ASSERT( opP != NULL);
-    sys_memzero((char*) opP, sizeof(ESAIOOperation));
+    otp_socket_zero((char*) opP, sizeof(ESAIOOperation));
 
     opP->tag = ESAIO_OP_RECVMSG;
     /* Its a bit annoying that we have to alloc an env and then
@@ -5119,8 +5117,8 @@ ERL_NIF_TERM esaio_recvmsg(ErlNifEnv*       env,
                   esock_atom_read_tries, &descP->readTries, 1);
 
     addrLen = sizeof(opP->data.recvmsg.addr);
-    sys_memzero((char*) &opP->data.recvmsg.addr, addrLen);
-    sys_memzero((char*) &opP->data.recvmsg.msg,  sizeof(opP->data.recvmsg.msg));
+    otp_socket_zero((char*) &opP->data.recvmsg.addr, addrLen);
+    otp_socket_zero((char*) &opP->data.recvmsg.msg,  sizeof(opP->data.recvmsg.msg));
 
     opP->data.recvmsg.wbufs[0].buf = opP->data.recvmsg.data[0].data;
     opP->data.recvmsg.wbufs[0].len = opP->data.recvmsg.data[0].size;
@@ -6102,7 +6100,7 @@ ERL_NIF_TERM esaio_ioctl_tcp_info(ErlNifEnv*       env,
         {
             TCP_INFO_v0 info;
 
-            sys_memzero((char *) &info, sizeof(info));
+            otp_socket_zero((char *) &info, sizeof(info));
             res = sock_ioctl2(descP->sock, SIO_TCP_INFO,
                               &version, sizeof(version),
                               &info, sizeof(info), &ndata);
@@ -6131,7 +6129,7 @@ ERL_NIF_TERM esaio_ioctl_tcp_info(ErlNifEnv*       env,
         {
             TCP_INFO_v1 info;
 
-            sys_memzero((char *) &info, sizeof(info));
+            otp_socket_zero((char *) &info, sizeof(info));
             res = sock_ioctl2(descP->sock, SIO_TCP_INFO,
                               &version, sizeof(version),
                               &info, sizeof(info), &ndata);

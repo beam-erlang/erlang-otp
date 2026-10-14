@@ -326,7 +326,7 @@ init_per_testcase(Case, Config0) ->
 init_per_testcase2(Case, Config0) ->
     Group = proplists:get_value(name, proplists:get_value(tc_group_properties,Config0)),
 
-    TLSB = vsftpd_tls(),
+    TLSB = vsftpd_tls(Config0),
     TLS = [{tls,TLSB}],
     SSL = [{tls_sec_method,ftps}|TLS],
     TLSReuse = [{tls_ctrl_session_reuse,true}|TLS],
@@ -401,7 +401,7 @@ end_per_testcase(_Case, Config) ->
             ftp__close(Config)
     end.
 
-vsftpd_tls() ->
+vsftpd_tls(Config) ->
     %% Workaround for interoperability issues with vsftpd =< 3.0.2:
     %%
     %% vsftpd =< 3.0.2 does not support ECDHE ciphers and the ssl application
@@ -415,6 +415,9 @@ vsftpd_tls() ->
                                                          (_) -> false end}]),
     Suites = ssl:append_cipher_suites(RSASuites, Default),
     [
+        {verify,verify_peer},
+        {cacertfile,filename:join(proplists:get_value(data_dir,Config),
+                                 "server-cacerts.pem")},
         {ciphers,Suites},
         %% vsftpd =< 3.0.3 gets upset with anything later than tlsv1.2
         {versions,['tlsv1.2']}
@@ -1212,7 +1215,7 @@ start_ftpd(Config0) ->
                       {ftpd_port,Port},
                       {ftpd_start_result,StartResult} | ConfigRewrite(Config0)],
             Options = case proplists:get_value(ftpd_ssl_implicit, Config) of
-                true -> [{tls,vsftpd_tls()},{tls_sec_method,ftps}];
+                true -> [{tls,vsftpd_tls(Config)},{tls_sec_method,ftps}];
                 _ -> [] % we do not need to test AUTH TLS
             end,
             try

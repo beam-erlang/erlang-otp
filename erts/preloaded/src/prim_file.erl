@@ -83,24 +83,24 @@
 
 -spec internal_name2native(prim_file_name()) -> binary().
 
-internal_name2native(_) ->
-    erlang:nif_error(undefined).
+internal_name2native(Name) ->
+    erts_internal:filename_to_native(Name).
 
 -spec internal_native2name(binary()) ->
         prim_file_name() | {'error',prim_file_name_error()}.
 
-internal_native2name(_) ->
-    erlang:nif_error(undefined).
+internal_native2name(Name) ->
+    erts_internal:filename_from_native(Name).
 
 -spec internal_normalize_utf8(unicode:unicode_binary()) -> string().
 
-internal_normalize_utf8(_) ->
-    erlang:nif_error(undefined).
+internal_normalize_utf8(Name) ->
+    erts_internal:filename_normalize_utf8(Name).
 
 -spec is_translatable(prim_file_name()) -> boolean().
 
-is_translatable(_) ->
-    erlang:nif_error(undefined).
+is_translatable(Name) ->
+    erts_internal:filename_is_translatable(Name).
 
 %% This is a janitor process used to close files whose controlling process has
 %% died. The emulator will be torn down if this is killed.

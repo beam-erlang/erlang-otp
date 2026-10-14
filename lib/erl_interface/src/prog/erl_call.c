@@ -40,6 +40,9 @@
 #ifdef __WIN32__
 #include <winsock2.h>
 #include <direct.h>
+#include <process.h>
+#include <time.h>
+#define getpid _getpid
 #include <windows.h>
 #include <winbase.h>
 

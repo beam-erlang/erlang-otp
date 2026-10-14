@@ -28,9 +28,7 @@
 #ifndef SOCKET_INT_H__
 #define SOCKET_INT_H__
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include "otp_socket_support.h"
 
 #ifdef __WIN32__
 
@@ -43,6 +41,7 @@
 #endif
 #include <windows.h>
 #include <Ws2tcpip.h>   /* NEED VC 6.0 or higher */
+#include <mswsock.h>
 
 /* Visual studio 2008+: NTDDI_VERSION needs to be set for iphlpapi.h
  * to define the right structures.
@@ -81,28 +80,6 @@
 #include <netpacket/packet.h>
 #endif
 
-#endif
-
-/* Copied from sys.h
- * In VC++, noreturn is a declspec that has to be before the types,
- * but in GNUC it is an attribute to be placed between return type
- * and function name, hence __decl_noreturn <types> __noreturn <function name>
- *
- * at some platforms (e.g. Android) __noreturn is defined at sys/cdef.h
- */
-#if __GNUC__
-#  define __decl_noreturn
-#  ifndef __noreturn
-#     define __noreturn __attribute__((noreturn))
-#  endif
-#else
-#  if defined(__WIN32__) && defined(_MSC_VER)
-#    define __noreturn
-#    define __decl_noreturn __declspec(noreturn)
-#  else
-#    define __noreturn
-#    define __decl_noreturn
-#  endif
 #endif
 
 #include <erl_nif.h>

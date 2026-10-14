@@ -22,8 +22,6 @@
 
 #include "etc_common.h"
 
-#include "erl_driver.h"
-#include "erl_misc_utils.h"
 
 #ifdef __WIN32__
 #  include "erl_version.h"
@@ -41,8 +39,13 @@
 #define DIRSEP "\\"
 #define PATHSEP ";"
 #define NULL_DEVICE "nul"
+#ifdef OTP_PUBLIC_HOST
+#define DLL_EXT ".exe"
+#define EMULATOR_EXECUTABLE "beam.exe"
+#else
 #define DLL_EXT ".dll"
 #define EMULATOR_EXECUTABLE "beam.dll"
+#endif
 #else
 #define PATHSEP ":"
 #define DIRSEP "/"
@@ -367,10 +370,7 @@ add_extra_suffixes(char *prog)
 #ifdef __WIN32__
    dll_p = res + len - 4;
    if (dll_p >= res) {
-      if (dll_p[0] == '.' &&
-	  (dll_p[1] == 'd' || dll_p[1] == 'D') &&
-	  (dll_p[2] == 'l' || dll_p[2] == 'L') &&
-	  (dll_p[3] == 'l' || dll_p[3] == 'L')) {
+      if (_stricmp(dll_p, DLL_EXT) == 0) {
 	  p = dll_p;
 	  dll = 1;
       }

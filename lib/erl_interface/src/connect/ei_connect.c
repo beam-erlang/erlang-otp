@@ -33,6 +33,8 @@
 #include <winsock2.h>
 #include <windows.h>
 #include <winbase.h>
+#include <process.h>
+#define getpid _getpid
 
 #else /* some unix */
 #include <unistd.h>

@@ -21,11 +21,9 @@
  * %CopyrightEnd%
  */
 
-#define STATIC_ERLANG_NIF 1
-
 #include "erl_nif.h"
-#include "config.h"
-#include "sys.h"
+#include "otp_nif_support.h"
+#include <stdatomic.h>
 
 #ifdef VALGRIND
 #  include <valgrind/memcheck.h>
@@ -57,7 +55,7 @@ static ERL_NIF_TERM am_not_found;
 
 typedef struct {
 #ifdef DEBUG
-    erts_atomic32_t concurrent_users;
+    _Atomic int32_t concurrent_users;
 #endif
 
     ErlNifBinary accumulator;
@@ -66,7 +64,7 @@ typedef struct {
 
     ErlNifIOQueue *queue;
 
-    erts_atomic32_t external_lock;
+    _Atomic int32_t external_lock;
 } buffer_data_t;
 
 static ERL_NIF_TERM new_nif(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]);
@@ -179,7 +177,7 @@ static void copy_from_iovec(SysIOVec *iovec, int vec_len, int vec_skip,
         block_size = iovec[vec_index].iov_len;
 
         copy_size = MIN(size - bytes_copied, block_size - skip_offset);
-        sys_memcpy(&data[bytes_copied], &block_start[skip_offset], copy_size);
+        memcpy(&data[bytes_copied], &block_start[skip_offset], copy_size);
 
         bytes_copied += copy_size;
         skip_offset = 0;
@@ -258,9 +256,9 @@ static ERL_NIF_TERM new_nif(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 
     if(buffer->queue != NULL) {
 #ifdef DEBUG
-        erts_atomic32_init_nob(&buffer->concurrent_users, 0);
+        atomic_init(&buffer->concurrent_users, 0);
 #endif
-        erts_atomic32_init_nob(&buffer->external_lock, 0);
+        atomic_init(&buffer->external_lock, 0);
 
         buffer->accumulator_present = 0;
         buffer->accumulated_bytes = 0;
@@ -284,7 +282,7 @@ static ERL_NIF_TERM size_nif(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]
         return enif_make_badarg(env);
     }
 
-    ASSERT(erts_atomic32_inc_read_acqb(&buffer->concurrent_users) == 1);
+    ASSERT((atomic_fetch_add_explicit(&buffer->concurrent_users, 1, memory_order_acquire) + 1) == 1);
 
     total_size = enif_ioq_size(buffer->queue);
 
@@ -294,7 +292,7 @@ static ERL_NIF_TERM size_nif(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]
         ASSERT(buffer->accumulated_bytes == 0);
     }
 
-    ASSERT(erts_atomic32_dec_read_relb(&buffer->concurrent_users) == 0);
+    ASSERT((atomic_fetch_sub_explicit(&buffer->concurrent_users, 1, memory_order_release) - 1) == 0);
 
     return enif_make_uint64(env, total_size);
 }
@@ -311,7 +309,7 @@ static ERL_NIF_TERM copying_read_nif(ErlNifEnv *env, int argc, const ERL_NIF_TER
         return enif_make_badarg(env);
     }
 
-    ASSERT(erts_atomic32_inc_read_acqb(&buffer->concurrent_users) == 1);
+    ASSERT((atomic_fetch_add_explicit(&buffer->concurrent_users, 1, memory_order_acquire) + 1) == 1);
 
     if(!enqueue_write_accumulator(buffer)) {
         return enif_raise_exception(env, am_out_of_memory);
@@ -328,7 +326,7 @@ static ERL_NIF_TERM copying_read_nif(ErlNifEnv *env, int argc, const ERL_NIF_TER
         enif_ioq_deq(buffer->queue, block_size, NULL);
     }
 
-    ASSERT(erts_atomic32_dec_read_relb(&buffer->concurrent_users) == 0);
+    ASSERT((atomic_fetch_sub_explicit(&buffer->concurrent_users, 1, memory_order_release) - 1) == 0);
 
     return result;
 }
@@ -344,7 +342,7 @@ static ERL_NIF_TERM write_nif(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[
         return enif_make_badarg(env);
     }
 
-    ASSERT(erts_atomic32_inc_read_acqb(&buffer->concurrent_users) == 1);
+    ASSERT((atomic_fetch_add_explicit(&buffer->concurrent_users, 1, memory_order_acquire) + 1) == 1);
 
     if(!combine_small_writes(buffer, iovec)) {
         if(!enqueue_write_accumulator(buffer) || !enif_ioq_enqv(buffer->queue, iovec, 0)) {
@@ -352,7 +350,7 @@ static ERL_NIF_TERM write_nif(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[
         }
     }
 
-    ASSERT(erts_atomic32_dec_read_relb(&buffer->concurrent_users) == 0);
+    ASSERT((atomic_fetch_sub_explicit(&buffer->concurrent_users, 1, memory_order_release) - 1) == 0);
 
     if(!enif_is_empty_list(env, tail)) {
         const ERL_NIF_TERM new_argv[2] = {argv[0], tail};
@@ -372,7 +370,7 @@ static ERL_NIF_TERM peek_head_nif(ErlNifEnv *env, int argc, const ERL_NIF_TERM a
         return enif_make_badarg(env);
     }
 
-    ASSERT(erts_atomic32_inc_read_acqb(&buffer->concurrent_users) == 1);
+    ASSERT((atomic_fetch_add_explicit(&buffer->concurrent_users, 1, memory_order_acquire) + 1) == 1);
 
     if(!enqueue_write_accumulator(buffer)) {
         return enif_raise_exception(env, am_out_of_memory);
@@ -382,7 +380,7 @@ static ERL_NIF_TERM peek_head_nif(ErlNifEnv *env, int argc, const ERL_NIF_TERM a
         return enif_make_badarg(env);
     }
 
-    ASSERT(erts_atomic32_dec_read_relb(&buffer->concurrent_users) == 0);
+    ASSERT((atomic_fetch_sub_explicit(&buffer->concurrent_users, 1, memory_order_release) - 1) == 0);
 
     return result;
 }
@@ -397,7 +395,7 @@ static ERL_NIF_TERM skip_nif(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]
         return enif_make_badarg(env);
     }
 
-    ASSERT(erts_atomic32_inc_read_acqb(&buffer->concurrent_users) == 1);
+    ASSERT((atomic_fetch_add_explicit(&buffer->concurrent_users, 1, memory_order_acquire) + 1) == 1);
 
     if(!enqueue_write_accumulator(buffer)) {
         return enif_raise_exception(env, am_out_of_memory);
@@ -407,7 +405,7 @@ static ERL_NIF_TERM skip_nif(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]
 
     enif_ioq_deq(buffer->queue, block_size, NULL);
 
-    ASSERT(erts_atomic32_dec_read_relb(&buffer->concurrent_users) == 0);
+    ASSERT((atomic_fetch_sub_explicit(&buffer->concurrent_users, 1, memory_order_release) - 1) == 0);
 
     return am_ok;
 }
@@ -427,7 +425,7 @@ static ERL_NIF_TERM find_nif(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]
         return enif_make_badarg(env);
     }
 
-    ASSERT(erts_atomic32_inc_read_acqb(&buffer->concurrent_users) == 1);
+    ASSERT((atomic_fetch_add_explicit(&buffer->concurrent_users, 1, memory_order_acquire) + 1) == 1);
 
     if(!enqueue_write_accumulator(buffer)) {
         return enif_raise_exception(env, am_out_of_memory);
@@ -446,7 +444,7 @@ static ERL_NIF_TERM find_nif(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]
             int timeslice_percent;
 
             if(queue_size >= FIND_NIF_RESCHEDULE_SIZE) {
-                ASSERT(erts_atomic32_dec_read_relb(&buffer->concurrent_users) == 0);
+                ASSERT((atomic_fetch_sub_explicit(&buffer->concurrent_users, 1, memory_order_release) - 1) == 0);
 
                 return enif_schedule_nif(env, "find",
                     ERL_NIF_DIRTY_JOB_CPU_BOUND, &find_nif, argc, argv);
@@ -470,7 +468,7 @@ static ERL_NIF_TERM find_nif(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]
         if(needle_address != NULL) {
             size_t result = search_offset + (needle_address - block_start);
 
-            ASSERT(erts_atomic32_dec_read_relb(&buffer->concurrent_users) == 0);
+            ASSERT((atomic_fetch_sub_explicit(&buffer->concurrent_users, 1, memory_order_release) - 1) == 0);
 
             return enif_make_tuple2(env, am_ok, enif_make_uint64(env, result));
         }
@@ -479,7 +477,7 @@ static ERL_NIF_TERM find_nif(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]
         queue_index++;
     }
 
-    ASSERT(erts_atomic32_dec_read_relb(&buffer->concurrent_users) == 0);
+    ASSERT((atomic_fetch_sub_explicit(&buffer->concurrent_users, 1, memory_order_release) - 1) == 0);
 
     return am_not_found;
 }
@@ -493,7 +491,9 @@ static ERL_NIF_TERM trylock_nif(ErlNifEnv *env, int argc, const ERL_NIF_TERM arg
         return enif_make_badarg(env);
     }
 
-    if(erts_atomic32_cmpxchg_acqb(&buffer->external_lock, 1, 0) == 0) {
+    int32_t expected = 0;
+    if(atomic_compare_exchange_strong_explicit(&buffer->external_lock,
+            &expected, 1, memory_order_acquire, memory_order_relaxed)) {
         return am_acquired;
     }
 
@@ -507,7 +507,9 @@ static ERL_NIF_TERM unlock_nif(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv
         return enif_make_badarg(env);
     }
 
-    if(erts_atomic32_cmpxchg_relb(&buffer->external_lock, 0, 1) == 0) {
+    int32_t expected = 1;
+    if(!atomic_compare_exchange_strong_explicit(&buffer->external_lock,
+            &expected, 0, memory_order_release, memory_order_relaxed)) {
         return enif_raise_exception(env, am_lock_order_violation);
     }
 

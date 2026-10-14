@@ -1,104 +1,166 @@
-# [Erlang/OTP](https://www.erlang.org)
+# Erlangsters - Erlang/OTP
 
-**Erlang** is a programming language and runtime system for building massively scalable soft real-time systems with requirements on high availability. 
+Erlangsters - Erlang/OTP is an experimental distribution of Erlang/OTP, built
+from OTP 29.0 sources around the shared virtual machine provided by
+[Erlangsters - BEAM/Erlang](https://github.com/beam-erlang/beam-erlang).
 
-**OTP** is a set of Erlang libraries, which consists of the Erlang runtime system, a number of ready-to-use components mainly written in Erlang, and a set of design principles for Erlang programs. [Learn more about Erlang and OTP](https://www.erlang.org/doc/system/getting_started.html).
+This repository owns OTP applications, commands, startup policy, native services
+and installation. It builds against an explicitly selected installed BEAM/Erlang
+SDK, using `libbeam` as its sole VM implementation. The resulting installation
+statically links the VM into `erts-<version>/bin/beam.smp`, embeds its thirteen
+OTP preloads and built-in native implementations, and runs independently of the
+build SDK. It installs no shared VM library or extra runtime directory. Exact
+installed-tree and release validation is tracked separately from full OTP
+compatibility in the [static runtime record](../dev-documents/static-sdk-otp-runtime.md).
 
-[Learn how to program in Erlang](http://learnyousomeerlang.com/).
+## Status
 
-## Examples
+The VM and distribution ownership migration is complete. Both Linux interpreter
+and JIT configurations build, with recorded acceptance for commands, native
+extensions, relocation, isolation and restart. Full OTP 29.0 compatibility
+remains unfinished.
 
-There are several examples [on the website](http://erlang.org/faq/getting_started.html) to help you get started. The below example defines a function `world/0` that prints "Hello, world" in the Erlang shell:
+Native Windows 11 AMD64 development uses Visual Studio 2022 MSVC, CMake and
+Ninja, with separate EMU/JIT builds and all 35 applications. See the
+[Windows build/use guide](docs/build.md#native-windows-development) and
+[development checkpoint](../dev-documents/windows-development-baseline.md) for
+executed smoke/GUI checks and known limitations. Full Windows qualification
+and the historical Linux wx deferral are separate from this development scope.
 
-```erlang
--module(hello).
--export([world/0]).
+Both flavors now assemble all 35 applications, including Observer and Reltool.
+Matching-flavor installation-tree equality, complete installed-content review and
+all eight playground examples pass on both flavors against candidate and upstream.
+The public allocator-tagging control and unchanged Observer crash-dump cases pass.
+See [assembly fidelity](docs/assembly-fidelity.md) for the final validation and
+stable-installation refresh, and [the application record](docs/observer-reltool.md)
+for selected upstream coverage and the historical startup failure.
+ET product validation passes; socket-sendfile has retained upstream-reproduced
+failures, and several suite coverage gates remain
+nonpassing because of skipped cases. wx is built, but its compatibility and
+GUI-dependent acceptance are explicitly deferred. The earlier recorded full checkpoint
+has 101 CTest entries per flavor: 79 passes, seven deferred wx entries and
+15 nonpassing entries. These counts do not represent complete OTP coverage.
 
-world() -> io:format("Hello, world\n").
-```
+The source baseline is recorded in [UPSTREAM_COMMIT](UPSTREAM_COMMIT).
+The [build guide](docs/build.md) and application records below describe the
+scope and limitations of the existing evidence.
 
-Save the file as `hello.erl` and run `erl` to enter the Erlang shell to compile the module.
+The adopted [release policy](../dev-documents/distribution-release-strategy.md)
+keeps OTP's upstream version with an Erlangsters distribution revision, while
+BEAM uses its upstream ERTS base with its own revision. Exact SDK selection remains
+required. The [sync strategy](../dev-documents/Upstream-Sync-Process.md) defines
+product maintenance branches by generation: OTP `maint-29` corresponds to BEAM
+`maint-17`. These are branch roles, not a claim that those branches or stable
+releases have been established. BEAM's current source identity is
+`17.0-r1-preview.1`; use the exact qualified SDK selection for an OTP build.
+
+## Building
+
+The commands below target Linux; the build guide also describes native Windows
+and macOS configurations. Install CMake 3.25 or newer, Ninja, C and C++
+compilers, Perl, Python 3.9 or newer, Flex 2.6 or newer, pkg-config and a JDK.
+Native dependencies include OpenSSL, zlib 1.2.8 or newer with
+`inflateGetDictionary`, curses/terminfo and ODBC development files. The wx build
+also requires wxWidgets 3.2 or newer with WebView, GLib, OpenGL and GLU development
+files; disabling wx tests does not remove these build dependencies.
+
+Obtain a matching installed BEAM/Erlang SDK before configuring. Set
+`BEAM_SDK_ROOT` explicitly to its absolute installation prefix. Select
+`OTP_BEAM_SDK_VERSION` and `OTP_BEAM_SDK_BUILD_ID` from the verified candidate
+record independently of that prefix; OTP and ERTS retain their upstream versions. OTP supplies its
+own compiler bootstrap and verifies it against retained sources; an existing
+Erlang installation or the BEAM command is not required.
+
+From the repository root, build and install the interpreter flavor:
 
 ```sh
-Erlang/OTP 24 [erts-12.2] [source] [64-bit] [smp:8:8] [ds:8:8:10] [async-threads:1] [jit]
-
-Eshell V12.2  (abort with ^G)
-1> c(hello).
-{ok,hello}
-2> hello:world().
-Hello, world
-ok
+cmake --preset linux-emu \
+  -DBEAM_SDK_ROOT=/absolute/path/to/installed/emu-sdk \
+  -DOTP_BEAM_SDK_VERSION="$EXPECTED_BEAM_VERSION" \
+  -DOTP_BEAM_SDK_BUILD_ID="$EXPECTED_BEAM_BUILD_ID"
+cmake --build --preset linux-emu
+cmake --install build/linux-emu
 ```
 
-Learn more about the Erlang syntax of [modules](http://erlang.org/doc/reference_manual/modules.html), [functions](http://erlang.org/doc/reference_manual/functions.html) and [expressions](http://erlang.org/doc/reference_manual/expressions.html) on [Erlang.org](https://www.erlang.org).
-
-## Installation
-
-### Binary Distributions
-
-Erlang/OTP is available as pre-built binary packages by most OS package managers.
+The JIT flavor uses its matching SDK and separate output directories:
 
 ```sh
-apt-get install erlang
+cmake --preset linux-jit \
+  -DBEAM_SDK_ROOT=/absolute/path/to/installed/jit-sdk \
+  -DOTP_BEAM_SDK_VERSION="$EXPECTED_BEAM_VERSION" \
+  -DOTP_BEAM_SDK_BUILD_ID="$EXPECTED_BEAM_BUILD_ID"
+cmake --build --preset linux-jit
+cmake --install build/linux-jit
 ```
 
-### Compiling from source
+Presets use `build/<preset>/` and install into `install/<preset>/`; both are
+gitignored. Configuration checks the selected SDK's version, flavor and required
+capabilities. See the [build guide](docs/build.md) for dependency selection,
+installation overrides and bootstrap details.
 
-To compile Erlang from source, run the following commands. The complete building and installation instructions [can be found here](HOWTO/INSTALL.md).
+## Using Erlang/OTP
+
+After installation, start the shell from the repository root:
 
 ```sh
-git clone https://github.com/erlang/otp.git
-cd otp
+install/linux-emu/bin/erl
 ```
 
-Checkout the branch or tag of your choice
+Enter `q().` to exit. The installation supplies the familiar `erl`, `erlc`,
+`escript` and `ct_run` commands. To compile and run the existing
+[compiler example](tools/fixtures/otp_compiler_probe.erl):
 
 ```sh
-git checkout maint-27    # current latest stable version
+mkdir -p build/example
+install/linux-emu/bin/erlc -o build/example tools/fixtures/otp_compiler_probe.erl
+install/linux-emu/bin/erl -noshell -pa build/example \
+  -eval 'io:format("~p~n", [otp_compiler_probe:run()]), halt().'
 ```
 
-Configure, build and install
+This prints `42`. Replace `linux-emu` with `linux-jit` to use the JIT installation.
+Command and emulator-option coverage remains incomplete; see the
+[command record](docs/commands.md) for the tested behavior.
+
+## Testing
+
+Run the registered acceptance suite for each built flavor:
 
 ```sh
-./configure
-make
-make install
+ctest --preset linux-emu
+ctest --preset linux-jit
 ```
 
-Alternatively, you can use [Kerl](https://github.com/kerl/kerl), a script that lets you easily build Erlang with a few commands.
+Complete runs currently return a nonzero status because of the known failures
+and strict coverage gates described above. Disabled wx entries are deferrals,
+not passes. Selected unchanged upstream suites run through this distribution's
+own Common Test application; see [upstream testing](docs/upstream-testing.md).
 
-## Bug Reports
+Full acceptance requires `bwrap`, permission to create private namespaces,
+POSIX terminals and loopback networking. Interoperability checks also require
+explicitly selected [vsftpd](docs/file-transfer.md),
+[OpenLDAP](docs/eldap.md) and [PostgreSQL 18 with psqlODBC](docs/odbc.md)
+dependencies. Their records describe the required CMake settings and isolated
+test environments. Deferred graphical checks additionally require Xvfb.
 
-Please visit our [GitHub Issues](https://github.com/erlang/otp/issues) page for reporting bugs. The instructions for submitting bugs reports [can be found here](https://github.com/erlang/otp/wiki/Bug-reports).
+## Documentation
 
-### Security Disclosure
+- [Build and SDK integration](docs/build.md)
+- [Application assembly inventory](docs/application-coverage.md)
+- [Commands and local distribution](docs/commands.md)
+- [Native extensions](docs/native-extensions.md)
+- [Upstream testing and evidence](docs/upstream-testing.md)
 
-Please do not report security vulnerabilities through public channels, like
-GitHub issues, discussions, or pull requests.
+These documents include historical checkpoints; each result applies to its
+recorded inputs and scope. Retained upstream documentation describes the
+original OTP distribution. Use this repository's CMake instructions to build
+this experimental distribution.
 
-Please disclose the security issues following our [SECURITY](SECURITY.md) guidelines.
+## License and credits
 
-## Contributing
-
-We are grateful to the community for contributing bug fixes and improvements. Read below to learn how you can take part in improving Erlang/OTP. We appreciate your help!
-
-### Contribution Guide
-
-Read our [contribution guide](CONTRIBUTING.md) to learn about our development process, how to propose fixes and improvements, and how to test your changes to Erlang/OTP before submitting a pull request.
-
-### Help Wanted
-
-We have a list of [Help Wanted](https://github.com/erlang/otp/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22) bugs that we would appreciate external help from the community. This is a great place to get involved.
-
-## Awesome-Erlang
-
-You can find more projects, tools and articles related to Erlang/OTP on the [awesome-erlang list](https://github.com/erlang-punch/awesome-erlang). Add your project there.
-
-## License
-
-Erlang/OTP is released under the [Apache License 2.0](http://www.apache.org/licenses/LICENSE-2.0).
-
-For any license inquiry, please send an email to opensource@ericsson.com
+The project primarily uses the [Apache License 2.0](LICENSE.txt). Bundled
+sources retain their own license and copyright notices; additional license
+texts are in [LICENSES/](LICENSES/). See the [upstream acknowledgments](AUTHORS)
+and [runtime credits](erts/AUTHORS).
 
 > %CopyrightBegin%
 >

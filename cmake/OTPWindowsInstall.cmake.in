@@ -1,0 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+file(READ "${CMAKE_INSTALL_PREFIX}/releases/RELEASES.src" _releases)
+string(REPLACE "%ERL_ROOT%" "${CMAKE_INSTALL_PREFIX}" _releases "${_releases}")
+file(WRITE "${CMAKE_INSTALL_PREFIX}/releases/RELEASES" "${_releases}")
+file(WRITE "${CMAKE_INSTALL_PREFIX}/releases/start_erl.data" "@_erts_version@ @PROJECT_VERSION_MAJOR@\n")

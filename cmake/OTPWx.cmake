@@ -1,0 +1,120 @@
+# Release archives contain the generated API bindings. The normal product
+# build compiles these retained sources, without regenerating from host headers.
+enable_language(CXX)
+if(WIN32)
+    find_package(wxWidgets 3.2 CONFIG REQUIRED COMPONENTS stc xrc html adv xml core base gl aui webview)
+else()
+    find_package(wxWidgets 3.2 REQUIRED COMPONENTS stc xrc html adv xml core base gl aui webview)
+endif()
+find_package(OpenGL REQUIRED)
+if(NOT TARGET OpenGL::GLU)
+    message(FATAL_ERROR "wx requires the GLU development library")
+endif()
+set(_wx_platform_libraries)
+set(_wx_platform_definitions _GNU_SOURCE)
+if(APPLE)
+    enable_language(OBJC)
+    set_source_files_properties("${PROJECT_SOURCE_DIR}/lib/wx/c_src/wxe_ps_init.c"
+        PROPERTIES LANGUAGE OBJC)
+    set(_wx_platform_definitions _MACOSX)
+    set(_wx_gl_header OpenGL/gl.h)
+    set(_wx_glu_header OpenGL/glu.h)
+    set(_wx_gl_definitions HAVE_OPENGL_GL_H=1 HAVE_OPENGL_GLU_H=1 HAVE_GL_SUPPORT=1)
+elseif(WIN32)
+    set(_wx_gl_header GL/gl.h)
+    set(_wx_glu_header GL/glu.h)
+    set(_wx_gl_definitions HAVE_GL_GL_H=1 HAVE_GL_GLU_H=1 HAVE_GL_SUPPORT=1)
+else()
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(OTP_WX_GLIB REQUIRED IMPORTED_TARGET glib-2.0)
+    list(APPEND _wx_platform_libraries PkgConfig::OTP_WX_GLIB)
+    list(APPEND _wx_platform_definitions HAVE_GLIB=1)
+    set(_wx_gl_header GL/gl.h)
+    set(_wx_glu_header GL/glu.h)
+    set(_wx_gl_definitions HAVE_GL_GL_H=1 HAVE_GL_GLU_H=1 HAVE_GL_SUPPORT=1)
+endif()
+add_library(otp_wxwidgets INTERFACE)
+target_include_directories(otp_wxwidgets SYSTEM INTERFACE ${wxWidgets_INCLUDE_DIRS})
+target_compile_definitions(otp_wxwidgets INTERFACE ${wxWidgets_DEFINITIONS})
+separate_arguments(_wx_flags NATIVE_COMMAND "${wxWidgets_CXX_FLAGS}")
+target_compile_options(otp_wxwidgets INTERFACE ${_wx_flags})
+target_link_libraries(otp_wxwidgets INTERFACE ${wxWidgets_LIBRARIES})
+
+include(CheckCXXSourceCompiles)
+set(CMAKE_REQUIRED_LIBRARIES OpenGL::GLU)
+check_cxx_source_compiles("#include <${_wx_glu_header}>
+void callback() {}
+int main() { GLUtesselator *t = nullptr; gluTessCallback(t, GLU_TESS_VERTEX, (GLvoid (*)(...))callback); }"
+    OTP_WX_TESS_CB_TIGER_STYLE)
+unset(CMAKE_REQUIRED_LIBRARIES)
+foreach(_type IN ITEMS GLintptr GLintptrARB GLchar GLcharARB GLhalfARB GLint64EXT)
+    string(TOUPPER "${_type}" _macro)
+    check_cxx_source_compiles("#include <${_wx_gl_header}>
+int main() { ${_type} value{}; return sizeof(value) == 0; }" OTP_WX_HAVE_${_macro})
+    if(OTP_WX_HAVE_${_macro})
+        list(APPEND _wx_gl_definitions "HAVE_${_macro}=1")
+    endif()
+endforeach()
+if(OTP_WX_TESS_CB_TIGER_STYLE)
+    list(APPEND _wx_gl_definitions TESS_CB_TIGER_STYLE=1)
+endif()
+
+set(_native "${PROJECT_SOURCE_DIR}/lib/wx/c_src")
+set(_wx_native_sources)
+foreach(_module IN ITEMS wxe_main wxe_impl wxe_helpers wxe_callback_impl wxe_return wxe_gl)
+    list(APPEND _wx_native_sources "${_native}/${_module}.cpp")
+endforeach()
+set(_wx_wrappers)
+foreach(_module IN ITEMS wxe_wrapper_1 wxe_wrapper_2 wxe_wrapper_3 wxe_wrapper_4
+        wxe_wrapper_5 wxe_wrapper_6 wxe_wrapper_7 wxe_wrapper_8 wxe_events wxe_init wxe_func_table)
+    list(APPEND _wx_wrappers "${_native}/gen/${_module}.cpp")
+endforeach()
+add_library(otp_wxe_driver MODULE ${_wx_native_sources} ${_wx_wrappers}
+    "${_native}/wxe_nif.c" "${_native}/wxe_ps_init.c")
+target_link_libraries(otp_wxe_driver PRIVATE BEAM::NIF otp_wxwidgets ${_wx_platform_libraries})
+target_compile_definitions(otp_wxe_driver PRIVATE ${_wx_platform_definitions} WXE_WEBVIEW ${_wx_gl_definitions})
+# Upstream reduces optimization for these large generated wrappers.
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    set_source_files_properties(${_wx_wrappers} PROPERTIES COMPILE_OPTIONS -O1)
+endif()
+add_library(otp_erl_gl MODULE "${_native}/gen/gl_nif.cpp" "${_native}/gen/glu_nif.cpp" "${_native}/egl_impl.c")
+target_link_libraries(otp_erl_gl PRIVATE BEAM::NIF OpenGL::GL OpenGL::GLU ${CMAKE_DL_LIBS})
+target_compile_definitions(otp_erl_gl PRIVATE ${_wx_gl_definitions})
+if(WIN32)
+    # egl_impl.c passes WCHAR library names to the Windows loader macros.
+    target_compile_definitions(otp_erl_gl PRIVATE UNICODE _UNICODE)
+endif()
+foreach(_module IN ITEMS wxe_driver erl_gl)
+    target_compile_features(otp_${_module} PRIVATE cxx_std_11)
+    set_target_properties(otp_${_module} PROPERTIES PREFIX "" OUTPUT_NAME "${_module}"
+        LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/otp/lib/wx-${_version}/priv")
+    install(TARGETS otp_${_module}
+        LIBRARY DESTINATION "lib/wx-${_version}/priv"
+            PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
+        RUNTIME DESTINATION "lib/wx-${_version}/priv"
+            PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+endforeach()
+
+file(GLOB _wx_generated CONFIGURE_DEPENDS "${_source}/gen/wx*.erl")
+# Preserve the upstream Makefile's wildcard expansion followed by glu and gl.
+list(APPEND _wx_generated "${_source}/gen/glu.erl" "${_source}/gen/gl.erl")
+list(APPEND _sources ${_wx_generated})
+set(_wx_modules "")
+foreach(_erl IN LISTS _wx_generated)
+    get_filename_component(_module "${_erl}" NAME_WE)
+    list(APPEND _wx_module_names "${_module},")
+endforeach()
+list(JOIN _wx_module_names " " _wx_modules)
+file(READ "${_source}/wx.app.src" _wx_resource)
+string(REPLACE "%GEN_MODS%" "${_wx_modules}" _wx_resource "${_wx_resource}")
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${_source}/wx.app.src")
+set(_resources "${_generated}/resources")
+file(CONFIGURE OUTPUT "${_resources}/wx.app.src" CONTENT "${_wx_resource}" @ONLY)
+configure_file("${_source}/wx.appup.src" "${_resources}/wx.appup.src" COPYONLY)
+file(GLOB_RECURSE _wx_headers CONFIGURE_DEPENDS "${_source}/*.hrl" "${PROJECT_SOURCE_DIR}/lib/wx/include/*.hrl")
+list(APPEND _extra_dependencies ${_wx_headers})
+install(DIRECTORY "${_source}/" DESTINATION "lib/wx-${_version}/src"
+    FILES_MATCHING PATTERN "*.erl" PATTERN "*.hrl")
+install(FILES "${PROJECT_SOURCE_DIR}/lib/wx/priv/erlang-logo32.png"
+    "${PROJECT_SOURCE_DIR}/lib/wx/priv/erlang-logo64.png" "${PROJECT_SOURCE_DIR}/lib/wx/priv/erlang-logo128.png"
+    DESTINATION "lib/wx-${_version}/priv")

@@ -1,0 +1,7 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+#ifndef OTP_SDK_SELECTION_H
+#define OTP_SDK_SELECTION_H
+#define OTP_SDK_VERSION "@BEAM_SDK_VERSION@"
+#define OTP_SDK_FLAVOR "@BEAM_SDK_FLAVOR@"
+#define OTP_SDK_BUILD_ID "@BEAM_SDK_BUILD_ID@"
+#endif

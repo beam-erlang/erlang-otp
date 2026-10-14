@@ -1,4 +1,5 @@
 #! /usr/bin/env perl
+binmode(STDOUT, ":raw");
 #
 # %CopyrightBegin%
 #

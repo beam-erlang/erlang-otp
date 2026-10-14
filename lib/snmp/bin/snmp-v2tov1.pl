@@ -24,13 +24,13 @@
 #
 
 # Translate v2 IMPORTs to their v1 equivalents
-$[ = 1;			# set array base to 1
+# Preserve the converter's one-based field indexing without Perl's removed $[.
 $, = ' ';		# set output field separator
 $\ = "\n";		# set output record separator
 
 line: while (<>) {
     chomp;	# strip record separator
-    @Fld = split(' ', $_, 9999);
+    @Fld = (undef, split(' ', $_, 9999));
     if (/IMPORT/) {
 	$import = 1;
 	$isave = 0;
@@ -54,18 +54,18 @@ line: while (<>) {
 	next line;
     }
 
+    # Just reprint all comments
+    if (/^--/) {
+	print $_;
+	next line;
+    }
+
     # str is 1 if we're inside a string, and 0 otherwise.
     if (/\"/) {
 	$str = 1;
     }
     if ($Fld[$#Fld] =~ /\"$/) {
 	$str = 0;
-    }
-
-    # Just reprint all comments
-    if (/^--/) {
-	print $_;
-	next line;
     }
 
     # Place comments around MODULE-IDENTITY

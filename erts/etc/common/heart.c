@@ -77,6 +77,9 @@
  */
 
 #include "etc_common.h"
+#ifdef __WIN32__
+#include <winsock2.h>
+#endif
 
 /*
  * Implement time correction using times() call even on Linuxes 
@@ -184,7 +187,7 @@ static BOOL enable_privilege(void);
 static BOOL do_shutdown(int);
 static void print_last_error(void);
 static HANDLE start_reader_thread(void);
-static DWORD WINAPI reader(LPVOID);
+static unsigned __stdcall reader(LPVOID);
 #define read _read
 #define write _write
 #endif
@@ -1009,7 +1012,7 @@ static BOOL do_shutdown(int really_shutdown) {
     return FALSE;
 }
 
-DWORD WINAPI reader(LPVOID lpvParam) {
+unsigned __stdcall reader(LPVOID lpvParam) {
 
 	while (1) {
 		debugf("reader is reading\n");
@@ -1023,7 +1026,7 @@ DWORD WINAPI reader(LPVOID lpvParam) {
 }
 
 HANDLE start_reader_thread(void) {
-	DWORD tid;
+	unsigned tid;
 	HANDLE thandle;
 	if ((thandle = (HANDLE) 
 	     _beginthreadex(NULL,0,reader,NULL,0,&tid)) == NULL) {

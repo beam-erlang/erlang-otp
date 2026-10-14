@@ -45,5 +45,5 @@ export BINDIR
 export PROGNAME
 export RELDIR
 
-exec $BINDIR/erlexec -boot $RELDIR/$VSN/start -config $RELDIR/$VSN/sys ${1+"$@"}
+exec "$BINDIR/erlexec" -boot "$RELDIR/$VSN/start" -config "$RELDIR/$VSN/sys" ${1+"$@"}
 

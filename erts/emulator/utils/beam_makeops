@@ -810,11 +810,13 @@ sub emulator_output {
 
         $name = "$outdir/beamasm_emit.h";
         open(STDOUT, ">$name") || die "Failed to open $name for writing: $!\n";
+    binmode(STDOUT, ":raw");
         comment('C');
         print_code(JIT);
 
         $name = "$outdir/beamasm_protos.h";
         open(STDOUT, ">$name") || die "Failed to open $name for writing: $!\n";
+    binmode(STDOUT, ":raw");
         comment('C');
 
         # Sort the generated code to create beamasm_protos.h deterministically
@@ -854,6 +856,7 @@ sub emulator_output {
     #
     $name = "$outdir/beam_opcodes.c";
     open(STDOUT, ">$name") || die "Failed to open $name for writing: $!\n";
+    binmode(STDOUT, ":raw");
     comment('C');
     include_files();
     print '#include "erl_term.h"', "\n";
@@ -1014,6 +1017,7 @@ sub emulator_output {
     #
     $name = "$outdir/beam_opcodes.h";
     open(STDOUT, ">$name") || die "Failed to open $name for writing: $!\n";
+    binmode(STDOUT, ":raw");
     comment('C');
     print "#ifndef __OPCODES_H__\n";
     print "#define __OPCODES_H__\n\n";
@@ -1121,16 +1125,19 @@ sub emulator_output {
     if ($jit eq 'no') {
 	$name = "$outdir/beam_hot.h";
 	open(STDOUT, ">$name") || die "Failed to open $name for writing: $!\n";
+    binmode(STDOUT, ":raw");
 	comment('C');
 	print_code(HOT);
 
 	$name = "$outdir/beam_warm.h";
 	open(STDOUT, ">$name") || die "Failed to open $name for writing: $!\n";
+    binmode(STDOUT, ":raw");
 	comment('C');
 	print_code(WARM);
 
 	$name = "$outdir/beam_cold.h";
 	open(STDOUT, ">$name") || die "Failed to open $name for writing: $!\n";
+    binmode(STDOUT, ":raw");
 	comment('C');
 	print_code(COLD);
     }
@@ -1219,6 +1226,7 @@ sub compiler_output {
     my($i);
 
     open(STDOUT, ">$outdir/$name") || die "Failed to open $name for writing: $!\n";
+    binmode(STDOUT, ":raw");
     print "-module($module).\n-moduledoc false.";
     comment('erlang');
 
@@ -1249,6 +1257,7 @@ sub compiler_output {
     #
     my($hrl_name) = "$outdir/${module}.hrl";
     open(STDOUT, ">$hrl_name") || die "Failed to open $hrl_name for writing: $!\n";
+    binmode(STDOUT, ":raw");
     comment('erlang');
 
     for ($i = 0; $i < @tag_type && $i < 8; $i++) {

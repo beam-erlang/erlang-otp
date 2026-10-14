@@ -25,9 +25,7 @@
  *
  */
 
-#ifdef HAVE_CONFIG_H
-#    include "config.h"
-#endif
+#include "otp_socket_support.h"
 
 #ifdef ESOCK_ENABLE
 
@@ -54,7 +52,6 @@
 #endif
 
 #include "socket_int.h"
-#include "sys.h"
 #include "socket_util.h"
 #include "socket_dbg.h"
 
@@ -421,7 +418,7 @@ BOOLEAN_T esock_decode_iov(ErlNifEnv*    env,
                            size_t        len,
                            ssize_t*      totSize)
 {
-    Uint16       i;
+    uint16_t       i;
     ssize_t      sz;
     ERL_NIF_TERM elem, tail, list;
 
@@ -1042,7 +1039,7 @@ BOOLEAN_T esock_decode_hwsockaddr(ErlNifEnv*    env,
         family = ARPHRD_NETROM;
     }
 #endif
-    
+
 #if defined(ARPHRD_ETHER)
     if (IS_IDENTICAL(efamily, esock_atom_ether)) {
         family = ARPHRD_ETHER;
@@ -1126,7 +1123,7 @@ BOOLEAN_T esock_decode_sockaddr_in(ErlNifEnv*          env,
     UDBG( ("SUTIL", "esock_decode_sockaddr_in -> entry\r\n") );
 
     /* Basic init */
-    sys_memzero((char*) sockAddrP, sizeof(struct sockaddr_in));
+    otp_socket_zero((char*) sockAddrP, sizeof(struct sockaddr_in));
 
 #ifndef NO_SA_LEN
     sockAddrP->sin_len = sizeof(struct sockaddr_in);
@@ -1143,7 +1140,7 @@ BOOLEAN_T esock_decode_sockaddr_in(ErlNifEnv*          env,
     UDBG( ("SUTIL", "esock_decode_sockaddr_in -> try decode port number\r\n") );
     if (! GET_INT(env, eport, &port))
         return FALSE;
-    
+
     sockAddrP->sin_port = htons(port);
 
     /* Extract (e) address from map */
@@ -1159,7 +1156,7 @@ BOOLEAN_T esock_decode_sockaddr_in(ErlNifEnv*          env,
         return FALSE;
 
     *addrLen = sizeof(struct sockaddr_in);
-    
+
     UDBG( ("SUTIL", "esock_decode_sockaddr_in -> done\r\n") );
 
     return TRUE;
@@ -1248,7 +1245,7 @@ BOOLEAN_T esock_decode_sockaddr_in6(ErlNifEnv*           env,
     UDBG( ("SUTIL", "esock_decode_sockaddr_in6 -> entry\r\n") );
 
     /* Basic init */
-    sys_memzero((char*) sockAddrP, sizeof(struct sockaddr_in6));
+    otp_socket_zero((char*) sockAddrP, sizeof(struct sockaddr_in6));
 #ifndef NO_SA_LEN
     sockAddrP->sin6_len = sizeof(struct sockaddr_in);
 #endif
@@ -1286,7 +1283,7 @@ BOOLEAN_T esock_decode_sockaddr_in6(ErlNifEnv*           env,
     UDBG( ("SUTIL", "esock_decode_sockaddr_in6 -> flowinfo: %d\r\n", flowInfo) );
 
     sockAddrP->sin6_flowinfo = flowInfo;
-    
+
     /* *** Extract (e) scope_id from map *** */
     if (! GET_MAP_VAL(env, eSockAddr, esock_atom_scope_id, &escopeId)) {
         UDBG( ("SUTIL", "esock_decode_sockaddr_in6 -> failed extract scope_id\r\n") );
@@ -1356,10 +1353,10 @@ void esock_encode_sockaddr_in6(ErlNifEnv*            env,
 
         /* The flowInfo */
         eFlowInfo = MKI(env, sockAddrP->sin6_flowinfo);
-            
+
         /* The scopeId */
         eScopeId = MKI(env, sockAddrP->sin6_scope_id);
-        
+
         /* The address */
         esock_encode_in6_addr(env, &sockAddrP->sin6_addr, &eAddr);
 
@@ -1407,7 +1404,7 @@ BOOLEAN_T esock_decode_sockaddr_un(ErlNifEnv*          env,
     /* Get the path */
     if (! GET_BIN(env, epath, &bin))
         return FALSE;
-    
+
     if ((bin.size +
 #ifdef __linux__
          /* Make sure the address gets zero terminated
@@ -1425,10 +1422,10 @@ BOOLEAN_T esock_decode_sockaddr_un(ErlNifEnv*          env,
         return FALSE;
 
 
-    sys_memzero((char*) sockAddrP, sizeof(struct sockaddr_un));
+    otp_socket_zero((char*) sockAddrP, sizeof(struct sockaddr_un));
     sockAddrP->sun_family = AF_LOCAL;
 
-    sys_memcpy(sockAddrP->sun_path, bin.data, bin.size);
+    memcpy(sockAddrP->sun_path, bin.data, bin.size);
     len = (sockAddrP->sun_path - (char *)sockAddrP) + bin.size;
 
 #ifndef NO_SA_LEN
@@ -1498,7 +1495,7 @@ void esock_encode_sockaddr_un(ErlNifEnv*          env,
             /* And finally build the 'path' attribute */
             path = enif_make_new_binary(env, m, &ePath);
             ESOCK_ASSERT( path != NULL );
-            sys_memcpy(path, sockAddrP->sun_path, m);
+            memcpy(path, sockAddrP->sun_path, m);
 
             /* And the socket address */
             make_sockaddr_un(env, ePath, eSockAddr);
@@ -1820,10 +1817,10 @@ BOOLEAN_T esock_decode_in_addr(ErlNifEnv*      env,
         int                 addrtSz;
         int                 a, v;
         char                addr[4];
-        
+
         if (! GET_TUPLE(env, eAddr, &addrtSz, &addrt))
             return FALSE;
-        
+
         if (addrtSz != 4)
             return FALSE;
 
@@ -1835,8 +1832,8 @@ BOOLEAN_T esock_decode_in_addr(ErlNifEnv*      env,
             addr[a] = v;
         }
 
-        sys_memcpy(inAddrP, &addr, sizeof(addr));
-        
+        memcpy(inAddrP, &addr, sizeof(addr));
+
     }
 
     return TRUE;
@@ -1864,7 +1861,7 @@ void esock_encode_in_addr(ErlNifEnv*      env,
     size_t         atLen = NUM(at);
     unsigned char* a     = (unsigned char*) addrP;
     ERL_NIF_TERM   addr;
-    
+
     /* The address */
     for (i = 0; i < atLen; i++) {
         at[i] = MKI(env, a[i]);
@@ -1914,16 +1911,16 @@ BOOLEAN_T esock_decode_in6_addr(ErlNifEnv*       env,
         } else {
             return FALSE;
         }
-        
+
     } else {
         /* This is (supposed to be) an 8-tuple */
-        
+
         const ERL_NIF_TERM* tuple;
         int                 arity;
         size_t              n;
         struct in6_addr     sa;
         #ifndef VALGRIND
-        sys_memzero(&sa, sizeof(sa));
+        otp_socket_zero(&sa, sizeof(sa));
         #endif
 
         UDBG( ("SUTIL", "esock_decode_in6_addr -> tuple\r\n") );
@@ -1956,7 +1953,7 @@ BOOLEAN_T esock_decode_in6_addr(ErlNifEnv*       env,
                 return FALSE;
             }
 
-            put_int16(v, sa.s6_addr + (n << 1));
+            otp_socket_put_u16(v, sa.s6_addr + (n << 1));
         }
         *inAddrP = sa;
     }
@@ -1990,10 +1987,10 @@ void esock_encode_in6_addr(ErlNifEnv*       env,
     ERL_NIF_TERM   at[8];
     size_t         atLen = NUM(at);
     unsigned char* a     = UCHARP(addrP->s6_addr);
-    
+
     /* The address */
     for (i = 0; i < atLen; i++) {
-        at[i] = MKI(env, get_int16(a + i*2));
+        at[i] = MKI(env, otp_socket_get_u16(a + i*2));
     }
 
     *eAddr = MKTA(env, at, atLen);
@@ -2741,7 +2738,7 @@ void esock_encode_packet_addr(ErlNifEnv*     env,
     ErlNifBinary val;
 
     if (ALLOC_BIN(vsz, &val)) {
-        sys_memcpy(val.data, addr, len);
+        memcpy(val.data, addr, len);
         *eAddr = MKBIN(env, &val);
     } else {
         esock_encode_packet_addr_tuple(env, len, addr, eAddr);
@@ -2808,9 +2805,9 @@ BOOLEAN_T esock_decode_sockaddr_native(ErlNifEnv*     env,
     if ((size_t)len < bin.size)
         return FALSE;
 
-    sys_memzero((char*) sockAddrP, sizeof(*sockAddrP));
+    otp_socket_zero((char*) sockAddrP, sizeof(*sockAddrP));
     sockAddrP->sa.sa_family = (sa_family_t) family;
-    sys_memcpy(sockAddrP->sa.sa_data, bin.data, bin.size);
+    memcpy(sockAddrP->sa.sa_data, bin.data, bin.size);
     len = (sockAddrP->sa.sa_data - CHARP(sockAddrP)) + bin.size;
 #ifndef NO_SA_LEN
     sockAddrP->sa.sa_len = len;
@@ -2921,7 +2918,7 @@ BOOLEAN_T esock_decode_string(ErlNifEnv*         env,
     BOOLEAN_T    result;
     unsigned int len;
     char*        bufP;
-    
+
     if (!GET_LIST_LEN(env, eString, &len) && (len != 0)) {
         *stringP = NULL;
         result   = FALSE;
@@ -2930,7 +2927,7 @@ BOOLEAN_T esock_decode_string(ErlNifEnv*         env,
         UDBG( ("SUTIL", "esock_decode_string -> len: %d\r\n", len) );
 
         bufP = MALLOC(len + 1); // We shall NULL-terminate
-    
+
         if (GET_STR(env, eString, bufP, len+1)) {
             UDBG( ("SUTIL", "esock_decode_string -> buf: %s\r\n", bufP) );
             // bufP[len] = '\0';
@@ -3221,7 +3218,7 @@ ERL_NIF_TERM esock_make_extra_error_info_term(ErlNifEnv*   env,
 }
 
 
-                                              
+
 /* Create an error two (2) tuple in the form:
  *
  *          {error, Reason}
@@ -3370,7 +3367,7 @@ size_t esock_strnlen(const char *s, size_t maxlen)
  *
  */
 extern
-void __noreturn esock_abort(const char* expr,
+_Noreturn void esock_abort(const char* expr,
                             const char* func,
                             const char* file,
                             int         line)
@@ -3382,7 +3379,7 @@ void __noreturn esock_abort(const char* expr,
     fflush(stderr);
     abort();
 #else
-    erts_exit(ERTS_DUMP_EXIT, "%s:%d:%s() Assertion failed: %s\n",
+    beam_native_fail(BEAM_NATIVE_FAILURE_DUMP, "%s:%d:%s() Assertion failed: %s\n",
               file, line, func, expr);
 #endif
 }
@@ -3564,7 +3561,7 @@ void make_sockaddr_in(ErlNifEnv*    env,
     ERL_NIF_TERM keys[]  = {esock_atom_family, esock_atom_port, esock_atom_addr};
     ERL_NIF_TERM vals[]  = {esock_atom_inet, port, addr};
     size_t       numKeys = NUM(keys);
-    
+
     ESOCK_ASSERT( numKeys == NUM(vals) );
     ESOCK_ASSERT( MKMA(env, keys, vals, numKeys, sa) );
 }
@@ -3590,7 +3587,7 @@ void make_sockaddr_in6(ErlNifEnv*    env,
                             flowInfo,
                             scopeId};
     size_t       numKeys = NUM(keys);
-    
+
     ESOCK_ASSERT( numKeys == NUM(vals) );
     ESOCK_ASSERT( MKMA(env, keys, vals, numKeys, sa) );
 }
@@ -3605,7 +3602,7 @@ void make_sockaddr_un(ErlNifEnv*    env,
     ERL_NIF_TERM keys[]  = {esock_atom_family, esock_atom_path};
     ERL_NIF_TERM vals[]  = {esock_atom_local,  path};
     size_t       numKeys = NUM(keys);
-    
+
     ESOCK_ASSERT( numKeys == NUM(vals) );
     ESOCK_ASSERT( MKMA(env, keys, vals, numKeys, sa) );
 }
@@ -3635,7 +3632,7 @@ void make_sockaddr_ll(ErlNifEnv*    env,
         pkttype,
         addr};
     size_t       numKeys = NUM(keys);
-    
+
     ESOCK_ASSERT( numKeys == NUM(vals) );
     ESOCK_ASSERT( MKMA(env, keys, vals, numKeys, sa) );
 }
@@ -3669,7 +3666,7 @@ void make_sockaddr_dl(ErlNifEnv*    env,
         slen,
         data};
     size_t       numKeys = NUM(keys);
-    
+
     ESOCK_ASSERT( numKeys == NUM(vals) );
     ESOCK_ASSERT( MKMA(env, keys, vals, numKeys, sa) );
 }
@@ -3681,7 +3678,7 @@ ERL_NIF_TERM esock_make_new_binary(ErlNifEnv *env, void *buf, size_t size)
 {
     ERL_NIF_TERM term;
 
-    sys_memcpy(enif_make_new_binary(env, size, &term), buf, size);
+    memcpy(enif_make_new_binary(env, size, &term), buf, size);
 
     return term;
 }

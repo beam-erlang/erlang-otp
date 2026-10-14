@@ -51,11 +51,7 @@
  *
  */ 
 
-#ifdef HAVE_CONFIG_H
-#  include "config.h"
-#endif
-
-#include "erl_printf.h"
+#include "otp_hostname_config.h"
 
 #ifdef WIN32
 
@@ -386,9 +382,9 @@ static void start_que_request(Worker *w) ;
 static int read_int32(HANDLE fd, int *res, HANDLE ev);
 static int read_exact(HANDLE fd, void *vbuff, DWORD nbytes, HANDLE ev);
 static int write_exact(HANDLE fd, AddrByte *buff, DWORD len,HANDLE ev);
-DWORD WINAPI worker_loop(void *v);
-DWORD WINAPI reader(void *data);
-DWORD WINAPI writer(void *data);
+unsigned __stdcall worker_loop(void *v);
+unsigned __stdcall reader(void *data);
+unsigned __stdcall writer(void *data);
 static int send_mes_to_worker(QueItem *m, Worker *pw);
 BOOL create_mesq(MesQ **q);
 BOOL enque_mesq(MesQ *q, QueItem *m);
@@ -438,7 +434,7 @@ static void do_allocate_console(void)
 					  FILE_ATTRIBUTE_NORMAL, NULL);
 }
 #ifdef HARDDEBUG
-DWORD WINAPI pseudo_worker_loop(void *v);
+unsigned __stdcall pseudo_worker_loop(void *v);
 static void poll_gethost(int row);
 #endif
 #endif
@@ -753,7 +749,7 @@ static void main_loop(void)
 #ifdef WIN32
 
     {
-	DWORD dummy;
+	unsigned dummy;
 	/* Create the reader and writer */
 	if ((!create_mesq(&to_erlang)) || (!create_mesq(&from_erlang))) {
 	    fatal("Could not create message que! errno = %d.",GetLastError());
@@ -1454,7 +1450,7 @@ static int fillin_reply(Worker *pw)
 		pw->pid);
 	return -1;
     }
-    
+
     if (relay_buff_size < (length + PACKET_BYTES)) { 
 	if (!relay_buff_size) {
 	    relay_buff = 
@@ -1591,7 +1587,7 @@ static int get_domainname(AddrByte *inbuff, int insize, AddrByte *domainbuff)
 static int create_worker(Worker *pworker, int save_que)
 {
     MesQ **thread_data = ALLOC(2*sizeof(MesQ *));
-    DWORD tid;
+    unsigned tid;
 
 
     if (!create_mesq(thread_data)) {
@@ -1702,7 +1698,7 @@ static void close_all_worker_fds(void)
 #endif /* !WIN32 */
 
 #ifdef WIN32
-DWORD WINAPI worker_loop(void *v)
+unsigned __stdcall worker_loop(void *v)
 #else
 static int worker_loop(void)
 #endif
@@ -2123,7 +2119,7 @@ static size_t build_error_reply(SerialType serial, int errnum,
     strcpy((char*)ptr, errstring);
     return need;
 }
-    
+
 
 
 static size_t build_reply(SerialType serial, struct hostent *he, 
@@ -2148,7 +2144,7 @@ static size_t build_reply(SerialType serial, struct hostent *he,
 	    ++num_strings;
 	}
     }
-    
+
     need = PACKET_BYTES + 
 	4 /* Serial */ + 1 /* Unit */ + 4 /* Naddr */ +
 	(unit * num_addresses) /* Address bytes */ +
@@ -2321,7 +2317,7 @@ static int read_exact(HANDLE fd, void *vbuff, DWORD nbytes, HANDLE ev)
     OVERLAPPED ov;
     DWORD err;
 
-    
+
     got = 0;
     for(;;) {
 	memset(&ov,0,sizeof(ov));
@@ -2413,7 +2409,7 @@ static int write_exact(HANDLE fd, AddrByte *buff, DWORD len, HANDLE ev)
     }
 }
 
-DWORD WINAPI reader(void *data) {
+unsigned __stdcall reader(void *data) {
     MesQ *mq = (MesQ *) data;
     QueItem *m;
     int siz;
@@ -2445,7 +2441,7 @@ DWORD WINAPI reader(void *data) {
     }
 }	
 
-DWORD WINAPI writer(void *data) 
+unsigned __stdcall writer(void *data)
 {
     MesQ *mq = (MesQ *) data;
     QueItem *m;
@@ -2574,7 +2570,7 @@ static char *format_address(int siz, AddrByte *addr)
     *buff='\0';
     if (siz <= 4) {
 	while(siz--) {
-	    erts_snprintf(tmp, sizeof(tmp), "%d",(int) *addr++);
+	    snprintf(tmp, sizeof(tmp), "%d",(int) *addr++);
 	    strcat(buff,tmp);
 	    if(siz) {
 		strcat(buff,".");
@@ -2583,7 +2579,7 @@ static char *format_address(int siz, AddrByte *addr)
 	return buff;
     } 
     while(siz--) {
-	erts_snprintf(tmp, sizeof(tmp), "%02x",(int) *addr++);
+	snprintf(tmp, sizeof(tmp), "%02x",(int) *addr++);
 	strcat(buff,tmp);
 	if(siz) {
 	    strcat(buff,":");
@@ -2600,12 +2596,12 @@ static void debugf(char *format, ...)
 
     va_start(ap,format);
 #ifdef WIN32
-    erts_snprintf(buff, sizeof(buff), "%s[%d] (DEBUG):",program_name,(int) GetCurrentThreadId());
+    snprintf(buff, sizeof(buff), "%s[%d] (DEBUG):",program_name,(int) GetCurrentThreadId());
 #else
-    erts_snprintf(buff, sizeof(buff), "%s[%d] (DEBUG):",program_name,(int) getpid());
+    snprintf(buff, sizeof(buff), "%s[%d] (DEBUG):",program_name,(int) getpid());
 #endif
     ptr = buff + strlen(buff);
-    erts_vsnprintf(ptr,sizeof(buff)-strlen(buff)-2,format,ap);
+    vsnprintf(ptr,sizeof(buff)-strlen(buff)-2,format,ap);
     strcat(ptr,"\r\n");
 #ifdef WIN32
     if (debug_console_allocated != INVALID_HANDLE_VALUE) {
@@ -2625,9 +2621,9 @@ static void warning(char *format, ...)
     va_list ap;
 
     va_start(ap,format);
-    erts_snprintf(buff, sizeof(buff), "%s[%d]: WARNING:",program_name, (int) getpid());
+    snprintf(buff, sizeof(buff), "%s[%d]: WARNING:",program_name, (int) getpid());
     ptr = buff + strlen(buff);
-    erts_vsnprintf(ptr,sizeof(buff)-strlen(buff)-2,format,ap);
+    vsnprintf(ptr,sizeof(buff)-strlen(buff)-2,format,ap);
     strcat(ptr,"\r\n");
 #ifdef WIN32
     {
@@ -2647,9 +2643,9 @@ static IMPL_NORETURN__ fatal(char *format, ...)
     va_list ap;
 
     va_start(ap,format);
-    erts_snprintf(buff, sizeof(buff), "%s[%d]: FATAL ERROR:",program_name, (int) getpid());
+    snprintf(buff, sizeof(buff), "%s[%d]: FATAL ERROR:",program_name, (int) getpid());
     ptr = buff + strlen(buff);
-    erts_vsnprintf(ptr,sizeof(buff)-strlen(buff)-2,format,ap);
+    vsnprintf(ptr,sizeof(buff)-strlen(buff)-2,format,ap);
     strcat(ptr,"\r\n");
 #ifdef WIN32
     {
@@ -2782,10 +2778,10 @@ HANDLE event_mesq(MesQ *q)
 }
 
 #ifdef HARDDEBUG
-DWORD WINAPI pseudo_worker_loop(void *v)
+unsigned __stdcall pseudo_worker_loop(void *v)
 {
     HOSTENT *hep;
-    
+
     DEBUGF(1,("gethostbyname(\"ftp.funet.fi\") starting"));
     hep = gethostbyname("ftp.funet.fi");
 
@@ -2795,7 +2791,7 @@ DWORD WINAPI pseudo_worker_loop(void *v)
 
 static void poll_gethost(int row) {
     HANDLE h;
-    DWORD tid;
+    unsigned tid;
     h = (HANDLE) _beginthreadex(NULL, 0, pseudo_worker_loop, NULL, 0, &tid);
     if (h == NULL) {
 	DEBUGF(1,("Failed to spawn pseudo worker (%d)...",row));
@@ -2806,5 +2802,5 @@ static void poll_gethost(int row) {
     }
 }
 #endif
-    
+
 #endif /* WIN32 */

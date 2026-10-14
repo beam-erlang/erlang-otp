@@ -1,0 +1,4 @@
+{application, otp_release_probe,
+ [{description, "Independent installed release lifecycle fixture"},
+  {vsn, "1.0.0"}, {modules, []}, {registered, []},
+  {applications, [kernel, stdlib]}, {mod, {otp_release_probe, []}}]}.

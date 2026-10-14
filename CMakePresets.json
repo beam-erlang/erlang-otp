@@ -1,0 +1,192 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 25,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "installed-sdk",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "BEAM_SDK_ROOT": "$env{BEAM_SDK_ROOT}",
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
+        "BUILD_TESTING": "ON",
+        "OTP_BEAM_SDK_VERSION": "$env{OTP_BEAM_SDK_VERSION}",
+        "OTP_BEAM_SDK_BUILD_ID": "$env{OTP_BEAM_SDK_BUILD_ID}"
+      }
+    },
+    {
+      "name": "linux-emu",
+      "inherits": "installed-sdk",
+      "cacheVariables": {
+        "OTP_BEAM_FLAVOR": "emu"
+      }
+    },
+    {
+      "name": "linux-jit",
+      "inherits": "installed-sdk",
+      "cacheVariables": {
+        "OTP_BEAM_FLAVOR": "jit"
+      }
+    },
+    {
+      "name": "macos-arm64-appleclang-emu",
+      "inherits": "installed-sdk",
+      "cacheVariables": {
+        "OTP_BEAM_FLAVOR": "emu",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_OSX_ARCHITECTURES": "arm64",
+        "CMAKE_OSX_DEPLOYMENT_TARGET": "15.0"
+      }
+    },
+    {
+      "name": "macos-arm64-appleclang-jit",
+      "inherits": "installed-sdk",
+      "cacheVariables": {
+        "OTP_BEAM_FLAVOR": "jit",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_OSX_ARCHITECTURES": "arm64",
+        "CMAKE_OSX_DEPLOYMENT_TARGET": "15.0"
+      }
+    },
+    {
+      "name": "windows-amd64-msvc-emu",
+      "inherits": "installed-sdk",
+      "cacheVariables": {
+        "OTP_BEAM_FLAVOR": "emu",
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_C_COMPILER": "cl",
+        "CMAKE_CXX_COMPILER": "cl"
+      }
+    },
+    {
+      "name": "windows-amd64-msvc-jit",
+      "inherits": "installed-sdk",
+      "cacheVariables": {
+        "OTP_BEAM_FLAVOR": "jit",
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_C_COMPILER": "cl",
+        "CMAKE_CXX_COMPILER": "cl"
+      }
+    },
+    {
+      "name": "windows-amd64-ucrt64-emu",
+      "inherits": "installed-sdk",
+      "cacheVariables": {
+        "OTP_BEAM_FLAVOR": "emu",
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++"
+      }
+    },
+    {
+      "name": "windows-amd64-ucrt64-jit",
+      "inherits": "installed-sdk",
+      "cacheVariables": {
+        "OTP_BEAM_FLAVOR": "jit",
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "linux-emu",
+      "configurePreset": "linux-emu"
+    },
+    {
+      "name": "linux-jit",
+      "configurePreset": "linux-jit"
+    },
+    {
+      "name": "macos-arm64-appleclang-emu",
+      "configurePreset": "macos-arm64-appleclang-emu"
+    },
+    {
+      "name": "macos-arm64-appleclang-jit",
+      "configurePreset": "macos-arm64-appleclang-jit"
+    },
+    {
+      "name": "windows-amd64-msvc-emu",
+      "configurePreset": "windows-amd64-msvc-emu"
+    },
+    {
+      "name": "windows-amd64-msvc-jit",
+      "configurePreset": "windows-amd64-msvc-jit"
+    },
+    {
+      "name": "windows-amd64-ucrt64-emu",
+      "configurePreset": "windows-amd64-ucrt64-emu"
+    },
+    {
+      "name": "windows-amd64-ucrt64-jit",
+      "configurePreset": "windows-amd64-ucrt64-jit"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "linux-emu",
+      "configurePreset": "linux-emu",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "linux-jit",
+      "configurePreset": "linux-jit",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "macos-arm64-appleclang-emu",
+      "configurePreset": "macos-arm64-appleclang-emu",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "macos-arm64-appleclang-jit",
+      "configurePreset": "macos-arm64-appleclang-jit",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "windows-amd64-msvc-emu",
+      "configurePreset": "windows-amd64-msvc-emu",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "windows-amd64-msvc-jit",
+      "configurePreset": "windows-amd64-msvc-jit",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "windows-amd64-ucrt64-emu",
+      "configurePreset": "windows-amd64-ucrt64-emu",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "windows-amd64-ucrt64-jit",
+      "configurePreset": "windows-amd64-ucrt64-jit",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
+  ]
+}

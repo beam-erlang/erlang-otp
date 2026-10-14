@@ -23,10 +23,6 @@
  * RAM File operations
  */
 
-#ifdef HAVE_CONFIG_H
-#  include "config.h"
-#endif
-
 /* Operations */
 
 /* defined "file" functions  */
@@ -85,8 +81,10 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <limits.h>
+#include <errno.h>
+#include <string.h>
+#include <stdint.h>
 
-#include "sys.h"
 #include "erl_driver.h"
 
 #ifndef NULL
@@ -94,6 +92,26 @@
 #endif
 
 #define BFILE_BLOCK  1024
+
+/* The ram_file Erlang module's protocol carries signed, big-endian 32-bit
+ * offsets and lengths. Keep this codec local to the driver. */
+static int32_t ram_read_int32(const char *buffer)
+{
+    const unsigned char *bytes = (const unsigned char *)buffer;
+    uint32_t value = 0;
+    for (unsigned i = 0; i < 4; ++i)
+        value = (value << 8) | bytes[i];
+    return value <= INT32_MAX ? (int32_t)value : -1 - (int32_t)(~value);
+}
+
+static void ram_write_int32(ErlDrvSSizeT input, char *buffer)
+{
+    uint32_t value = (uint32_t)input;
+    for (unsigned i = 4; i > 0; --i) {
+        buffer[i - 1] = (char)(unsigned char)value;
+        value >>= 8;
+    }
+}
 
 typedef unsigned char uchar;
 
@@ -144,26 +162,10 @@ typedef struct ram_file {
     ErlDrvSSizeT end;            /* end position in buffer */
 } RamFile;
 
-#ifdef LOADABLE
-static int rfile_finish(DriverEntry* drv)
+DRIVER_INIT(ram_file_drv)
 {
-    return 0;
-}
-
-DriverEntry* driver_init(void *handle)
-{
-    ram_file_driver_entry.handle = handle;
-    ram_file_driver_entry.driver_name = "ram_file_drv";
-    ram_file_driver_entry.finish = rfile_finish;
-    ram_file_driver_entry.init = rfile_init;
-    ram_file_driver_entry.start = rfile_start;
-    ram_file_driver_entry.stop = rfile_stop;
-    ram_file_driver_entry.output = rfile_command;
-    ram_file_driver_entry.ready_input = NULL;
-    ram_file_driver_entry.ready_output = NULL;
     return &ram_file_driver_entry;
 }
-#endif
 
 static int rfile_init(void)
 {
@@ -203,7 +205,7 @@ static int error_reply(RamFile *f, int err)
     char response[256];		/* Response buffer. */
     char* s;
     char* t;
-    
+
     /*
      * Contents of buffer sent back:
      *
@@ -242,7 +244,7 @@ static int numeric_reply(RamFile *f, ErlDrvSSizeT result)
      */
 
     tmp[0] = RAM_FILE_RESP_NUMBER;
-    put_int32(result, tmp+1);
+    ram_write_int32(result, tmp+1);
     driver_output2(f->port, tmp, sizeof(tmp), NULL, 0);
     return 0;
 }
@@ -263,7 +265,7 @@ static int ram_file_init(RamFile *f, char *buf, ErlDrvSSizeT count, int *error)
 {
     ErlDrvSSizeT bsize;
     ErlDrvBinary* bin;
-    
+
     if (count < 0) {
 	*error = EINVAL;
 	return -1;
@@ -281,8 +283,8 @@ static int ram_file_init(RamFile *f, char *buf, ErlDrvSSizeT count, int *error)
 	*error = ENOMEM;
 	return -1;
     }
-    sys_memzero(bin->orig_bytes, bsize);
-    sys_memcpy(bin->orig_bytes, buf, count);
+    memset(bin->orig_bytes, 0, bsize);
+    memcpy(bin->orig_bytes, buf, count);
     ram_file_set(f, bin, bsize, count);
     return count;
 }
@@ -291,7 +293,7 @@ static ErlDrvSSizeT ram_file_expand(RamFile *f, ErlDrvSSizeT size, int *error)
 {
     ErlDrvSSizeT bsize;
     ErlDrvBinary* bin;
-    
+
     if (size < 0) {
 	*error = EINVAL;
 	return -1;
@@ -300,7 +302,7 @@ static ErlDrvSSizeT ram_file_expand(RamFile *f, ErlDrvSSizeT size, int *error)
 	< 0) {
 	bsize = INT_MAX;
     }
-    
+
     if (bsize <= f->size)
 	return f->size;
     else {
@@ -308,7 +310,7 @@ static ErlDrvSSizeT ram_file_expand(RamFile *f, ErlDrvSSizeT size, int *error)
 	    *error = ENOMEM;
 	    return -1;
 	}
-	sys_memzero(bin->orig_bytes+f->size, bsize - f->size);
+	memset(bin->orig_bytes+f->size, 0, bsize - f->size);
 	f->size = bsize;
 	f->buf = bin->orig_bytes;
 	f->bin = bin;
@@ -321,7 +323,7 @@ static ErlDrvSSizeT ram_file_write(RamFile *f, char *buf, ErlDrvSSizeT len,
 			  ErlDrvSSizeT *location, int *error)
 {
     ErlDrvSSizeT cur = f->cur;
-    
+
     if (!(f->flags & RAM_FILE_MODE_WRITE)) {
 	*error = EBADF;
 	return -1;
@@ -334,7 +336,7 @@ static ErlDrvSSizeT ram_file_write(RamFile *f, char *buf, ErlDrvSSizeT len,
     if (cur+len > f->size && ram_file_expand(f, cur+len, error) < 0) {
 	return -1;
     }
-    if (len) sys_memcpy(f->buf+cur, buf, len);
+    if (len) memcpy(f->buf+cur, buf, len);
     cur += len;
     if (cur > f->end) f->end = cur;
     if (! location) f->cur = cur;
@@ -346,7 +348,7 @@ static ErlDrvSSizeT ram_file_read(RamFile *f, ErlDrvSSizeT len, ErlDrvBinary **b
 {
     ErlDrvBinary* bin;
     ErlDrvSSizeT cur = f->cur;
-    
+
     if (!(f->flags & RAM_FILE_MODE_READ)) {
 	*error = EBADF;
 	return -1;
@@ -365,7 +367,7 @@ static ErlDrvSSizeT ram_file_read(RamFile *f, ErlDrvSSizeT len, ErlDrvBinary **b
 	*error = ENOMEM;
 	return -1;
     }
-    if (len) sys_memcpy(bin->orig_bytes, f->buf+cur, len);
+    if (len) memcpy(bin->orig_bytes, f->buf+cur, len);
     *bp = bin;
     if (! location) f->cur = cur + len;
     return len;
@@ -407,7 +409,7 @@ static void rfile_command(ErlDrvData e, char* buf, ErlDrvSizeT count)
     count--;
     switch(*(uchar*)buf++) {
     case RAM_FILE_OPEN:  /* args is initial data */
-	f->flags = get_int32(buf);
+	f->flags = ram_read_int32(buf);
 	if (ram_file_init(f, buf+4, count-4, &error) < 0)
 	    error_reply(f, error);
 	else
@@ -436,7 +438,7 @@ static void rfile_command(ErlDrvData e, char* buf, ErlDrvSizeT count)
 	break;
 
     case RAM_FILE_PWRITE:
-        if ((offset = get_int32(buf)) < 0)
+        if ((offset = ram_read_int32(buf)) < 0)
 	    error_reply(f, EINVAL);
 	else if (ram_file_write(f, buf+4, count-4, &offset, &error) < 0)
 	    error_reply(f, error);
@@ -445,8 +447,8 @@ static void rfile_command(ErlDrvData e, char* buf, ErlDrvSizeT count)
 	break;
 
     case RAM_FILE_LSEEK:
-	offset = get_int32(buf);
-	origin = get_int32(buf+4);
+	offset = ram_read_int32(buf);
+	origin = ram_read_int32(buf+4);
 	if ((offset = ram_file_seek(f, offset, origin, &error)) < 0)
 	    error_reply(f, error);
 	else
@@ -454,17 +456,17 @@ static void rfile_command(ErlDrvData e, char* buf, ErlDrvSizeT count)
 	break;
 
     case RAM_FILE_PREAD:
-	if ((offset = get_int32(buf)) < 0) {
+	if ((offset = ram_read_int32(buf)) < 0) {
 	    error_reply(f, EINVAL);
 	    break;
 	}
 	
-	count = get_int32(buf+4);
+	count = ram_read_int32(buf+4);
 	if ((n = ram_file_read(f, count, &bin, &offset, &error)) < 0) {
 	    error_reply(f, error);
 	} else {
 	    header[0] = RAM_FILE_RESP_DATA;
-	    put_int32(n, header+1);
+	    ram_write_int32(n, header+1);
 	    driver_output_binary(f->port, header, sizeof(header),
 				 bin, 0, n);
 	    driver_free_binary(bin);
@@ -472,12 +474,12 @@ static void rfile_command(ErlDrvData e, char* buf, ErlDrvSizeT count)
 	break;
 
     case RAM_FILE_READ:
-	count = get_int32(buf);
+	count = ram_read_int32(buf);
 	if ((n = ram_file_read(f, count, &bin, NULL, &error)) < 0)
 	    error_reply(f, error);
 	else {
 	    header[0] = RAM_FILE_RESP_DATA;
-	    put_int32(n, header+1);
+	    ram_write_int32(n, header+1);
 	    driver_output_binary(f->port, header, sizeof(header),
 				 bin, 0, n);
 	    driver_free_binary(bin);
@@ -490,7 +492,7 @@ static void rfile_command(ErlDrvData e, char* buf, ErlDrvSizeT count)
 	    break;
 	}
 	if (f->end > f->cur)
-	    sys_memzero(f->buf + f->cur, f->end - f->cur);
+	    memset(f->buf + f->cur, 0, f->end - f->cur);
 	f->end = f->cur;
 	reply(f, 1, 0);
 	break;
@@ -501,10 +503,10 @@ static void rfile_command(ErlDrvData e, char* buf, ErlDrvSizeT count)
 	    error_reply(f, ENOMEM);
 	    break;
 	}
-	sys_memcpy(bin->orig_bytes, f->buf, n);
+	memcpy(bin->orig_bytes, f->buf, n);
 	
 	header[0] = RAM_FILE_RESP_DATA;
-	put_int32(n, header+1);
+	ram_write_int32(n, header+1);
 	driver_output_binary(f->port, header, sizeof(header),
 			     bin, 0, n);
 	driver_free_binary(bin);
