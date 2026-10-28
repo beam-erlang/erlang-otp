@@ -1,239 +1,132 @@
-# Erlang/OTP distribution work
+# Erlang/OTP repository guidance
 
-## Local Linux completion
+Read [architecture](docs/architecture.md), [compatibility](docs/compatibility.md)
+and the owning implementation before changes. This repository owns the OTP
+product over an explicitly selected installed public BEAM SDK. Keep guidance
+about current rules; do not add development plans, checkpoint narratives or
+run reports to product source or link product guidance to them.
 
-The 2026-10-27 [completion direction](../dev-documents/otp-compatibility.md#objective)
-reopens wx and dependent GUI acceptance on the current Linux x86-64 stack,
-authorizes evidenced narrow upstream bug/test-setup corrections, and permits
-exact named upstream limitations with supplemental checks and visible raw skips.
-It supersedes earlier deferral/paused-authorization text below. Qualification
-remains incomplete; no signal/lifetime workaround, assertion weakening,
-publication, commit or other-platform expansion is implied. Follow the
-[bounded implementation sequence](../dev-documents/otp-completion.md).
+## Runtime and installed boundary
 
-## Static SDK and faithful OTP assembly
+`libbeam` is the sole VM. Product, seed and source-built compiler hosts link
+`BEAM::RuntimeStatic`, embed thirteen OTP-owned preloads and explicitly compose
+OTP's linked native implementations. The SDK supplies exactly nine core Erlang
+modules; preserve OTP's 22 preloaded/sticky modules and restart semantics.
+Modern BEAM commands/components are separately owned. Removed runtime-family
+selectors, locks, OTP boot adapters and BEAM-side OTP ownership stay removed.
 
-The current implementation adds `BEAM::RuntimeStatic` alongside shared
-`BEAM::Runtime`. OTP product/private hosts use the static target, embed thirteen
-OTP-owned preloads and explicitly compose already-linked NIF/driver implementations.
-The VM still embeds exactly nine core modules and owns no OTP native inventory.
-Modern commands/components retain shared linkage. Native extensions must resolve
-against one host runtime; mixed linkage and second-runtime mappings are rejected.
+Select exact SDK version, flavor, build identity and required capabilities.
+Use public installed headers/symbols/CMake targets; never copy private VM headers,
+use sibling source/build dependencies or introduce an alternate runtime. A missing
+mechanism requires a reviewed public SDK boundary or an OTP-owned implementation.
+Generic admission, activation, rollback and cleanup belong to the VM; OTP owns
+native names, startup, commands, resources and distribution policy.
 
-OTP must reproduce the pinned original installation tree, including paths, entry
-types, modes and literal link targets for equivalent build features. It installs
-no `libbeam.so`, development VM archive, startup wrapper libraries, `otp-runtime/`
-directory or validation manifest. Standard external resources remain upstream
-owned. Build/source/SDK provenance stays outside the installation. The custom
-OTP C playground is retired; independent product fixtures own its preparation,
-copied-input, recovery and lifecycle coverage. See the
-[implementation evidence](../dev-documents/static-sdk-otp-runtime.md) for current
-validation; the ownership checkpoint below is historical evidence and its former
-shared-runtime placement is superseded. The current bounded assembly milestone
-adds Observer and Reltool and completes the upstream installation shape through
-ordinary playground examples. wx acceptance and release upgrades remain deferred.
-Both flavors assemble all 35 applications. Matching-flavor installation-tree
-equality, content review, allocator/crash-dump acceptance and the complete
-playground matrix pass; see [assembly fidelity](docs/assembly-fidelity.md).
-The ET event-file and restart-taint probe corrections now pass full relocated
-and isolated product checks on both flavors. Socket sendfile reproduces the
-same two failures on pinned original upstream; native correction requires an
-explicit upstream-bug-fix decision. See [the comparison](docs/et-sendfile-comparison.md).
-Preserve historical failures and deferred coverage.
+The host statically embeds the VM/preloads/built-ins. Preserve native-origin and
+single-runtime checks. Standard application extensions remain at upstream paths.
+Do not promise a stable preview C ABI, third-party component-provider interface,
+hot native rebinding or complete returning teardown of OTP. Sequential fresh
+VMs remain supported; concurrent VMs remain unsupported.
 
-## Ownership cutover checkpoint
+## Bootstrap and assembly
 
-`beam-erlang/src/otp/` is removed in the main checkout. BEAM's command now uses
-modern boot exclusively; runtime-family selection/locking and OTP-specific boot,
-acquisition and deployment adapters are removed. OTP selects its own terminal,
-Zstandard and RAM-file artifacts through its host inventory. The ownership
-migration and final interpreter/JIT validation are complete. BEAM passes all
-21 tests per flavor; OTP completes all 101 entries per flavor with 79 passes,
-seven deferred wx entries and 15 retained nonpassing gates. These results do not
-establish full OTP compatibility. See [the cutover record](../dev-documents/otp-ownership-cutover.md) for implemented changes, acceptance
-transfers and unresolved compatibility gaps. Older descriptions of selectable families,
-static OTP registrations and duplicated installation assets below describe the
-pre-cutover baseline and must not be restored as policy.
+[bootstrap/](bootstrap/README.md) owns the complete source-attested deterministic
+compiler foundation. Normal builds verify inventories, source/generated hashes,
+compiler metadata and reproduced seed outputs before ordinary compilation.
+Candidate refresh writes only to build output and needs reviewed adoption.
+System Erlang, the BEAM command and BEAM's private compiler are never fallbacks.
+Product/seed/source-built hosts share OTP-private preparation and native/preload
+inventories. Preserve copied inputs, preparation failure/recovery and literal
+build arguments.
 
+[Application assembly](docs/application-build.md) owns generators, native/system
+dependencies, metadata and resources. Versions come from `OTP_VERSION` and
+`otp_versions.table`; explicit CMake inventories own module selection. Preserve
+normal application source/compiler-option metadata, complete core inspection
+artifacts and `prim_eval` assembly/abstract-code pairing. Generated sources stay
+in the build tree. Native modules use public `BEAM::NIF`/`BEAM::Driver` targets
+and matching SDK descriptors; private compression/PCRE symbols stay isolated.
+Runtime Tools selects tracing through the public capability query without forcing
+unavailable or unknown backends off. Preserve retained GUI bindings/resources
+and required dependency probes.
 
-Ownership migration edits belong directly in this main checkout. Keep fresh
-builds, isolated installations and logs under workspace `tmp/`; do not create
-separate source worktrees. Existing validation snapshots stay fixed until their
-running jobs finish. Integration does not establish passing acceptance or
-complete a migration milestone. See the workspace runtime strategy for the
-full goal and validation requirements.
+Installation reproduces the pinned original tree for equivalent features:
+paths, entry kinds, permissions and literal symlink targets. Content review is
+separate from tree equality. Preserve ordinary/DESTDIR finalization and upstream
+resource lookup. Install no VM shared library/development archive, startup wrapper
+library, extra runtime directory or validation manifest. Keep source/SDK/install
+provenance external; public native headers come from verified SDK deployment.
 
-This repository owns the OTP distribution assembled around the installed
-BEAM/Erlang SDK. `libbeam` is its sole VM implementation. The
-[runtime strategy](../dev-documents/runtime-evolution-strategy.md) defines the
-ownership boundary and the migration from the current implementation.
+## Acceptance and upstream preservation
 
-OTP owns all OTP-specific source, startup modules and policy, native services,
-drivers, helpers, commands and build machinery. The shared VM owns exactly nine
-embedded Erlang modules and their VM implementation: `erts_code_purger`, `erlang`,
-`erts_internal`, `erts_literal_area_collector`, `erts_trace_cleaner`,
-`erts_dirty_process_signal_handler`, `atomics`, `counters` and `persistent_term`.
-Modern BEAM libraries and components, including the seven base modules, belong
-outside `libbeam`; their ownership does not make them VM core.
+The initial full target remains OTP 29.0 on Linux x86-64 interpreter and JIT,
+including every target application, optional integrations and wx-dependent GUI
+behavior. [Compatibility](docs/compatibility.md) owns gates and stop rules;
+[qualification](docs/local-qualification.md) owns reconciliation. Assembly,
+registration, selected suites and ownership completion do not establish full
+compatibility. Disabled wx tests remain untested, not an exclusion from target.
 
-Normal generation and compilation use private OTP-owned seed and source-built
-hosts linked only to `BEAM::RuntimeStatic`. `bootstrap/` supplies 277
-source-attested modules; mandatory deterministic reproduction precedes ordinary
-application compilation. The BEAM command, its private compiler and bundled
-applications are not build inputs. The product and private hosts share the
-OTP-owned linked-native and embedded-preload inventories. Preparation copies
-composition inputs without starting a VM. Real upstream external dependencies,
-including the child helper, retain failure/recovery acceptance.
+Production changes require concrete plans and applicable both-flavor installed,
+relocated and isolated integration. Shared VM/SDK changes require owning BEAM
+acceptance, necessary OTP adaptation and affected package checks. One behavior
+has one primary test owner; preserve functional/lifecycle/integrity coverage when
+retiring obsolete placement assertions. Independent product fixtures own product
+release acceptance; development examples are not release inputs or gates.
 
-Historical shared-runtime acquisition, loose-native deployment and bootstrap
-results belong to the cutover record. Their former paths and counts are evidence,
-not current installation requirements. Current validation is recorded in the
-[static SDK evidence](../dev-documents/static-sdk-otp-runtime.md); passing ownership
-or layout checks does not resolve the retained compatibility failures.
+Preserve upstream sources, fixtures, assertions, deadlines and selections by
+default. Reviewed setup adaptations live in `tools/upstream-test-adaptations.json`
+and retain source hashes/rationale and behavioral assertions. Building/generating
+original fixture inputs does not authorize changed expected behavior. Reproduced
+upstream defects need scoped correction decisions. Named limitations bind exact
+case/context/source/flavor/reference/supplemental results and retain raw skips.
+Unexpected skips, missing prerequisites and candidate-only failures remain
+nonpassing. Never drain messages, force descriptors closed or weaken assertions
+to conceal an incompatibility.
 
-Keep OTP-owned builds and hosts on the public SDK. Private-header or
-private-symbol dependencies require a supported generic mechanism or an OTP-owned
-replacement; they do not justify leaving OTP implementations in BEAM. Runtime
-family selectors and APIs are removed. Preserve generic composition, native
-admission and lifecycle mechanisms: OTP supplies thirteen additional preloads,
-retaining its 22-module preload, sticky and restart semantics while the VM owns
-only nine. Preserve the public-boundary, native-origin, copied-input, failure and
-restart acceptance independently of the retired custom OTP playground host.
+Stop for maintainer direction on confirmed VM incompatibility, an unsupported
+architectural route, a material unresolved ownership/API choice or a proposed
+weaker/narrower/bypassed acceptance boundary. Respect an already authorized
+bounded correction without extending it to unrelated semantics. Report expected
+versus observed behavior, reproducer, source/SDK/flavors, raw outcomes and needed
+decision. Record passes/failures/skips/blocked/disabled/untested coverage separately;
+never combine selected historical runs into a new complete result.
 
-Temporary development documents now belong in the workspace's
-[`../dev-documents/`](../dev-documents/README.md). The existing build and evidence
-documents in this repository's `docs/` remain in place pending a separate review;
-upstream documentation is also retained. The
-[OTP compatibility record](../dev-documents/otp-compatibility.md)
-defines the objective, completion gates and paused implementation checkpoint.
-Documentation moves do not change acceptance requirements or resolve recorded
-failures and deferrals.
+## Test inputs and cleanup
 
-The initial target is every Linux-capable OTP 29.0 application on interpreter
-and JIT configurations. The current CMake project establishes installed dependency discovery, a public
-SDK probe, source compilation of kernel, STDLIB, compiler, Parsetools, SASL,
-Common Test, Syntax Tools, Crypto, ASN.1, Tools, Public Key, SSL, Runtime Tools, Mnesia, Inets, EUnit, Xmerl, FTP, TFTP, SSH, EDoc, ELDAP, Diameter, OS Monitor, JInterface, Dialyzer, SNMP, Megaco, ODBC, wx and Debugger, standalone Erlang Interface libraries, and an
-independently installed OTP-owned host. The unchanged Base64, math, queue and complete dirty-NIF
-suites run through installed candidate commands; see [upstream testing](docs/upstream-testing.md). Upstream launchers now own argument/environment parsing and detached/EPMD
-policy; the public-API host lives under the ERTS command directory. See
-[command evidence](docs/commands.md). Further VM options, resources and product
-compatibility remain in progress. Public NIF/driver headers are deployed by the
-SDK into standard OTP include directories; unchanged native fixtures run in
-relocated and isolated product acceptance. See [native extension evidence](docs/native-extensions.md)
-and [the build guide](docs/build.md).
+[Build](docs/build.md), [upstream testing](docs/upstream-testing.md) and
+[test preparation](docs/test-preparation.md) own runnable procedures. Candidate
+commands/peers always use the selected installed VM. Identified original builds
+may be comparison/interoperability endpoints. Preserve exact native/helper
+origins, copied-input and missing-asset recovery, terminal restoration, restart
+and actual resource measurements without loader/prefix fallback.
 
-- Select an installed SDK explicitly. Do not add sibling source/build paths,
-  copy VM-private headers, import private symbols, or use an external Erlang
-  runtime as a build or execution fallback.
-- Crypto links system OpenSSL through its normal CMake package and the public
-  NIF SDK. Preserve its retained sources and record third-party capabilities.
-  The engine suite currently has three upstream skips; its strict coverage
-  gate remains nonpassing. See [Crypto evidence](docs/crypto.md).
-- ASN.1 generators and its ordinary NIF are OTP-owned. Preserve the explicit
-  product inventory and source inputs. Generated PER/UPER example constants
-  match a recorded pinned-upstream limitation; see [ASN.1 evidence](docs/asn1.md).
-- FTP interoperability uses an explicitly selected external vsftpd inside private
-  process/network namespaces. Its strict gate currently has ten upstream setup
-  skips; see [file-transfer evidence](docs/file-transfer.md).
-- EDoc consumes the standard ERTS application tree, including SDK-deployed
-  embedded-core bytecode. Its four upstream EEP-48 skips remain a coverage gap;
-  see [EDoc evidence](docs/edoc.md).
-- ELDAP interoperability uses an explicitly selected OpenLDAP package tree
-  in private namespaces. Its unchanged suite has TLS setup skips; preserve
-  verification defaults and assertions. See [ELDAP evidence](docs/eldap.md).
-- Runtime Tools builds its IP/file tracing drivers through `BEAM::Driver` and
-  its dynamic-tracing NIF through `BEAM::NIF`. Discover the compiled VM backend
-  through the public native capability query; do not force tracing off or copy
-  private configuration headers. Validate the new ownership separately from
-  historical SDK-built evidence. See [native ownership](docs/runtime-tools.md).
-- Diameter owns dictionary generation and `diameterc`. Preserve normal compiler
-  metadata in OTP applications and the upstream assembly/abstract-code pairing
-  for `prim_eval`; VM-owned core inspection artifacts come from the SDK. See
-  [Diameter assembly](docs/diameter.md).
-- Tools and Public Key retain source-owned parser/schema generation. Generated
-  artifacts stay in the build tree; see [assembly evidence](docs/public-key.md).
-- OS Monitor owns its Linux CPU/memory helper executables. Run unchanged
-  helper-kill suites in private process namespaces with neutral launcher names;
-  the CPU idle-measurement skip remains explicit. See [OS Monitor evidence](docs/os-monitor.md).
-- Dialyzer owns its Erlang analysis modules and the retained `dialyzer`/`typer`
-  command front ends. Preserve version defines and unchanged suite inputs;
-  build PLTs with the installed candidate. See [Dialyzer assembly](docs/dialyzer.md).
-- SNMP owns MIB/parser/codec generation and agent/manager resources. Preserve
-  unchanged suite inputs and explicit compiler-fixture preparation. Its retained
-  Perl converter has a focused portability correction; see [SNMP assembly](docs/snmp.md).
-- Megaco generates its parsers/codecs from retained grammars and schemas. Build
-  both Flex scanners against `BEAM::Driver`, with explicit Flex dependency
-  selection; see [Megaco assembly](docs/megaco.md).
-- ODBC owns its EI-linked port program and system driver-manager dependency.
-  Database acceptance uses an explicitly selected disposable PostgreSQL cluster;
-  see [ODBC assembly](docs/odbc.md).
-- wx builds its retained bindings and ordinary NIFs through the public SDK.
-  The private PCRE collision is corrected in BEAM and both-flavor runtime,
-  playground and GLM acceptance passes. wx work and acceptance are explicitly
-  deferred; retain strict checks disabled by default with `OTP_ENABLE_WX_TESTS`.
-  The pinned upstream runtime reproduces native reload and GTK child-process
-  failures. Continue other applications and non-GUI behavior; GUI coverage that
-  requires wx remains deferred. See [wx evidence](docs/wx.md). Do not silently
-  change process signal policy, native lifetimes or upstream assertions.
-- Debugger builds retained interpreter and GUI modules; validate headless
-  interpretation and breakpoints independently of deferred wx. Install product
-  sources so protected-application checks work after relocation and isolation.
-  See [Debugger evidence](docs/debugger.md).
-- Keep product adaptations focused on the public SDK and distribution boundary.
-  Preserve upstream suite sources, assertions and fixtures unless the maintainer
-  authorizes a specific test change. Replacement build/test orchestration may
-  compile and generate existing inputs without changing their assertions.
-- Keep build outputs under ignored `build/<preset>/` and installs under
-  `install/<preset>/`. Do not commit generated outputs or scratch evidence.
-- Preserve the explicit bootstrap inventory, source attestation and mandatory
-  seed-to-source-built compiler verification. Candidate refresh writes only to
-  the build tree; review candidates before changing checked seeds or hashes.
-  Use only the selected `libbeam` for execution. Do not make
-  the build depend on a bundled OTP environment in BEAM, a sibling build tree
-  or a second VM; seeds do not substitute for source-built product applications.
-- Application versions come from `OTP_VERSION` and `otp_versions.table`.
-  Retained compiler generators must match the selected VM's bytecode format.
-  Native builds and deployment must follow supported public SDK contracts.
-  Report an unresolved boundary instead of inventing a private dependency.
+Use explicitly selected system or verified reusable dependencies. Builds never
+fetch missing inputs automatically. Service tests use private namespaces and
+disposable databases/configuration; never change a running system service.
+Inspect reusable dependency manifests before declaring a prerequisite absent.
+GUI checks preserve attendance guards, display isolation, signal/process policy
+and native lifetime; no unsandboxed retry is permitted.
 
-Keep commits and permanent documentation independent of interactive sessions.
-Preserve license and copyright notices. The upstream tracker is a separate
-read-only reference, not a source directory for this build.
+Build/install only under ignored `build/<preset>` and `install/<preset>` or the
+workspace's authorized scratch locations. Estimate peak disk before heavy runs
+and bound concurrent installations. Runners stop owned processes and remove
+payloads on success/failure/catchable interruption, retaining bounded diagnostics
+and exact identities in ignored output or CI artifacts. `BEAM_TEST_KEEP_WORK=1`
+is a temporary debugging override; record size/location and remove it afterward.
+Never prune another running job's inputs or selected development installations.
 
-## Preview SDK qualification
+Keep functional manifests, test oracles, fixtures and qualification interfaces.
+Generated provenance/results/content-review decisions are external acceptance
+inputs, not committed reports or installed assets. Do not rename/delete them
+based on the word evidence. Documentation-only edits need focused link/content/
+whitespace checks, not invented product execution claims.
 
-The [release strategy](../dev-documents/distribution-release-strategy.md) records
-upstream-based product identities and public compatibility policy. OTP retains
-its upstream OTP version plus a distribution revision; BEAM adopts its upstream
-ERTS version plus a BEAM distribution revision, currently `17.0-r1-preview.1`.
-Keep actual SDK/evidence versions intact; earlier identity validation does not
-qualify a new SDK. OTP retains its own `OTP_VERSION` and `otp_versions.table`
-for application assembly after their removal from the modern repository.
-The [sync process](../dev-documents/Upstream-Sync-Process.md) defines OTP
-`maint-<OTP-major>` branches from product checkpoints, paired with the selected
-BEAM `maint-<ERTS-major>` generation. The initial pairing is OTP `maint-29` and
-BEAM `maint-17`; names do not replace exact SDK qualification or declare support.
-Changes to experimental modern reporting do not remove OTP's own reporting and
-compatibility requirements. Preserve the private matching-build native contract.
+## Source maintenance
 
-The BEAM preview pipeline consumes this repository at an explicit source pin and
-builds against its acquired, verified SDK archive. Expected BEAM version, build
-identity and flavor are independent of OTP_VERSION. Preserve upstream reporting,
-all owning acceptance and external provenance. Playground is not a release input
-or gate. Existing nonpassing OTP checks block promotion; this release work does
-not authorize their correction or reopen wx.
-
-## Test output cleanup
-
-Follow the workspace [validation storage lifecycle](../AGENTS.md#validation-storage-lifecycle).
-Runners clean disposable payloads on success, failure and catchable interruption,
-keeping bounded diagnostics and result identities. `BEAM_TEST_KEEP_WORK=1` is an
-explicit debugging-only retention override; record its size and remove it after
-investigation. Existing development installations and selected input prefixes
-are never cleanup targets.
-
-Select system tools or verified reusable packages from workspace `downloads/`,
-following the workspace cache policy. Flex is a build dependency. vsftpd,
-OpenLDAP and PostgreSQL/psqlODBC are external interoperability-test inputs;
-private server instances and their mutable data remain inside disposable test
-directories. Never store the reusable dependency packages in `tmp/`.
+[Maintenance](docs/maintenance.md) owns source pins, reviewed removal history,
+version/release distinctions and propagation. Inspect the actual target branch;
+never reapply an obsolete blanket OTP removal mask or change the reference tree.
+Preserve copyright/license notices and upstream author/provenance conventions.
+Keep implementation/commits independent of interactive sessions. Preserve
+unrelated incomplete changes. Work in the main checkout for distribution work;
+no commits, pushes or publication are implied by an implementation request.

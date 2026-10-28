@@ -149,7 +149,7 @@ run(Prefix, Flavor, Work) ->
         GeneratedBeam = code:which('P-Record'),
         %% Supply the record in schema order. The example's generated v/0
         %% uses canonical SET order for PER; that separate value-generation
-        %% discrepancy is recorded in docs/asn1.md, not repaired here.
+        %% discrepancy is documented in docs/application-build.md.
         Value = {'PersonnelRecord', {'Name', "John", "P", "Smith"},
                  "Director", 51, "19710917", {'Name', "Mary", "T", "Smith"},
                  [{'ChildInformation', {'Name', "Ralph", "T", "Smith"}, "19571111"},

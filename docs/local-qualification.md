@@ -1,9 +1,9 @@
 # Local Linux qualification
 
-The [completion objective](../../dev-documents/otp-compatibility.md) targets
+The [compatibility contract](compatibility.md) targets
 Linux x86-64 interpreter and JIT installations using the public installed SDK.
-This work is in progress. An inventory, a working command or a passing selected
-suite does not qualify the distribution. Release-promotion policy is unchanged.
+An inventory, a working command or a passing selected suite does not qualify the
+distribution. Qualification and release promotion remain separate decisions.
 
 ## Specification and command inventory
 
@@ -46,8 +46,8 @@ tests likewise retain their BEAM owner. Product commands, application behavior,
 native implementations and installation tests belong here.
 
 Case expansion remains pending until each suite's actual fixture preparation is
-available. Command controls likewise require observable behavior checks. The
-initial inventory reports `qualified: false`; it cannot establish completion.
+available. Command controls likewise require observable behavior checks. An
+inventory with unexpanded selections cannot establish completion.
 
 ## Case evidence and strict suite outcomes
 
@@ -72,10 +72,9 @@ inventory limitation must name one exact case/context/occurrence, flavor, source
 hash, skip status and raw reason. It must bind a complete original-reference
 selection and reference installation by hash, with the same skip, plus passing
 candidate supplemental evidence under `gate: limitation:<id>`. Each entry also
-records its rationale. A failed case, changed reason, missing original evidence
-or supplemental check from another installation remains nonpassing. No named
-limitation has yet been activated in the inventory; the integrity tests exercise
-the reconciliation protocol independently of product evidence.
+records its rationale. A failed case, changed reason, missing original result
+or supplemental check from another installation remains nonpassing. The integrity
+tests exercise the reconciliation protocol independently of product results.
 
 ```sh
 python3 tools/qualify_local.py --source /path/to/erlang-otp \
@@ -108,3 +107,38 @@ and remove disposable payloads on completion, failure and catchable interruption
 Final qualification requires fresh both-flavor installed, relocated and isolated
 acceptance, GUI observations, interoperability and release lifecycle evidence
 for the final recorded source/SDK pairs.
+
+## Installation structure and content
+
+`tools/installation_inventory.py` verifies complete selected bytes against
+external provenance and compares matching-flavor paths, kinds, modes and literal
+symlink targets, including the installation root. Ordinary and DESTDIR installs
+need their own faithful finalization. Source/build/SDK attestation remains outside
+the installed tree; see [build instructions](build.md#installation-and-external-provenance).
+
+`tools/review_installed_contents.py` separately reviews every changed regular
+file. Decisions bind an exact relative path and both artifact hashes to its
+producer/source, rationale, disposition and validation. Stale or missing decisions
+cannot pass; filename classes/patterns do not waive review. The tool rejects an
+installation changed since capture and writes only outside installed prefixes.
+
+```sh
+python3 tools/review_installed_contents.py \
+  --candidate "$OTP_PROVENANCE" --reference "$REFERENCE_PROVENANCE" \
+  --decisions "$REVIEW_DECISIONS" --output "$CONTENT_REVIEW"
+```
+
+Optional paired `--candidate-beams`/`--reference-beams` records come from
+`tools/inspect_installed_beams.escript` run by each selected installed `escript`.
+They retain interfaces, attributes, compiler options, abstract-code hashes and
+raw literal tables. Source-path normalization is limited to compiler/include and
+abstract-file metadata; the logger-literal comparison changes only its `file`
+field. Native reports preserve dependency/export evidence and archives preserve
+member evidence. Raw differences remain available.
+
+`tools/compare_asn1_generated.escript` compares generated function bodies/exports
+while removing source annotations and consistently identifying internal generated
+helpers. This is not a blanket equivalence rule for ASN.1 output. Keep raw
+source/interface/executable differences, matching producer toolchains and exact
+hash-bound review decisions. Structural equality, reviewed content and runtime
+compatibility are independent gates.
