@@ -1,25 +1,21 @@
 # SPDX-License-Identifier: Apache-2.0
 # OTP-owned primitives use the installed public SDK, with matching-build stamps
 # for explicit host composition. No VM-private source or header is an input.
-if(NOT WIN32)
-    find_package(ZLIB 1.2.8 REQUIRED)
-endif()
-include(CheckSymbolExists)
-if(WIN32)
-    set(CMAKE_REQUIRED_INCLUDES "${_zlib}")
-else()
-    set(CMAKE_REQUIRED_LIBRARIES ZLIB::ZLIB)
-endif()
-if(WIN32)
-    include(CheckCSourceCompiles)
-    check_c_source_compiles("#include <zlib.h>\nint main(void) { return sizeof(&inflateGetDictionary) == 0; }" OTP_HAS_ZLIB_INFLATEGETDICTIONARY)
-else()
-    check_symbol_exists(inflateGetDictionary "zlib.h" OTP_HAS_ZLIB_INFLATEGETDICTIONARY)
-endif()
+# Compression comes from the explicitly selected public SDK, not a second codec.
+include(CheckCSourceCompiles)
+set(CMAKE_REQUIRED_LIBRARIES BEAM::RuntimeStatic)
+unset(OTP_HAS_PUBLIC_ZLIB CACHE)
+check_c_source_compiles("#include <beam/zlib.h>
+int main(void) {
+    beam_zlib_stream stream = {0};
+    unsigned length = 0;
+    if (beam_zlib_inflate_init(&stream) != BEAM_ZLIB_OK) return 1;
+    int result = beam_zlib_inflate_get_dictionary(&stream, 0, &length);
+    return beam_zlib_inflate_end(&stream) != BEAM_ZLIB_OK || result != BEAM_ZLIB_OK;
+}" OTP_HAS_PUBLIC_ZLIB)
 unset(CMAKE_REQUIRED_LIBRARIES)
-unset(CMAKE_REQUIRED_INCLUDES)
-if(NOT OTP_HAS_ZLIB_INFLATEGETDICTIONARY)
-    message(FATAL_ERROR "OTP compression requires zlib with inflateGetDictionary")
+if(NOT OTP_HAS_PUBLIC_ZLIB)
+    message(FATAL_ERROR "Selected BEAM SDK lacks the public in-memory zlib interface")
 endif()
 otp_application_version(erts _primitive_erts_version)
 set(_primitive_directory "erts-${_primitive_erts_version}/lib")
@@ -55,8 +51,6 @@ target_include_directories(otp_prim_file_nif PRIVATE
     "${PROJECT_SOURCE_DIR}/erts/emulator/nifs/common"
     "${PROJECT_BINARY_DIR}/generated")
 target_link_libraries(otp_prim_file_nif PRIVATE BEAM::Driver)
-target_link_libraries(otp_zlib_nif PRIVATE ZLIB::ZLIB)
-target_compile_definitions(otp_zlib_nif PRIVATE HAVE_ZLIB_INFLATEGETDICTIONARY)
 function(otp_nif_relative_path output module)
     if(TARGET "otp_${module}_nif")
         get_target_property(_path "otp_${module}_nif" OTP_INSTALL_PATH)

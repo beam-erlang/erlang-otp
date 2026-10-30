@@ -23,16 +23,6 @@ else()
 endif()
 include_directories("${PROJECT_BINARY_DIR}/generated")
 
-# The retained zlib is an ordinary third-party dependency, not a VM input.
-set(_zlib "${PROJECT_SOURCE_DIR}/erts/emulator/zlib")
-set(_zlib_sources)
-foreach(_source adler32 compress crc32 deflate inffast inflate inftrees trees uncompr zutil)
-    list(APPEND _zlib_sources "${_zlib}/${_source}.c")
-endforeach()
-add_library(otp_zlib STATIC ${_zlib_sources})
-target_include_directories(otp_zlib PUBLIC "${_zlib}")
-add_library(ZLIB::ZLIB ALIAS otp_zlib)
-
 file(CONFIGURE OUTPUT "${PROJECT_BINARY_DIR}/generated/config.h" CONTENT
     "/* OTP-owned Windows command capabilities. */\n#define SIZEOF_VOID_P 8\n#define SIZEOF_LONG 4\n#define SIZEOF_LONG_LONG 8\n#define SIZEOF_INT 4\n#define SIZEOF_SHORT 2\n#define SIZEOF_CHAR 1\n#define HAVE_STDLIB_H 1\n#define HAVE_STRERROR 1\n#define HAVE_IN6 1\n#define HAVE_IN6ADDR_ANY 1\n#define HAVE_IN6ADDR_LOOPBACK 1\n#define HAVE_DECL_IPV6_V6ONLY 1\n#define HAVE_SDKDDKVER_H 1\n#define NO_SA_LEN 1\n" @ONLY)
 

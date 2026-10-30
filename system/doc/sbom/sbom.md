@@ -31,7 +31,13 @@ software used, dependencies and, essentially, what the software is made of. SBOM
 different use cases, and some examples include verification of licenses, or
 vulnerability scanning using databases such as [CVE](https://www.cve.org/) and [OSV](https://osv.dev/), among others.
 
-Erlang/OTP has multiple third-party dependencies. Some are vendored into the source code of Erlang/OTP:
+The following vendoring descriptions and SBOM examples refer to upstream
+Erlang/OTP. See [the installed SDK boundary](../../../docs/architecture.md#installed-sdk-boundary)
+for this distribution's VM dependency ownership.
+
+Upstream Erlang/OTP has multiple third-party dependencies. Some are vendored into
+its source code:
+
 - pcre2 (`erts/emulator/pcre`)
 - zlib (`erts/emulator/zlib`)
 - asmjit (`erts/emulator/asmjit`)

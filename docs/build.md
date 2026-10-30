@@ -4,13 +4,20 @@ OTP requires an explicitly selected installed BEAM SDK with `BEAM::RuntimeStatic
 `BEAM::NIF`, `BEAM::Driver` and verified public artifact/header deployment. Product
 and private compiler hosts use the same OTP-owned native/preload inventory.
 [Architecture](architecture.md) defines the boundary; no private VM header,
-sibling build or external compiler/runtime fallback is permitted.
+sibling build or external compiler/runtime fallback is permitted. The optional
+`BEAM::Host` target, modern library containers and returning-host headers are
+not required. The `installed-sdk-boundary` test removes those assets from a
+private SDK copy and compiles, links and executes the public VM lifecycle probe;
+it also checks exact-selection rejection and public imports.
+
+The zlib NIF uses the selected SDK codec. Third-party dependencies retain their
+own system-zlib requirements.
 
 ## Linux build and acceptance inputs
 
 Use CMake 3.25 or newer, Ninja, C/C++ compilers, Perl, Python 3.9 or newer,
 Flex 2.6 or newer, pkg-config and a JDK. Native dependencies include OpenSSL,
-zlib 1.2.8 or newer with `inflateGetDictionary`, curses/terminfo, ODBC development
+curses/terminfo, ODBC development
 files and wxWidgets 3.2 or newer with WebView/GLib/OpenGL/GLU dependencies.
 `FLEX_EXECUTABLE` and normal CMake dependency settings select nonstandard inputs.
 The application inventory includes all 35 OTP 29.0 applications. Disabling wx
@@ -59,7 +66,7 @@ Windows 11 AMD64 uses Visual Studio 2022 MSVC, CMake, Ninja, Python 3.12,
 Perl, native WinFlex 2.6.4 and Java 17. Start an **x64 Native Tools Command
 Prompt for VS 2022**, then run PowerShell from that environment. Neither WSL
 nor MSYS2 compilers are used in these MSVC configurations. Both compile all 35 applications.
-The Windows build uses wxMSW, Windows SDK ODBC and retained static zlib sources.
+The Windows build uses wxMSW, Windows SDK ODBC and the selected SDK's public in-memory zlib interface.
 
 Select verified dependency packages and extracted inputs explicitly; keep reusable
 inputs separate from mutable build/test output. Build OpenSSL 3.6.3 from its verified source archive in an MSVC environment:
@@ -163,7 +170,8 @@ The `windows-amd64-ucrt64-emu` and `windows-amd64-ucrt64-jit` presets consume
 the corresponding installed GCC BEAM static SDK. Use native UCRT64 GCC/G++,
 CMake, Ninja and windres, with native Python, Perl, WinFlex and Java 17.
 Select installed UCRT64 OpenSSL and shared wxMSW dependencies matched to the
-compiler environment. Retained zlib is still compiled separately as a static library.
+compiler environment. The zlib NIF uses the selected SDK's public codec rather than a separate static
+zlib build.
 Use the prepared UTF-8 toolchain copy described in the
 [BEAM build guidance](../../beam-erlang/cmake/README.md) for native
 compilation in Unicode paths without modifying the original compiler prefix.
@@ -213,7 +221,7 @@ The smoke/GUI checks have the same qualification limits as the MSVC configuratio
 
 The `macos-arm64-appleclang-emu` and `macos-arm64-appleclang-jit` presets select
 ARM64 Apple Clang and deployment target 15.0. Select the matching installed SDK,
-OpenSSL, zlib, unixODBC, wxWidgets/Cocoa, Java, Flex and ordinary build tools:
+OpenSSL, unixODBC, wxWidgets/Cocoa, Java, Flex and ordinary build tools:
 
 ```sh
 cmake --preset macos-arm64-appleclang-emu \

@@ -12,7 +12,7 @@ embedding/native interfaces and generic lifecycle mechanisms. See the
 
 The SDK supplies shared and static forms of the same VM. OTP links product,
 seed and source-built compiler hosts through `BEAM::RuntimeStatic`. Modern
-BEAM commands and components retain their own linkage. An OTP process must
+BEAM commands and libraries retain their own linkage. An OTP process must
 contain one runtime: mixing shared/static VM graphs or loading a second runtime
 through a native dependency is rejected.
 
@@ -27,15 +27,26 @@ additional VM core modules.
 
 The OTP-owned native inventory selects linked NIFs and drivers, the socket
 backend and helpers. Public composition copies preload bytes, native descriptors
-and immutable startup context. Preparation does not execute a VM; native
-activation and ordinary `load_nif` timing remain under the VM registries and OTP
-startup policy. Selecting code grants no implicit capability. VM lifetimes own
-admission, activation, failure rollback, owner monitoring and cleanup. OTP owns
-process startup, native names and restart policy; BEAM contains no OTP inventory.
+and immutable startup context. Preparation does not execute a VM. Resident NIF
+entry-table accessors run during VM initialization; OTP modules subsequently
+invoke ordinary `erlang:load_nif/2` with their actual load information. The host's
+linked native code uses the executable's lifetime and requires no image owner.
+OTP does not use explicit NIF bindings or modern library startup actions.
+The shared host preparation also declares its embedded Zstd implementation through
+the SDK's generic immutable dependency inventory. This preserves
+`erlang:system_info(embedded_3pps)` across restart without requiring the VM to know
+OTP's native dependency names. OTP continues to own and build that implementation
+independently of optional modern packages.
+
+Selecting code grants no implicit capability. VM lifetimes own native admission,
+failure arbitration and native-resource cleanup. OTP owns process startup,
+native names, owner monitoring and restart policy. Its `beam_vm_enter` call
+retains the initialized-to-entry convenience path: process-lifetime permissions
+become effective at entry commit. BEAM contains no OTP inventory.
 
 Sequential fresh VMs may use different explicit compositions. Concurrent VMs,
 complete returning teardown of an OTP system, hot native rebinding and a stable
-third-party component-provider ABI are not established contracts. Native
+third-party library-provider ABI are not established contracts. Native
 matching-build descriptors require the selected SDK identity.
 
 ## Installed SDK boundary
@@ -54,9 +65,18 @@ commands and peers must execute the selected candidate runtime.
 
 The static target carries archive retention, native exports and link support,
 including the JIT C++ runtime. Static-only SDK discovery does not require the
-BEAM command or shared VM library. Private compression/regular-expression
+BEAM command, shared VM library, optional `BEAM::Host` archive, library
+containers or their headers. `<beam/beam.h>` exposes only the core VM API. Private compression/regular-expression
 symbols must remain isolated from application dependencies. Native extensions
 resolve public VM symbols through the running OTP host.
+
+Ryu, its adapted Microsoft STL formatting code and AsmJit are private VM
+implementation dependencies supplied by `BEAM::RuntimeStatic`. Ryu implements
+short float-to-string conversion. AsmJit supplies machine-code generation for
+the JIT flavor and is excluded from the interpreter flavor. BEAM owns their
+vendored sources, adaptations, metadata and notices; upstream changes to these
+dependencies are reviewed in BEAM. OTP receives their implementations through
+its selected installed SDK.
 
 ## Independent compiler bootstrap
 
@@ -110,3 +130,10 @@ prefixes, sources and builds, execute from unrelated directories and reject
 loader-path fallback. [Build instructions](build.md),
 [application assembly](application-build.md) and
 [compatibility requirements](compatibility.md) describe the owning procedures.
+
+OTP's zlib NIF uses `<beam/zlib.h>` from the selected installed SDK. Its
+preloaded Erlang module and native registration remain OTP-owned; it does not
+consume the modern `libbeam-zlib` library. The SDK provides the single codec for
+VM and Erlang compression. BEAM owns the vendored codec, its adaptations, vendor
+metadata and notices; upstream codec changes are reviewed and maintained in
+BEAM. Third-party dependencies may independently use system zlib.

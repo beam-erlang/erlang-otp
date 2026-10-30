@@ -55,6 +55,8 @@ def main():
     public_native = set(re.findall(
         r"^(?:void|int|beam_native_trace_backend)\s+(beam_(?:native|packet)_\w+)\s*\(",
         (sdk / "include/beam/native.h").read_text(), re.MULTILINE))
+    public_zlib = set(re.findall(r"\b(beam_zlib_\w+)\s*\(",
+                                (sdk / "include/beam/zlib.h").read_text()))
     runtime = symbols(args.nm, args.runtime, "--defined-only")
     entries = json.loads(args.compile_commands.read_text())
     inventory = json.loads(args.inventory.read_text())
@@ -119,7 +121,8 @@ def main():
             roots.append("header.erl_nif" if is_nif else "header.erl_driver")
             for identity, path in (("header.erl_nif", header_dir / "erl_nif.h"),
                                    ("header.erl_driver", header_dir / "erl_driver.h"),
-                                   ("header.beam_native", sdk / "include/beam/native.h")):
+                                   ("header.beam_native", sdk / "include/beam/native.h"),
+                                   ("api.zlib", sdk / "include/beam/zlib.h")):
                 if path in headers:
                     roots.append(identity)
         allowed_sdk = header_closure(sdk, roots)
@@ -136,6 +139,8 @@ def main():
             public |= public_nif
         if sdk / "include/beam/native.h" in headers:
             public |= public_native
+        if sdk / "include/beam/zlib.h" in headers:
+            public |= public_zlib
         libraries = [Path(path) for path in record["library"].split(";")]
         imports, exported = set(), set()
         for library in libraries:

@@ -12,19 +12,21 @@ run reports to product source or link product guidance to them.
 `BEAM::RuntimeStatic`, embed thirteen OTP-owned preloads and explicitly compose
 OTP's linked native implementations. The SDK supplies exactly nine core Erlang
 modules; preserve OTP's 22 preloaded/sticky modules and restart semantics.
-Modern BEAM commands/components are separately owned. Removed runtime-family
+Modern BEAM commands/libraries are separately owned. Removed runtime-family
 selectors, locks, OTP boot adapters and BEAM-side OTP ownership stay removed.
 
 Select exact SDK version, flavor, build identity and required capabilities.
 Use public installed headers/symbols/CMake targets; never copy private VM headers,
 use sibling source/build dependencies or introduce an alternate runtime. A missing
 mechanism requires a reviewed public SDK boundary or an OTP-owned implementation.
-Generic admission, activation, rollback and cleanup belong to the VM; OTP owns
-native names, startup, commands, resources and distribution policy.
+Generic admission, native binding, failure arbitration and cleanup belong to the
+VM; OTP owns resident registrations, native names, startup, commands, resources
+and distribution policy. OTP must not depend on BEAM::Host or modern library
+containers; its process host uses the public initialized-to-entry path.
 
 The host statically embeds the VM/preloads/built-ins. Preserve native-origin and
 single-runtime checks. Standard application extensions remain at upstream paths.
-Do not promise a stable preview C ABI, third-party component-provider interface,
+Do not promise a stable preview C ABI, third-party library-provider interface,
 hot native rebinding or complete returning teardown of OTP. Sequential fresh
 VMs remain supported; concurrent VMs remain unsupported.
 

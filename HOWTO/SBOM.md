@@ -29,8 +29,13 @@ different use cases, and some examples include checking license compliance,
 dependencies for vulnerabilities using databases such as
 [CVE](https://www.cve.org/) and [OSV](https://osv.dev/), among others.
 
-Erlang/OTP has multiple third-party dependencies. Some are vendored into the
-source code of Erlang/OTP:
+The following vendoring descriptions and SBOM examples refer to upstream
+Erlang/OTP. See [the installed SDK boundary](../docs/architecture.md#installed-sdk-boundary)
+for this distribution's VM dependency ownership.
+
+Upstream Erlang/OTP has multiple third-party dependencies. Some are vendored into
+its source code:
+
 - pcre (`erts/emulator/pcre`)
 - zlib (`erts/emulator/zlib`)
 - asmjit (`erts/emulator/asmjit`)
@@ -225,7 +230,7 @@ Fields summary:
 - `ecosystem`: List of valid ecosystems in [OSV Ecosystems](https://ossf.github.io/osv-schema/#defined-ecosystems)
   where this value is omitted for C/C++ code (e.g., `asmjit`, `pcre2`, `zlib`, `zstd`, etc), and used in `vendor.json` for `jquery`.
 - `path`: path to the vendor library inside Erlang/OTP. This can point to a folder or a list of files.
-  - Folder: any file inside the folder is considered part of the vendor library (e.g., asmjit [vendor.info](../erts/emulator/asmjit/vendor.info)).
+  - Folder: any file inside the folder is considered part of the vendor library (e.g., upstream AsmJit [vendor.info](https://github.com/erlang/otp/blob/550d7b7898706c7822362c42e7b93120c1d1f29a/erts/emulator/asmjit/vendor.info)).
   - List of files: only the files listed here are part of a vendor library (e.g., erts-config [vendor.info](../erts/autoconf/vendor.info)).
 - `exclude`: excludes the listed files or directories from what is listed in `path`. That is, they will not included into the generated SPDX package, but will instead be part of the SPDX package which this package is part of.
 - `comment`: any comment.

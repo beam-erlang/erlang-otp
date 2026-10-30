@@ -10,6 +10,9 @@ before_boot() ->
         ok = check_startup_loaded([erl_init, init, prim_buffer, prim_eval, prim_inet, prim_file, zlib,
      socket_registry, prim_socket, prim_net, prim_zip, erl_prim_loader, erl_tracer]),
         ok = check_primitives(),
+        #{included := Embedded, excluded := Excluded} = erlang:system_info(embedded_3pps),
+        [zstd] = [Name || Name <- Embedded, Name =:= zstd],
+        [] = [Name || Name <- Excluded, Name =:= zstd],
         Janitor = unique_helper(prim_file),
         Registry = unique_helper(socket_registry),
         ok = persistent_term:get({prim_socket, load_nif_result}),
@@ -42,6 +45,9 @@ after_boot() ->
         Protocols = persistent_term:get({prim_socket, protocols}),
         ok = check_driver_ownership(Init),
         ok = check_primitives(),
+        #{included := Embedded, excluded := Excluded} = erlang:system_info(embedded_3pps),
+        [zstd] = [Name || Name <- Embedded, Name =:= zstd],
+        [] = [Name || Name <- Excluded, Name =:= zstd],
         ok = check_module_policy(),
         case ets:lookup(boot_activation, cycle) of
             [{cycle, 0}] ->

@@ -46,7 +46,7 @@ if(WIN32)
 endif()
 
 # These are declared SDK capabilities, not knowledge of private install paths.
-set(_required_artifacts runtime.static api.beam api.runtime api.boot)
+set(_required_artifacts runtime.static api.beam api.runtime api.zlib)
 if(NOT WIN32)
     list(APPEND _required_artifacts helper.child_setup)
 endif()
@@ -75,13 +75,16 @@ int main(void) {
     options.builtin_driver_count = 0;
     options.preload_count = 0;
     options.preloads = (const beam_module_spec *)0;
+    beam_embedded_dependency dependency = {sizeof(beam_embedded_dependency), \"probe\", BEAM_EMBEDDED_INCLUDED};
+    options.embedded_dependency_count = 1;
+    options.embedded_dependencies = &dependency;
     beam_vm_options vm = {0};
     vm.break_policy = BEAM_BREAK_DISABLED;
     return (int) options.preload_count;
 }" OTP_HAS_PUBLIC_PRELOAD_COMPOSITION)
 unset(CMAKE_REQUIRED_LIBRARIES)
 if(NOT OTP_HAS_PUBLIC_PRELOAD_COMPOSITION)
-    message(FATAL_ERROR "Selected BEAM SDK lacks public preload composition or process interrupt policy required for OTP compatibility")
+    message(FATAL_ERROR "Selected BEAM SDK lacks public preload composition, embedded dependency reporting or process interrupt policy required for OTP compatibility")
 endif()
 
 function(_otp_json_string output value)
