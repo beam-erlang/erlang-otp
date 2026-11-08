@@ -38,7 +38,7 @@ for this distribution's VM dependency ownership.
 Upstream Erlang/OTP has multiple third-party dependencies. Some are vendored into
 its source code:
 
-- pcre2 (`erts/emulator/pcre`)
+- pcre2 (`lib/stdlib/c_src/re/pcre2`)
 - zlib (`erts/emulator/zlib`)
 - asmjit (`erts/emulator/asmjit`)
 - openssl (`erts/emulator/openssl`)

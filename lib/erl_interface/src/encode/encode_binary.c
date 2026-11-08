@@ -30,20 +30,7 @@ static void copy_bits(const unsigned char* src, size_t soffs,
 
 int ei_encode_binary(char *buf, int *index, const void *p, long len)
 {
-  char *s = buf + *index;
-  char *s0 = s;
-
-  if (!buf) s += 5;
-  else {
-    put8(s,ERL_BINARY_EXT);
-    put32be(s,len);
-    memmove(s,p,len);
-  }
-  s += len;
-  
-  *index += s-s0; 
-
-  return 0; 
+    return beam_etf_embed_encode_binary(buf, index, p, len);
 }
 
 int ei_encode_bitstring(char *buf, int *index,
@@ -51,29 +38,7 @@ int ei_encode_bitstring(char *buf, int *index,
                         size_t bitoffs,
                         size_t bits)
 {
-  char *s = buf + *index;
-  char *s0 = s;
-  size_t bytes = (bits + 7) / 8;
-  char last_bits = bits % 8;
-
-  if (!buf) s += last_bits ? 6 : 5;
-  else {
-      char* tagp = s++;
-      put32be(s, bytes);
-      if (last_bits) {
-          *tagp = ERL_BIT_BINARY_EXT;
-          put8(s, last_bits);
-      }
-      else
-          *tagp = ERL_BINARY_EXT;
-
-      copy_bits((const unsigned char*)p, bitoffs, (unsigned char*)s, bits);
-  }
-  s += bytes;
-
-  *index += s-s0;
-
-  return 0;
+    return beam_etf_embed_encode_bitstring(buf, index, p, bitoffs, bits);
 }
 
 

@@ -30,28 +30,6 @@
 
 int ei_encode_double(char *buf, int *index, double p)
 {
-  char *s = buf + *index;
-  char *s0 = s;
-
-  /* Erlang does not handle Inf and NaN, so we return an error rather
-   * than letting the Erlang VM complain about a bad external
-   * term. */
-#if defined(HAVE_ISFINITE)
-  if(!isfinite(p)) {
-      return -1;
-  }
-#endif
-
-  if (!buf)
-    s += 9;
-  else {
-    /* IEEE 754 format */
-    put8(s, NEW_FLOAT_EXT);
-    put64be(s, ((FloatExt*)&p)->val);
-  }
-
-  *index += s-s0; 
-
-  return 0; 
+    return beam_etf_embed_encode_double(buf, index, p);
 }
 

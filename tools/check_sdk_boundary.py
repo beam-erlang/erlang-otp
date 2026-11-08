@@ -51,6 +51,22 @@ def main():
             # A static OTP host needs neither the modern controller nor libraries.
             minimal = root / "runtime-only-sdk"
             shutil.copytree(args.sdk, minimal, symlinks=True)
+            config = minimal / 'lib/cmake/BEAM/BEAMConfig.cmake'
+            original_config = config.read_text()
+            declaration = 'set(BEAM_SDK_HAS_LEGACY_RE_BIFS OFF)'
+            if original_config.count(declaration) != 1:
+                raise RuntimeError('Final SDK must declare legacy regex BIFs absent')
+            for label, value in [('legacy-regex', declaration.replace('OFF', 'ON')),
+                                 ('unknown-regex', '')]:
+                config.write_text(original_config.replace(declaration, value))
+                rejected = subprocess.run([args.cmake, '-S', str(root), '-B', str(root / label),
+                    '-DBEAM_SDK_ROOT=' + str(minimal),
+                    '-DOTP_BEAM_SDK_VERSION=' + args.expected_version,
+                    '-DOTP_BEAM_SDK_BUILD_ID=' + args.expected_build_id,
+                    '-DOTP_BEAM_FLAVOR=' + args.expected_flavor], text=True, capture_output=True)
+                if rejected.returncode == 0 or 'without legacy re BIF' not in rejected.stdout + rejected.stderr:
+                    raise RuntimeError('Ineligible regex SDK accepted: ' + label)
+            config.write_text(original_config)
             records = json.loads((minimal / "lib/beam/runtime-artifacts.json").read_text())["artifacts"]
             for identity, record in records.items():
                 if (identity in {"runtime", "host.static", "api.boot", "api.host",
@@ -107,6 +123,11 @@ def main():
     for source in args.source:
         source = source.resolve()
         matches = [entry for entry in entries if Path(entry["file"]).resolve() == source]
+        if source.name == "otp_host_inputs.c":
+            # The private instrumented host compiles this source with a distinct
+            # native inventory. This check owns the production host boundary.
+            matches = [entry for entry in matches if "CMakeFiles/otp_host_inputs.dir/"
+                       in entry.get("command", entry.get("output", ""))]
         if len(matches) != 1:
             raise RuntimeError("Expected one compile command for the SDK probe")
         entry = matches[0]

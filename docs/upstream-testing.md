@@ -31,6 +31,14 @@ SDK supplies every candidate VM, including peers and subprocesses. An original
 OTP installation is a separately identified reference/interoperability input,
 never a fallback candidate compiler or runtime.
 
+`upstream-binary_module_SUITE` executes the complete unchanged binary-library
+selection, including its reference implementation, argument diagnostics and
+documentation examples. The runner copies and compiles `binref.erl`,
+`random_iolist.erl` and `error_info_lib.erl`; binary-module documentation comes
+from the installed product. Its 16,200-second execution limit and 16,320-second
+CTest limit leave room for the original per-case timetraps without narrowing
+the selection.
+
 ## Explicit installed comparisons
 
 The runner also accepts an immutable installed selection with its complete
@@ -99,3 +107,44 @@ and estimate peak use before large cases; serialize heavy installations and
 never remove another job's inputs. Reusable dependency packages stay separate
 from mutable validation work. Product source/manuals do not retain development
 run reports or reference disposable consumer inventories as release gates.
+
+The complete collection/text acceptance selections include `lists_SUITE` (78),
+`maps_SUITE` (32), `string_SUITE` (45) and `unicode_SUITE` (19). The runner stages
+unchanged helpers and Unicode property/normalization data. New outer limits
+preserve upstream case timetraps; these suites run serially. Unicode acceptance
+also compares the native UTF-16/32 contracts with the unchanged ordinary fallback,
+including nested remainders and partial sequences.
+
+ETS acceptance registers the unchanged complete `ets_SUITE` (162 cases and
+groups), `ets_tough_SUITE` (one case with the original iteration defaults) and
+`ets_property_test_SUITE` (four properties). ETS stages its upstream helpers and
+data, including `error_info_lib` and `erts_test_utils`, and preserves doctest
+metadata and source-integrity checks. Outer/CTest limits are 43200/43320 seconds
+for ETS and 600/720 for tough/property. These suites run serially. Without a
+verified property framework, retain the original prerequisite skip and report
+the four properties as unexecuted/nonpassing; registration is not execution.
+The SDK-owned VM report separately runs both `match_spec_SUITE` trace-session
+groups and its flat cases, with 46 occurrence paths and 3600/3720-second limits.
+
+### Erl_Interface
+
+Registered complete suites are `ei_encode_SUITE`, `ei_decode_SUITE`,
+`ei_decode_encode_SUITE`, `ei_format_SUITE`, `ei_print_SUITE`,
+`ei_connect_SUITE`, `ei_accept_SUITE`, `ei_tmo_SUITE`, `ei_global_SUITE`,
+`erl_call_SUITE` and `port_call_SUITE`. The usual `upstream-<suite>` CTest entries
+use the installed candidate and original sources/assertions. Preparation copies
+and hashes native sources, runs the original `init_tc` generator through the
+candidate, and builds native runners/driver against installed OTP headers and
+`libei`. A private EPMD serves real candidate-node communication; no running
+system service or external compiler runtime is used. `otp-ei-interop` additionally runs both standalone candidate archives against
+an explicitly selected, provenance-verified original node. It sends UTF-8,
+64-bit integer, binary and exported-fun values through real RPC and decodes the
+returned terms. The reference identity is recorded separately.
+Failures and skips retain their raw case results.
+
+`ei_tmo_SUITE:ei_connect_unreachable_tmo` requires an explicitly selected
+unreachable host. Set `OTP_EI_UNREACHABLE_HOST` (or the runner's
+`--ei-unreachable-host`) to supply the original `test_host_not_reachable`
+configuration. The unchanged case checks reachability before exercising the C
+connection timeout. Without that prerequisite it remains auto-skipped and the
+suite's qualification result remains nonpassing.

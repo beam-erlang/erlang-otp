@@ -26,25 +26,6 @@
 
 int ei_encode_boolean(char *buf, int *index, int p)
 {
-  char *s = buf + *index;
-  char *s0 = s;
-  char *val;
-  int len;
-
-  val = p ? "true" : "false";
-  len = strlen(val);
-
-  if (!buf) s += 2;
-  else {
-      put8(s, ERL_SMALL_ATOM_UTF8_EXT);
-      put8(s, len);
-
-      memcpy(s,val,len); /* unterminated string */
-  }
-  s += len;
-
-  *index += s-s0; 
-
-  return 0; 
+    return beam_etf_embed_encode_boolean(buf, index, p);
 }
 

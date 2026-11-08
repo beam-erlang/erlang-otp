@@ -16,7 +16,8 @@ def main():
     args = parser.parse_args()
     if len(set(args.modules)) != len(args.modules):
         parser.error("Duplicate preload names")
-    # Retain upstream chunk selection and ordering. Inspection files stay whole.
+    # Retain the generator's executable chunks and native metadata in order.
+    # Inspection files stay whole.
     # Its ordinary output contains only C arrays, with no private VM types.
     generated = subprocess.run([args.perl, str(args.generator),
         *[str(args.directory / (name + ".beam")) for name in args.modules]],

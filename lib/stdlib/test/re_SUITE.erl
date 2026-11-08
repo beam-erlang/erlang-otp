@@ -71,6 +71,7 @@ groups() ->
     [].
 
 init_per_suite(Config) ->
+    ok = otp_re_test:load("otp_re_test"),
     Config.
 
 end_per_suite(_Config) ->
@@ -293,7 +294,7 @@ count_re_run_trap_out(P, M) when is_reference(M) ->
     count_re_run_trap_out(P, 0);
 count_re_run_trap_out(P, N) when is_integer(N) ->
     receive
-        {trace,P,out,{erlang,re_run_trap,3}} ->
+        {trace,P,out,{re,re_match_continue,2}} ->
             count_re_run_trap_out(P, N+1)
     after 0 ->
             N
@@ -1274,7 +1275,7 @@ receive_any() ->
 
 last_test(Config) when is_list(Config) ->
     erts_debug:set_internal_state(available_internal_state, true),
-    Res = case erts_debug:get_internal_state(re_yield_coverage) of
+    Res = case otp_re_test:get_internal_state(re_yield_coverage) of
               undefined ->
                   case erlang:system_info(build_type) of
                       Type when Type =/= debug ->
@@ -1290,7 +1291,7 @@ last_test(Config) when is_list(Config) ->
 check_yield_coverage([], Yields, Err) ->
     io:format("Total number of yields: ~p\n", [Yields]),
     io:format("Note: The number of yields per seconds are probably way higher than expected in a healthy system\n"
-              "      due to the use of erts_debug:set_internal_state(re_loop_limit,_) to get good code coverage.", []),
+              "      due to the use of otp_re_test:set_internal_state(re_loop_limit,_) to get good code coverage.", []),
     Err;
 check_yield_coverage([Tuple | Tail], YieldAcc, Err0) ->
     {Err1, Yields} =

@@ -1,0 +1,17 @@
+{
+  "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+  "reference_repository": "beam-erlang-re",
+  "reference_files": {
+    "native/re_nif.c": "cb9f67f4d13d971f666fd72596a0c86e05b0735e9fd00cd2194f07a05061c637",
+    "tools/generate_backend.py": "dda321402437624fbc40d255c30af974f0a7f302e7909034519dc742cec58fb3",
+    "src/re.erl": "20bd96f227e909ba02bcdcaf3eceea38cdfebaedfe7d4fd7b3b75edc12c1e28f",
+    "tests/benchmark/re_bench.erl": "b8bacb76d042c64cab78283479129eae10790c74fd29d5fc9cfc11fe13191ee9"
+  },
+  "adaptations": [
+    "OTP resident loading and existing Erlang algorithms/formatter",
+    "OTP-private backend namespace and STDLIB source ownership",
+    "Transactional same-backend module upgrade and shared resource ownership",
+    "Vendor metadata paths updated for STDLIB ownership; backend C/header contents retained",
+    "Comparison fixture retains eight reference workloads and adds five OTP caller workloads"
+  ]
+}

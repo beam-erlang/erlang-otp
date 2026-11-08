@@ -68,6 +68,7 @@
 
 -include("dialyzer.hrl").
 -include("../../compiler/src/core_parse.hrl").
+-include("../../compiler/src/otp_native_profile.hrl").
 
 -type ext_types_message() :: {pid(), 'ext_types',
                               {mfa(), {file:filename(), erl_anno:location()}}}
@@ -126,7 +127,7 @@ get_core_from_src(File, Opts) ->
   case compile:noenv_file(File, Opts ++ src_compiler_opts()) of
     error -> {error, []};
     {error, Errors, _} -> {error, format_errors(Errors)};
-    {ok, _, Core} -> {ok, dialyzer_clean_core:clean(Core)}
+    {ok, _, Core} -> {ok, dialyzer_clean_core:clean(analysis_core(Core, Opts))}
   end.
 
 -type get_core_from_beam_ret() :: {'ok', cerl:c_module()} | {'error', string()}.
@@ -143,7 +144,7 @@ get_core_from_beam(File, Opts) ->
     {ok, {Module, [{debug_info, {debug_info_v1, Backend, Metadata}}]}} ->
       case Backend:debug_info(core_v1, Module, Metadata, Opts ++ src_compiler_opts()) of
 	{ok, Core} ->
-          {ok, dialyzer_clean_core:clean(Core)};
+          {ok, dialyzer_clean_core:clean(analysis_core(Core, Opts))};
 	{error, _} ->
 	  {error, "  Could not get Core Erlang code for: " ++ File ++ "\n"}
       end;
@@ -151,6 +152,74 @@ get_core_from_beam(File, Opts) ->
       {error, "  Could not get Core Erlang code for: " ++ File ++ "\n" ++
         "  Recompile with +debug_info or analyze starting from source code"}
   end.
+
+%% Executable compilation keeps public calls opaque to name-based native
+%% optimizations. Analysis instead resolves their contracts against its target
+%% profile, independently of the VM running Dialyzer. Ordinary calls retain
+%% their original identities so cross-module success typing still works.
+analysis_core(Core, Opts) ->
+  Attrs = [{cerl:concrete(K), cerl:concrete(V)} ||
+             {K,V} <- cerl:module_attrs(Core)],
+  Aliases = maps:from_list(proplists:get_value(beam_native_calls, Attrs, [])),
+  FormOpts = lists:append([case V of L when is_list(L) -> L; _ -> [V] end ||
+                            {compile,V} <- Attrs]),
+  Canonical = native_default_bindings(),
+  Selected = proplists:get_value(beam_native_bindings, FormOpts ++ Opts, Canonical),
+  Targets = maps:from_list([{{M,F,A},ID} || {ID,M,F,A} <- Selected]),
+  Contracts = maps:from_list([{ID,{M,F,A}} || {ID,M,F,A} <- Canonical]),
+  NativeNames = maps:from_list([{{M,F,A},ID} || {ID,M,F,A} <- Canonical]),
+  cerl_trees:map(fun(T) -> analysis_call(T, Aliases, Targets, Contracts, NativeNames) end,
+                 Core).
+
+analysis_call(T, Aliases, Targets, Contracts, NativeNames) ->
+  case cerl:type(T) of
+    call ->
+      M = cerl:call_module(T),
+      F = cerl:call_name(T),
+      case cerl:is_c_atom(M) andalso cerl:is_c_atom(F) of
+        true ->
+          case {cerl:concrete(M), maps:find(cerl:concrete(F), Aliases)} of
+            {'$beam_public',{ok,Role}} ->
+              analysis_role(T, Role, Targets, Contracts, NativeNames);
+            {erlang,{ok,{Kind,_,_,_,_}=Role}}
+              when Kind =:= guard; Kind =:= private_guard ->
+              analysis_role(T, Role, Targets, Contracts, NativeNames);
+            _ -> T
+          end;
+        false -> T
+      end;
+    _ -> T
+  end.
+
+analysis_role(T, {public,M,F,A,_}, Targets, Contracts, NativeNames) ->
+  case maps:find({M,F,A}, Targets) of
+    {ok,ID} -> analysis_contract(T, ID, Contracts);
+    error ->
+      case maps:is_key({M,F,A}, NativeNames) of
+        true -> T;
+        false -> analysis_target(T, {M,F,A})
+      end
+  end;
+analysis_role(T, {private,_,_,_,ID}, _, Contracts, _) ->
+  analysis_contract(T, ID, Contracts);
+analysis_role(T, {private_guard,_,_,_,ID}, _, Contracts, _) ->
+  analysis_contract(T, ID, Contracts);
+analysis_role(T, {guard,M,F,A,ID}, Targets, Contracts, _) ->
+  case maps:find({M,F,A}, Targets) of
+    {ok,ID} when ID =/= undefined -> analysis_contract(T, ID, Contracts);
+    _ -> cerl:ann_c_atom(cerl:get_ann(T), false)
+  end;
+analysis_role(T, {selection,M,F,A,ID}, Targets, _, _) ->
+  cerl:ann_c_atom(cerl:get_ann(T), maps:find({M,F,A}, Targets) =:= {ok,ID}).
+
+analysis_contract(T, ID, Contracts) ->
+  case maps:find(ID, Contracts) of
+    {ok,MFA} -> analysis_target(T, MFA);
+    error -> T
+  end.
+
+analysis_target(T, {M,F,_}) ->
+  cerl:update_c_call(T, cerl:c_atom(M), cerl:c_atom(F), cerl:call_args(T)).
 
 %% ============================================================================
 %%

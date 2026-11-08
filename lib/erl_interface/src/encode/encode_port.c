@@ -26,37 +26,8 @@
 
 int ei_encode_port(char *buf, int *index, const erlang_port *p)
 {
-  char *s = buf + *index;
-
-  ++(*index); /* skip ERL_PORT_EXT */
-  if (ei_encode_atom_len_as(buf, index, p->node, strlen(p->node), ERLANG_UTF8,
-			    ERLANG_LATIN1|ERLANG_UTF8) < 0) {
-      return -1;
-  }
-  if (p->id > 0x0fffffff /* 28 bits */) {
-      if (buf) {
-          put8(s, ERL_V4_PORT_EXT);
-
-          s = buf + *index;
-
-          /* now the integers */
-          put64be(s,p->id);
-          put32be(s, p->creation);
-      }
-      *index += 8 + 4;
-  }
-  else {
-      if (buf) {
-          put8(s, ERL_NEW_PORT_EXT);
-
-          s = buf + *index;
-
-          /* now the integers */
-          put32be(s,p->id);
-          put32be(s, p->creation);
-      }
-      *index += 4 + 4;
-  }
-  return 0;
+    BeamEtfPort value;
+    ei_etf_port_to(&value, p);
+    return beam_etf_embed_encode_port(buf, index, &value);
 }
 

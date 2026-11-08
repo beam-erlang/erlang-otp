@@ -21,9 +21,16 @@ from installation_inventory import inventory, verify_installation
 from upstream_results import case_results
 
 
+EI_SUITES = {"ei_encode_SUITE": 9, "ei_decode_SUITE": 10,
+             "ei_decode_encode_SUITE": 1, "ei_format_SUITE": 5, "ei_print_SUITE": 9,
+             "ei_connect_SUITE": 22, "ei_accept_SUITE": 4, "ei_tmo_SUITE": 13,
+             "ei_global_SUITE": 3, "erl_call_SUITE": 6, "port_call_SUITE": 1}
+
 DEBUGGER_SUITES = {"debugger_SUITE": 5, "int_SUITE": 7,
                    "int_eval_SUITE": 13, "int_break_SUITE": 2}
-STDLIB_SUITES = {"lists_SUITE": 78}
+STDLIB_SUITES = {"lists_SUITE": 78, "maps_SUITE": 32, "string_SUITE": 45,
+                 "unicode_SUITE": 19, "re_SUITE": 37, "binary_module_SUITE": 19,
+                 "ets_SUITE": 162, "ets_tough_SUITE": 1, "ets_property_test_SUITE": 4}
 
 # Explicit non-GUI selections; original GUI cases remain deferred.
 OBSERVER_SUITES = {"observer_SUITE": 2, "etop_SUITE": 4,
@@ -75,7 +82,7 @@ def main():
     parser.add_argument("--work-root", type=Path,
                         help="Explicit scratch root for suites that turn filenames into atoms")
     parser.add_argument("--ftp-server", type=Path, help="Explicit vsftpd executable for ftp_SUITE")
-    parser.add_argument("--suite", choices=["prim_file_SUITE", "sendfile_SUITE", "zlib_SUITE", "zstd_SUITE", "ram_file_SUITE", "base64_SUITE", "math_SUITE", "queue_SUITE", "dirty_nif_SUITE", "engine_SUITE", "asn1_app_SUITE", "syntax_SUITE", "error_SUITE", "asn1_SUITE", "pbe_SUITE", "pubkey_policy_tree_SUITE", "ssl_rfc_5869_SUITE", "ssl_cipher_SUITE", "tls_1_3_record_SUITE", "runtime_tools_SUITE", "dbg_SUITE", "mnesia_install_test", "inets_SUITE", "http_format_SUITE", "httpc_cookie_SUITE", "eunit_SUITE", "xmerl_sax_SUITE", "xmerl_sax_stream_SUITE", "xmerl_SUITE", "xmerl_xsd_SUITE", "ftp_format_SUITE", "tftp_SUITE", "ftp_SUITE", "ssh_basic_SUITE", "edoc_SUITE", "eep48_SUITE", "eldap_basic_SUITE", "diameter_app_SUITE", "diameter_compiler_SUITE", "diameter_codec_SUITE", "diameter_config_SUITE", "diameter_sync_SUITE", "diameter_reg_SUITE", "et_SUITE"] + list(OS_MON_SUITES) + list(JAVA_SUITES) + list(DIALYZER_SUITES) + list(SNMP_SUITES) + list(MEGACO_SUITES) + list(ODBC_SUITES) + list(WX_SUITES) + list(DEBUGGER_SUITES) + list(TOOLS_SUITES) + list(STDLIB_SUITES), required=True)
+    parser.add_argument("--suite", choices=["prim_file_SUITE", "sendfile_SUITE", "zlib_SUITE", "zstd_SUITE", "ram_file_SUITE", "base64_SUITE", "math_SUITE", "queue_SUITE", "dirty_nif_SUITE", "engine_SUITE", "asn1_app_SUITE", "syntax_SUITE", "error_SUITE", "asn1_SUITE", "pbe_SUITE", "pubkey_policy_tree_SUITE", "ssl_rfc_5869_SUITE", "ssl_cipher_SUITE", "tls_1_3_record_SUITE", "runtime_tools_SUITE", "dbg_SUITE", "mnesia_install_test", "inets_SUITE", "http_format_SUITE", "httpc_cookie_SUITE", "eunit_SUITE", "xmerl_sax_SUITE", "xmerl_sax_stream_SUITE", "xmerl_SUITE", "xmerl_xsd_SUITE", "ftp_format_SUITE", "tftp_SUITE", "ftp_SUITE", "ssh_basic_SUITE", "edoc_SUITE", "eep48_SUITE", "eldap_basic_SUITE", "diameter_app_SUITE", "diameter_compiler_SUITE", "diameter_codec_SUITE", "diameter_config_SUITE", "diameter_sync_SUITE", "diameter_reg_SUITE", "et_SUITE"] + list(OS_MON_SUITES) + list(JAVA_SUITES) + list(DIALYZER_SUITES) + list(SNMP_SUITES) + list(MEGACO_SUITES) + list(ODBC_SUITES) + list(WX_SUITES) + list(DEBUGGER_SUITES) + list(TOOLS_SUITES) + list(STDLIB_SUITES) + list(EI_SUITES), required=True)
     parser.add_argument("--ldap-root", type=Path, help="Extracted OpenLDAP package root for eldap_basic_SUITE")
     parser.add_argument("--postgres-root", type=Path, help="Extracted PostgreSQL 18 and psqlODBC dependency root")
     parser.add_argument("--xvfb", type=Path, help="Explicit Xvfb for private GUI acceptance")
@@ -85,6 +92,8 @@ def main():
     parser.add_argument("--javac", type=Path)
     parser.add_argument("--inet-backend", choices=("inet", "socket"),
                         help="Kernel backend for the unchanged sendfile suite")
+    parser.add_argument("--ei-unreachable-host",
+                        help="Explicit unreachable host for the original ei_tmo_SUITE prerequisite")
     parser.add_argument("--schedulers", type=int,
                         help="Normal schedulers for the candidate and default peer launches")
     parser.add_argument("--case", action="append", choices=("t_sendfile_closeduring", "t_sendfile_crashduring", "large_file_heavy", "utf8", "nchar", "nvarchar"),
@@ -109,6 +118,8 @@ def main():
         parser.error("Duplicate case selection")
     if args.inet_backend and args.suite != "sendfile_SUITE":
         parser.error("--inet-backend applies only to sendfile_SUITE")
+    if args.ei_unreachable_host and args.suite != "ei_tmo_SUITE":
+        parser.error("--ei-unreachable-host applies only to ei_tmo_SUITE")
     if args.wx_product and args.suite != "wx_app_SUITE":
         parser.error("--wx-product requires the wx_app_SUITE fixture selection")
     if args.schedulers is None:
@@ -239,6 +250,15 @@ def main():
             relocated = work / "relocated OTP"
             prefix.rename(relocated)
             prefix = relocated
+        re_host_evidence = None
+        if args.suite == "re_SUITE":
+            if not build:
+                raise RuntimeError("re_SUITE requires a selected build for its same-source instrumented host")
+            subprocess.run([args.cmake, "--build", str(build), "--target", "otp_re_instrumented_host", "--parallel", "4"], check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            host = next(prefix.glob("erts-*/bin/beam.smp"))
+            observer = build / "otp_re_instrumented_host"
+            re_host_evidence = {"production_host_sha256": hashlib.sha256(host.read_bytes()).hexdigest(), "instrumented_host_sha256": hashlib.sha256(observer.read_bytes()).hexdigest(), "native_source_sha256": hashlib.sha256((source / "lib/stdlib/c_src/re/re_nif.c").read_bytes()).hexdigest()}
+            shutil.copyfile(observer, host)
         native = args.suite in {"dirty_nif_SUITE", "dbg_SUITE"}
         suite_root = {"prim_file_SUITE": "lib/kernel/test",
                       "ram_file_SUITE": "lib/kernel/test",
@@ -297,8 +317,14 @@ def main():
             suite_root = "lib/megaco/test"
         if args.suite in SNMP_SUITES:
             suite_root = "lib/snmp/test"
+        if args.suite in EI_SUITES:
+            suite_root = "lib/erl_interface/test"
         inputs = [f"{suite_root}/{args.suite}.erl",
                   "lib/common_test/test_server/ts_install_cth.erl"]
+        if args.suite in EI_SUITES:
+            inputs.append("lib/erl_interface/test/runner.erl")
+        if args.suite in {"ei_decode_SUITE", "ei_accept_SUITE"}:
+            inputs.append("erts/emulator/test/erts_test_utils.erl")
         if args.suite == "ttb_SUITE":
             inputs += ["lib/observer/test/" + name for name in
                        ("ttb_helper.erl", "client.erl", "server.erl")]
@@ -343,8 +369,17 @@ def main():
             inputs += ["lib/eldap/test/make_certs.erl", "tools/fixtures/otp_ldap_probe.erl"]
         if args.suite == "dirty_nif_SUITE":
             inputs.append("erts/emulator/test/literal_area_collector_test.erl")
-        if args.suite in {"math_SUITE", "lists_SUITE"}:
+        if args.suite in {"math_SUITE", "lists_SUITE", "maps_SUITE", "unicode_SUITE", "re_SUITE", "binary_module_SUITE"}:
             inputs.append("lib/stdlib/test/error_info_lib.erl")
+        if args.suite == "ets_SUITE":
+            inputs += ["lib/stdlib/test/error_info_lib.erl", "erts/emulator/test/erts_test_utils.erl"]
+        if args.suite == "ets_property_test_SUITE":
+            inputs += ["lib/stdlib/test/property_test/ets_prop.erl"]
+        if args.suite == "binary_module_SUITE":
+            inputs += ["lib/stdlib/test/binref.erl", "lib/stdlib/test/random_iolist.erl"]
+        if args.suite == "unicode_SUITE":
+            inputs += ["lib/stdlib/test/random_iolist.erl", "lib/stdlib/test/random_unicode_list.erl",
+                       "tools/fixtures/otp_unicode_contract.erl"]
         if args.suite == "asn1_SUITE":
             inputs += [str(p.relative_to(source)) for p in sorted((source / suite_root).glob("*.erl"))
                        if not p.name.endswith("_SUITE.erl")]
@@ -380,6 +415,9 @@ def main():
                         "ssh_key_cb.erl", "ssh_key_cb_options.erl", "ssh_test_cli.erl",
                         "ssh_peername_sockname_server.erl")]
             inputs.append("lib/ssh/src/ssh_transport.hrl")
+        if args.suite == "re_SUITE":
+            inputs += ["lib/stdlib/test/" + name for name in ("run_pcre_tests.erl", "run_old_pcre1_tests.erl", "re_testoutput1_replacement_test.erl", "re_testoutput1_split_test.erl")]
+            inputs.append("tools/fixtures/otp_re_test.erl")
         expected_cases = {"zstd_SUITE": 10, "ram_file_SUITE": 9, "prim_file_SUITE": 41, "sendfile_SUITE": 14, "zlib_SUITE": 36, "base64_SUITE": 19, "math_SUITE": 4, "queue_SUITE": 7, "dirty_nif_SUITE": 35, "engine_SUITE": 31, "asn1_app_SUITE": 5, "syntax_SUITE": 12, "error_SUITE": 21, "asn1_SUITE": 103, "pbe_SUITE": 5, "pubkey_policy_tree_SUITE": 10, "ssl_rfc_5869_SUITE": 7, "ssl_cipher_SUITE": 4, "tls_1_3_record_SUITE": 4, "runtime_tools_SUITE": 3, "dbg_SUITE": 22, "mnesia_install_test": 3, "inets_SUITE": 6, "http_format_SUITE": 18, "httpc_cookie_SUITE": 10, "eunit_SUITE": 15, "xmerl_sax_SUITE": 12, "xmerl_sax_stream_SUITE": 4, "xmerl_SUITE": 46, "xmerl_xsd_SUITE": 85, "ftp_format_SUITE": 12, "tftp_SUITE": 9, "ftp_SUITE": 84, "ssh_basic_SUITE": 49, "edoc_SUITE": 10, "eep48_SUITE": 44, "eldap_basic_SUITE": 116, "diameter_app_SUITE": 7, "diameter_compiler_SUITE": 5, "diameter_codec_SUITE": 5, "diameter_config_SUITE": 2, "diameter_sync_SUITE": 1, "diameter_reg_SUITE": 1, "et_SUITE": 2}
         expected_cases.update(OS_MON_SUITES)
         expected_cases.update(JAVA_SUITES)
@@ -391,6 +429,7 @@ def main():
         expected_cases.update(DEBUGGER_SUITES)
         expected_cases.update(TOOLS_SUITES)
         expected_cases.update(STDLIB_SUITES)
+        expected_cases.update(EI_SUITES)
         expected = expected_cases[args.suite]
         if args.case:
             expected = len(args.case)
@@ -404,6 +443,9 @@ def main():
         for relative in inputs:
             original = source / relative
             copied = suites / original.name
+            if "/property_test/" in relative:
+                copied = suites / "property_test" / original.name
+                copied.parent.mkdir(exist_ok=True)
             shutil.copyfile(original, copied)
             assert original.read_bytes() == copied.read_bytes()
             manifest[relative] = hashlib.sha256(copied.read_bytes()).hexdigest()
@@ -419,6 +461,20 @@ def main():
                 if original.is_file():
                     shutil.copyfile(original, examples / original.name)
                     manifest[str(original.relative_to(source))] = hashlib.sha256(original.read_bytes()).hexdigest()
+        if args.suite == "string_SUITE":
+            relative = "lib/stdlib/test/unicode_util_SUITE_data/NormalizationTest.txt"
+            target = suites / "unicode_util_SUITE_data" / "NormalizationTest.txt"
+            target.parent.mkdir(exist_ok=True)
+            shutil.copyfile(source / relative, target)
+            manifest[relative] = hashlib.sha256(target.read_bytes()).hexdigest()
+        if args.suite == "unicode_SUITE":
+            target_root = suites / "unicode_SUITE_data"
+            target_root.mkdir(exist_ok=True)
+            for name in ("PropList.txt", "DerivedCoreProperties.txt"):
+                relative = "lib/stdlib/uc_spec/" + name
+                target = target_root / name
+                shutil.copyfile(source / relative, target)
+                manifest[relative] = hashlib.sha256(target.read_bytes()).hexdigest()
         data = suites / (args.suite + "_data")
         source_data = source / suite_root / data.name
         if args.suite in TOOLS_SUITES:
@@ -456,6 +512,12 @@ def main():
             for original in sorted(examples.rglob("*")):
                 if original.is_file():
                     manifest[str(original.relative_to(source))] = hashlib.sha256(original.read_bytes()).hexdigest()
+        if args.suite in EI_SUITES:
+            common = source / "lib/erl_interface/test/all_SUITE_data"
+            shutil.copytree(common, suites / "all_SUITE_data")
+            for original in sorted(common.iterdir()):
+                if original.is_file():
+                    manifest[str(original.relative_to(source))] = hashlib.sha256(original.read_bytes()).hexdigest()
         environment = {k: v for k, v in os.environ.items()
                        if not k.startswith(("ERL_", "ERLC_", "ESCRIPT_", "LD_", "DYLD_"))
                        and k not in {"BINDIR", "ROOTDIR", "EMU"}}
@@ -477,7 +539,7 @@ def main():
             if not any(line.startswith("ftp:") for line in accounts.splitlines()):
                 accounts += f"ftp:x:{os.getuid()}:{os.getgid()}:FTP test:{work}:/usr/sbin/nologin\n"
             account_file.write_text(accounts)
-        if java_dependency or args.suite in set(DIALYZER_SUITES) | set(SNMP_SUITES) | set(MEGACO_SUITES) | set(TOOLS_SUITES) or args.suite in {"mnesia_install_test", "eunit_SUITE", "memsup_SUITE"}:
+        if java_dependency or args.suite in set(EI_SUITES) | set(DIALYZER_SUITES) | set(SNMP_SUITES) | set(MEGACO_SUITES) | set(TOOLS_SUITES) or args.suite in {"ets_SUITE", "mnesia_install_test", "eunit_SUITE", "memsup_SUITE"}:
             # Unchanged helpers may start peer nodes without -setcookie.
             # Their ordinary HOME cookie must match this harness's parent node.
             cookie = work / ".erlang.cookie"
@@ -496,7 +558,14 @@ def main():
                                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                        start_new_session=True)
             try:
-                output, _ = process.communicate(timeout=7200 if args.suite == "asn1_SUITE" or args.suite in DIALYZER_SUITES else (1200 if args.suite in TOOLS_SUITES else 600))
+                timeout = (43200 if args.suite == "ets_SUITE" else
+                           25200 if args.suite == "unicode_SUITE" else
+                           3600 if args.suite == "string_SUITE" else
+                           2400 if args.suite == "maps_SUITE" else
+                           16200 if args.suite == "binary_module_SUITE" else
+                           7200 if args.suite == "asn1_SUITE" or args.suite in DIALYZER_SUITES else
+                           1200 if args.suite in TOOLS_SUITES else 600)
+                output, _ = process.communicate(timeout=timeout)
             except subprocess.TimeoutExpired:
                 os.killpg(process.pid, signal.SIGTERM)
                 try:
@@ -537,6 +606,17 @@ def main():
             run([str(prefix / "bin/erl"), "+S2", "-noshell", "-eval", identity])
         run([str(prefix / "bin/erlc"), "+debug_info", "-o", str(hooks),
              str(suites / "ts_install_cth.erl")])
+        if args.suite in EI_SUITES and args.suite != "erl_call_SUITE":
+            if args.suite != "port_call_SUITE":
+                generator = suites / "all_SUITE_data/init_tc.erl"
+                run([str(prefix / "bin/erlc"), "-o", str(suites), str(generator)])
+                program = args.suite.replace("_SUITE", "_test")
+                run([str(prefix / "bin/erl"), "+S2", "-noshell", "-pa", str(suites),
+                     "-s", "init_tc", "run", program, "-s", "erlang", "halt"], cwd=data)
+            run([args.cmake, "-S", str(source / "tools/fixtures/erl_interface"),
+                 "-B", str(work / "ei-native-build"), f"-DOTP_PREFIX={prefix}",
+                 f"-DSUITE={args.suite}", f"-DSUITE_DATA={data}"])
+            run([args.cmake, "--build", str(work / "ei-native-build"), "--parallel", "2"])
         compile_includes = []
         if args.suite in MEGACO_SUITES:
             compile_includes += ["-Dmegaco_parser_inline", "+{parse_transform,sys_pre_attributes}",
@@ -558,8 +638,11 @@ def main():
         run([str(prefix / "bin/erlc"), "+debug_info", "-I", str(suites), *compile_includes, "-o", str(suites),
              *[str(Path(relative).name if args.suite == "ttb_SUITE" else suites / Path(relative).name)
                for relative in inputs
-               if relative.endswith(".erl") and Path(relative).name != "ts_install_cth.erl"]],
+               if relative.endswith(".erl") and "/property_test/" not in relative
+               and Path(relative).name != "ts_install_cth.erl"]],
             cwd=compile_cwd)
+        if args.suite == "re_SUITE":
+            (work / "re-host.json").write_text(json.dumps(re_host_evidence, indent=2) + "\n")
         if args.suite in DEBUGGER_SUITES and data.is_dir():
             # The interpreter needs ordinary debug-info BEAM files beside unchanged
             # fixture sources, as supplied by the original test build.
@@ -615,6 +698,10 @@ def main():
         if args.case:
             selection = "{testcase,[" + ",".join(args.case) + "]},"
         ct_options += selection
+        if args.ei_unreachable_host:
+            ei_config = work / "ei-timeout.config"
+            ei_config.write_text("{test_host_not_reachable," + erl_string(args.ei_unreachable_host) + "}.\n")
+            ct_options += f"{{config,{erl_string(ei_config)}}},"
         if args.suite == "mnesia_install_test":
             # This unchanged sub-suite gets node allocation from mnesia_SUITE's
             # hook in the full hierarchy. Supply the same hook when run standalone.
@@ -630,6 +717,10 @@ def main():
         product_probe = ('ok=otp_ldap_probe:run(os:getenv("OTP_LDAP_CERT")), '
                          if ldap_dependency else "")
         origin_modules = ['ct', 'ct_run', 'erl_syntax_lib', 'compile']
+        if args.suite in {'binary_module_SUITE', 'maps_SUITE', 'ets_SUITE'}:
+            origin_modules += [{'binary_module_SUITE':'binary','maps_SUITE':'maps','ets_SUITE':'ets'}[args.suite], 'ct_doctest']
+        if args.suite == 'unicode_SUITE':
+            product_probe += 'ok=otp_unicode_contract:run(), '
         if args.suite in OBSERVER_SUITES:
             origin_modules += ['observer', 'etop', 'ttb', 'crashdump_viewer']
         elif args.suite in RELTOOL_SUITES:
@@ -801,7 +892,7 @@ def main():
                         if succeeded and not record['complete']:
                             raise RuntimeError('Common Test configurations or case evidence did not pass')
 
-        if native or java_dependency or args.suite in set(DIALYZER_SUITES) | set(SNMP_SUITES) | set(MEGACO_SUITES) | set(TOOLS_SUITES) or args.suite in {"asn1_SUITE", "mnesia_install_test", "eunit_SUITE", "memsup_SUITE"}:
+        if native or java_dependency or args.suite in set(EI_SUITES) | set(DIALYZER_SUITES) | set(SNMP_SUITES) | set(MEGACO_SUITES) | set(TOOLS_SUITES) or args.suite in {"ets_SUITE", "asn1_SUITE", "mnesia_install_test", "eunit_SUITE", "memsup_SUITE"}:
             with socket.socket() as reservation:
                 reservation.bind(("127.0.0.1", 0))
                 epmd_port = reservation.getsockname()[1]
@@ -839,7 +930,7 @@ def main():
                             time.sleep(0.02)
                     # Java and Observer fixtures derive peer names from the ordinary
                     # local hostname, including cleanup. A localhost alias differs.
-                    local_hostname = java_dependency or args.suite in TOOLS_SUITES
+                    local_hostname = java_dependency or args.suite in set(TOOLS_SUITES) | set(EI_SUITES)
                     node_name = f"ct_{os.getpid()}" + ("" if local_hostname else "@localhost")
                     node_args = ["-sname", node_name,
                                  "-setcookie", "otp_native_acceptance", "-start_epmd", "false"]

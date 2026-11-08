@@ -30,9 +30,12 @@ def main():
                            check=True, stdout=log, stderr=subprocess.STDOUT)
         inventory = json.loads((args.build / 'native-components.json').read_text())
         builtins = {(record['kind'], record['module']) for record in inventory if record['kind'].startswith('builtin-')}
-        assert {('builtin-nif', 'prim_tty'), ('builtin-nif', 'zstd'),
+        assert {('builtin-nif', 'prim_tty'), ('builtin-nif', 'zstd'), ('builtin-nif', 're'),
                 ('builtin-driver', 'ram_file_drv')} <= builtins
         assert all(not record['installed'] for record in inventory if record['kind'].startswith('builtin-'))
+        regex = next(record for record in inventory if record['module'] == 're')
+        assert all(Path(path).is_relative_to(args.source / 'lib/stdlib/c_src/re') for path in regex['sources'])
+        assert not list(prefix.rglob('re.so')) and not list(prefix.rglob('beam_re_errors.beam'))
         helper = next(prefix.glob('erts-*/bin/erl_child_setup'))
         selected = {'erl_child_setup': str(helper.relative_to(prefix))}
         hashes = {name: hashlib.sha256((prefix / path).read_bytes()).hexdigest()
@@ -45,6 +48,11 @@ def main():
         expression = (
             'ok=prim_tty:load(),Data = <<"owned-native">>,'
             'Data=iolist_to_binary(zstd:decompress(zstd:compress(Data))),'
+            'false=erlang:is_builtin(re,run,3),'
+            '{ok,Pattern}=re:compile(<<"(?<owned>native)">>),'
+            '{match,[<<"native">>]}=re:run(Data,Pattern,[{capture,[owned],binary}]),'
+            'true=lists:prefix(filename:join(code:lib_dir(stdlib),"ebin"),code:which(re)),'
+            'false=erlang:function_exported(otp_re_test,stats,0),'
             '{ok,F}=ram_file:open(Data,[read,write,binary]),{ok,Data}=file:read(F,byte_size(Data)),'
             'ok=file:close(F),[]=erlang:system_info(taints),'
             '{ok,Maps}=file:read_file("/proc/self/maps"),'

@@ -7,7 +7,7 @@
 // %CopyrightEnd%
 [
   {
-    "ID": "erts-pcre2",
+    "ID": "stdlib-pcre2",
     "description": "PCRE2 library",
     "copyrightText": "NOASSERTION",
     "downloadLocation": "https://github.com/PCRE2Project/pcre2",
@@ -15,10 +15,9 @@
     "licenseDeclared": "BSD-3-Clause",
     "name": "pcre2",
     "versionInfo": "10.47",
-    "path": "./erts/emulator/pcre",
-    "exclude": ["./erts/emulator/pcre/vendor.info",
-                "./erts/emulator/pcre/README.pcre_update.md",
-                "./erts/emulator/pcre/pcre.mk"],
+    "path": "./lib/stdlib/c_src/re/pcre2",
+    "exclude": ["./lib/stdlib/c_src/re/pcre2/vendor.info",
+                "./lib/stdlib/c_src/re/pcre2/README.pcre_update.md"],
     "sha": "f454e231fe5006dd7ff8f4693fd2b8eb94333429",
     "supplier": "Person: Nicholas Wilson",
     "purl": "pkg:github/PCRE2Project/pcre2"

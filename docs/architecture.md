@@ -16,12 +16,16 @@ BEAM commands and libraries retain their own linkage. An OTP process must
 contain one runtime: mixing shared/static VM graphs or loading a second runtime
 through a native dependency is rejected.
 
-`libbeam` embeds exactly nine core Erlang modules: `erts_code_purger`, `erlang`,
-`erts_internal`, `erts_literal_area_collector`, `erts_trace_cleaner`,
-`erts_dirty_process_signal_handler`, `atomics`, `counters` and `persistent_term`.
-OTP embeds thirteen additional preloads in its host and supplies them through
+`libbeam` embeds exactly six core Erlang modules: `erts_code_purger`, `erlang`,
+`erts_internal`, `erts_literal_area_collector`, `beam_internal`,
+`erts_dirty_process_signal_handler`.
+OTP embeds seventeen additional preloads in its host and supplies them through
 public composition, retaining its 22-module preload/sticky inventory and restart
-semantics. The seven modern base modules and modern boot/service inventories
+semantics. Private `beam_internal` is omitted from Erlang preload reporting.
+OTP supplies canonical `erts_trace_cleaner` as its seventeenth preload and
+selects its `start/0` worker entry; it delegates to mandatory VM cleanup code.
+The cleaner retains its canonical process identity, system-process status and
+shutdown policy. The modern base library and modern boot/service inventories
 are ordinary selected bytecode owned by BEAM; they are not OTP build inputs or
 additional VM core modules.
 
@@ -29,14 +33,22 @@ The OTP-owned native inventory selects linked NIFs and drivers, the socket
 backend and helpers. Public composition copies preload bytes, native descriptors
 and immutable startup context. Preparation does not execute a VM. Resident NIF
 entry-table accessors run during VM initialization; OTP modules subsequently
-invoke ordinary `erlang:load_nif/2` with their actual load information. The host's
+invoke ordinary `erlang:load_nif/2` with their actual load information.
+All three host stages explicitly select `erl_tracer` as the default delivery
+identity and preserve its early activation, canonical native destinations and
+legacy tracing exports. The modern tracing library is not an OTP input. The host's
 linked native code uses the executable's lifetime and requires no image owner.
 OTP does not use explicit NIF bindings or modern library startup actions.
-The shared host preparation also declares its embedded Zstd implementation through
+The shared host preparation also declares its embedded Zstd and PCRE2 implementations through
 the SDK's generic immutable dependency inventory. This preserves
 `erlang:system_info(embedded_3pps)` across restart without requiring the VM to know
 OTP's native dependency names. OTP continues to own and build that implementation
 independently of optional modern packages.
+
+STDLIB owns `re` and its resident ordinary NIF. Its `on_load` attaches the
+OTP-owned backend, without an installed `re.so`, additional preload or package
+manager dependency. The selected SDK must declare legacy regex BIFs absent.
+[Regex implementation](regex.md) describes scheduling, serialization and upgrades.
 
 Selecting code grants no implicit capability. VM lifetimes own native admission,
 failure arbitration and native-resource cleanup. OTP owns process startup,
@@ -90,10 +102,22 @@ and the product's linked native/preload inventories.
 
 [OTPHost.cmake](../cmake/OTPHost.cmake) establishes version/startup inputs before
 application generation. `otp_host_inputs.c` prepares owned composition/context
-inputs without VM calls; failures release partial inputs and preserve caller
-outputs. Tests cover cancellation, copied caller storage, failed preparation
-followed by recovery and normal/custom boot paths. This preparation interface
-is private to OTP, not an SDK export.
+inputs without VM calls. It binds 124 SDK-owned implementations to OTP's native
+`binary`, `lists`, `maps`, `string`, `unicode`, `atomics`, `persistent_term` and
+`ets` MFAs. The 51 ETS contracts use shared `term_table_*` identifiers, including
+`term_table_new_list_2` and the four existing implementation protocols. Clock/timer contracts retain their canonical `erlang` names, including
+`timestamp/0` and legacy `now/0`. The ordinary `erlang:convert_time_unit/3`
+export is selected independently through `core_exports`. All
+contracts are explicitly selected through the same
+public composition API. `bin_to_list/1,2,3` stay ordinary functions in that
+module, and `beam_bytes` names are not bound. The SDK owns compiled arities and
+argument dialects; OTP owns the public module/function names. An empty binding
+list installs no optional BIFs. The host-preparation boot
+checks `erlang:is_builtin/3` for both spellings and one `binary:split/2`
+result. Failures release partial inputs and preserve caller outputs. Tests
+cover cancellation, copied caller storage, failed preparation followed by
+recovery and normal/custom boot paths. This preparation interface is private
+to OTP, not an SDK export.
 
 ## Faithful installation
 
@@ -103,7 +127,7 @@ must match the pinned original build. Application bytecode, executables and
 other generated contents may differ and require separate content review.
 
 The standard host is `erts-<version>/bin/beam.smp`. It embeds the static VM,
-thirteen OTP preloads and built-in native implementations. The installation
+seventeen OTP preloads and built-in native implementations. The installation
 contains no `libbeam.so`, VM development archive, extra runtime directory,
 startup wrapper library or validation manifest. Ordinary application dynamic
 extensions remain at their upstream `priv` paths. The child-setup helper is a
@@ -111,8 +135,9 @@ real checksum-verified SDK artifact; the hostname helper is OTP-owned.
 
 The standard `lib/erts-<version>/ebin` inspection tree contains all 22 preload
 files and `erts.app`. The SDK supplies exact complete inspection bytecode for
-its nine core modules through public artifact deployment; OTP supplies its
-thirteen preloads. Embedded execution chunks and inspection bytes retain their
+its five canonical core modules through filtered public artifact deployment;
+the private sixth core module remains available in the SDK. OTP supplies its
+seventeen preloads. Embedded execution chunks and inspection bytes retain their
 required relationship, without compiling replacement VM core modules. Normal
 application compilation retains source/compiler-option metadata for tools;
 strict deterministic foundation metadata is a separate bootstrap requirement.
@@ -137,3 +162,22 @@ consume the modern `libbeam-zlib` library. The SDK provides the single codec for
 VM and Erlang compression. BEAM owns the vendored codec, its adaptations, vendor
 metadata and notices; upstream codec changes are reviewed and maintained in
 BEAM. Third-party dependencies may independently use system zlib.
+
+## Erl_Interface codec ownership
+
+OTP retains `ei.h`, both standalone `libei` archives, C-node/distribution support,
+formatting, printing, compatibility helpers and optional GMP integration. Its
+selected ETF source files are adapters to the installed BEAM SDK's `ETF`
+component. The canonical wire codec is maintained in BEAM and supplied as PIC
+objects in the `beam_etf_embed_*` namespace; the narrow `beam_etf_compat_*`
+bridge retains explicit-encoding atoms, legacy big-integer digits and growth
+with OTP-owned `ei_x_extra`. `cmake/OTPInterfaceSources.cmake` records adapter
+and OTP-owned source inventories for both native build routes.
+
+`ei.h` has no BEAM header dependency. Adapters copy fields between independent
+public structures, including rebasing exported-fun names stored inside the
+structure. OTP retains Latin-1 defaults, raw atom truncation, dynamic atom
+rejection, cursor conventions and buffer updates on failure. Growth and fun
+allocations use the same C-runtime allocation domain as OTP receive code. The
+SDK helper checks Microsoft CRT selection. No codec initialization is added to
+`beam_init`; `ei_init` remains an OTP library operation.

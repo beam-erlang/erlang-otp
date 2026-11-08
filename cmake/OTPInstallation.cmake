@@ -63,7 +63,10 @@ endforeach()
 install(FILES "${PROJECT_BINARY_DIR}/otp/bin/start_clean.boot" DESTINATION "${_release_directory}" RENAME start.boot)
 install(FILES "${PROJECT_BINARY_DIR}/otp/bin/start_clean.script" DESTINATION "${_release_directory}" RENAME start.script)
 install(FILES ${_preload_outputs} DESTINATION "${_preload_relative}")
-beam_install_core_modules(DESTINATION "${_preload_relative}" SOURCE_DESTINATION "lib/erts-${_erts_version}/src")
+beam_install_core_modules(DESTINATION "${_preload_relative}"
+    SOURCE_DESTINATION "lib/erts-${_erts_version}/src"
+    MODULES erlang erts_internal erts_code_purger erts_literal_area_collector
+        erts_dirty_process_signal_handler)
 install(FILES ${_preload_sources} "${PROJECT_SOURCE_DIR}/erts/preloaded/src/prim_eval.erl"
     DESTINATION "lib/erts-${_erts_version}/src")
 set(_erts_template "${PROJECT_SOURCE_DIR}/erts/preloaded/src/erts.app.src")

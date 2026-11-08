@@ -67,13 +67,10 @@ int ei_x_free(ei_x_buff* x)
 
 int x_fix_buff(ei_x_buff* x, int szneeded)
 {
-    int sz = szneeded + ei_x_extra;
-    if (sz > x->buffsz) {
-	sz += ei_x_extra;	/* to avoid reallocating each and every time */
-	x->buffsz = sz;
-	x->buff = ei_realloc(x->buff, sz);
-    }
-    return x->buff != NULL;
+    BeamEtfBuffer value = {x->buff, x->buffsz, x->index};
+    int status = beam_etf_compat_x_fix_buff(&value, szneeded, ei_x_extra);
+    x->buff = value.buff; x->buffsz = value.buffsz; x->index = value.index;
+    return status;
 }
 
 int ei_x_append(ei_x_buff* x, const ei_x_buff* x2)

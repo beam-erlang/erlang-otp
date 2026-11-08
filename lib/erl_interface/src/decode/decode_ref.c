@@ -27,68 +27,9 @@
 
 int ei_decode_ref(const char *buf, int *index, erlang_ref *p)
 {
-  const char *s = buf + *index;
-  const char *s0 = s;
-  int count, i;
-  const char tag = get8(s);
-  
-  switch (tag) {
-    case ERL_REFERENCE_EXT:
-      if (p) {
-	  if (get_atom(&s, p->node, NULL) < 0) return -1;
-	  p->n[0] = get32be(s);
-	  p->len = 1;
-	  p->creation = get8(s) & 0x03;
-      }
-      else {
-	  if (get_atom(&s, NULL, NULL) < 0) return -1;
-	  s += 5;
-      }
-  
-      *index += s-s0;
-  
-      return 0;
-      break;
-      
-  case ERL_NEW_REFERENCE_EXT:
-  case ERL_NEWER_REFERENCE_EXT:
-
-      /* first the integer count */
-      count = get16be(s);
-
-      if (count > sizeof(p->n)/sizeof(p->n[0]))
-          return -1; /* Not enough space in struct... */
-
-      if (p) {
-	  p->len = count;
-	  if (get_atom(&s, p->node, NULL) < 0) return -1;
-          if (tag == ERL_NEW_REFERENCE_EXT)
-              p->creation = get8(s) & 0x03;
-          else
-              p->creation = get32be(s);
-      }
-      else {
-	  if (get_atom(&s, NULL, NULL) < 0) return -1;
-	  s += (tag == ERL_NEW_REFERENCE_EXT ? 1 : 4);
-      }
-
-      /* finally the id integers */
-      if (p) {
-        for (i = 0; i < count && i < sizeof(p->n)/sizeof(p->n[0]); i++) {
-	  p->n[i] = get32be(s);
-	}
-        for (; i < sizeof(p->n)/sizeof(p->n[0]); i++)
-          p->n[i] = 0;
-      }
-      else s += 4 * count;
-  
-      *index += s-s0;
-  
-      return 0;
-      break;
-      
-    default:
-      return -1;
-  }
+    BeamEtfRef value = {0};
+    int status = beam_etf_embed_decode_ref(buf, index, p ? &value : NULL);
+    if (p && status == 0) ei_etf_ref_from(p, &value);
+    return status;
 }
 

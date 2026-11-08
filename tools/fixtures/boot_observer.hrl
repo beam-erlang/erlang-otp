@@ -49,6 +49,10 @@ after_boot() ->
         [zstd] = [Name || Name <- Embedded, Name =:= zstd],
         [] = [Name || Name <- Excluded, Name =:= zstd],
         ok = check_module_policy(),
+        false = erlang:is_builtin(re, run, 3),
+        {ok, Regex} = re:compile(<<"(?<boot>boot)">>),
+        {match, [<<"boot">>]} = re:run(<<"boot">>, Regex, [{capture, [boot], binary}]),
+        [pcre2] = [Name || Name <- Embedded, Name =:= pcre2],
         case ets:lookup(boot_activation, cycle) of
             [{cycle, 0}] ->
                 before_init = persistent_term:get({boot_probe, marker}),
@@ -75,6 +79,10 @@ check_preloads() ->
     Expected = core_modules() ++ [erl_init, init, prim_buffer, prim_eval, prim_inet, prim_file, zlib,
      socket_registry, prim_socket, prim_net, prim_zip, erl_prim_loader, erl_tracer],
     Actual = erlang:pre_loaded(),
+    true = erlang:module_loaded(beam_internal),
+    true = erlang:function_exported(beam_internal, trace_cleaner_start, 0),
+    false = lists:member(beam_internal, Actual),
+    false = erlang:delete_module(beam_internal),
     Count = length(Expected),
     Count = length(Actual),
     [] = Expected -- Actual,
@@ -109,6 +117,7 @@ check_module_policy() ->
 check_primitives() ->
     %% These run even before the Erlang code loader exists. They require real
     %% native attachment, not just exported placeholder functions.
+    ok = check_clock_selection(),
     Atomics = atomics:new(2, [{signed, true}]),
     ok = atomics:put(Atomics, 1, 9),
     12 = atomics:add_get(Atomics, 1, 3),
@@ -141,6 +150,25 @@ check_primitives() ->
     {ok, Udp} = prim_inet:open(udp, inet, dgram),
     true = erlang:port_close(Udp),
     ok.
+
+check_clock_selection() ->
+    ok = check_clock_exports([{monotonic_time,0},{monotonic_time,1},
+        {system_time,0},{system_time,1},{time_offset,0},{time_offset,1},
+        {timestamp,0},{start_timer,3},{start_timer,4},{send_after,3},{send_after,4},
+        {cancel_timer,1},{cancel_timer,2},{read_timer,1},{read_timer,2},{now,0}]),
+    true = erlang:function_exported(erlang,convert_time_unit,3),
+    false = erlang:is_builtin(erlang,convert_time_unit,3),
+    false = erlang:function_exported(beam_time,timestamp,0),
+    true = is_tuple(erlang:timestamp()),
+    true = is_integer(erlang:monotonic_time(1 bsl 100)),
+    -1 = erlang:convert_time_unit(-1,millisecond,second),
+    ok.
+
+check_clock_exports([{Function,Arity}|Rest]) ->
+    true = erlang:is_builtin(erlang,Function,Arity),
+    true = erlang:function_exported(erlang,Function,Arity),
+    check_clock_exports(Rest);
+check_clock_exports([]) -> ok.
 
 check_driver_ownership(_Owner) ->
     check_linked_drivers(["tcp_inet", "udp_inet", "ram_file_drv"]).

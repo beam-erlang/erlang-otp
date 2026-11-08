@@ -74,3 +74,5 @@ if(WIN32)
         "${PROJECT_SOURCE_DIR}/erts/emulator/drivers/win32/registry_drv.c"
         "${_static_directory}/registry${CMAKE_SHARED_MODULE_SUFFIX}")
 endif()
+
+include("${CMAKE_CURRENT_LIST_DIR}/OTPRegex.cmake")

@@ -26,20 +26,7 @@
 
 int ei_decode_binary(const char *buf, int *index, void *p, long *lenp)
 {
-  const char *s = buf + *index;
-  const char *s0 = s;
-  long len;
-
-  if (get8(s) != ERL_BINARY_EXT) return -1;
-
-  len = get32be(s);
-  if (p) memmove(p,s,len);
-  s += len;
-
-  if (lenp) *lenp = len;
-  *index += s-s0; 
-
-  return 0; 
+    return beam_etf_embed_decode_binary(buf, index, p, lenp);
 }
 
 int ei_decode_bitstring(const char *buf, int *index,
@@ -47,36 +34,6 @@ int ei_decode_bitstring(const char *buf, int *index,
                         unsigned int* bitoffsp,
                         size_t *nbitsp)
 {
-    const char *s = buf + *index;
-    const char *s0 = s;
-    unsigned char last_bits;
-    const unsigned char tag = get8(s);
-    size_t len = get32be(s);
-
-    switch(tag) {
-    case ERL_BINARY_EXT:
-        if (nbitsp)
-            *nbitsp = len * 8;
-        break;
-    case ERL_BIT_BINARY_EXT:
-        last_bits = get8(s);
-        if (((last_bits==0) != (len==0)) || last_bits > 8)
-            return -1;
-
-        if (nbitsp)
-            *nbitsp = (len == 0) ? 0 : ((len-1) * 8) + last_bits;
-        break;
-    default:
-        return -1;
-    }
-
-    if (pp)
-        *pp = s;
-    if (bitoffsp)
-        *bitoffsp = 0;
-
-    s += len;
-    *index += s-s0;
-    return 0;
+    return beam_etf_embed_decode_bitstring(buf, index, pp, bitoffsp, nbitsp);
 }
 

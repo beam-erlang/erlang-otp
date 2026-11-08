@@ -84,16 +84,17 @@ file(CONFIGURE OUTPUT "${_native_config_dir}/erl_int_sizes_config.h" CONTENT
     "/* Standalone command formatter sizes, probed by CMake. */\n#define SIZEOF_CHAR ${SIZEOF_CHAR}\n#define SIZEOF_SHORT ${SIZEOF_SHORT}\n#define SIZEOF_INT ${SIZEOF_INT}\n#define SIZEOF_LONG ${SIZEOF_LONG}\n#define SIZEOF_LONG_LONG ${SIZEOF_LONG_LONG}\n#define SIZEOF_VOID_P ${SIZEOF_VOID_P}\n" @ONLY)
 
 set(_ei "${PROJECT_SOURCE_DIR}/lib/erl_interface")
-set(_ei_sources)
-foreach(_part IN ITEMS connect decode encode epmd misc global)
-    file(GLOB _part_sources CONFIGURE_DEPENDS "${_ei}/src/${_part}/*.c")
-    list(APPEND _ei_sources ${_part_sources})
-endforeach()
+include("${CMAKE_CURRENT_LIST_DIR}/OTPInterfaceSources.cmake")
 # Upstream explicitly compiles this retained standalone digest in ERL_INTERFACE
 # mode. It neither includes sys.h nor obtains any VM implementation dependency.
 list(APPEND _ei_sources "${PROJECT_SOURCE_DIR}/erts/emulator/beam/erl_md5.c")
 foreach(_variant IN ITEMS ei ei_st)
     add_library(otp_${_variant} STATIC ${_ei_sources})
+    beam_target_etf_objects(otp_${_variant})
+    # Match upstream configure.ac, including the retained formatter's varargs.
+    if(SIZEOF_LONG EQUAL 8)
+        target_compile_definitions(otp_${_variant} PRIVATE EI_64BIT)
+    endif()
     set_target_properties(otp_${_variant} PROPERTIES OUTPUT_NAME "${_variant}" POSITION_INDEPENDENT_CODE ON)
     target_compile_definitions(otp_${_variant} PRIVATE ERL_INTERFACE EI_NO_DEPR_WARN HAVE_CONFIG_H _GNU_SOURCE)
     target_include_directories(otp_${_variant} PUBLIC "${_ei}/include" PRIVATE

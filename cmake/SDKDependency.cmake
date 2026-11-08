@@ -11,13 +11,16 @@ if(NOT OTP_BEAM_FLAVOR MATCHES "^(emu|jit)$")
 endif()
 file(REAL_PATH "${BEAM_SDK_ROOT}" BEAM_SDK_ROOT)
 set(BEAM_DIR "${BEAM_SDK_ROOT}/lib/cmake/BEAM" CACHE PATH "Selected installed BEAM package" FORCE)
-find_package(BEAM CONFIG REQUIRED COMPONENTS RuntimeStatic NIF Driver PATHS "${BEAM_DIR}" NO_DEFAULT_PATH)
-foreach(_target RuntimeStatic NIF Driver)
+find_package(BEAM CONFIG REQUIRED COMPONENTS RuntimeStatic NIF Driver ETF PATHS "${BEAM_DIR}" NO_DEFAULT_PATH)
+if(NOT DEFINED BEAM_SDK_HAS_LEGACY_RE_BIFS OR BEAM_SDK_HAS_LEGACY_RE_BIFS)
+    message(FATAL_ERROR "OTP requires an installed SDK without legacy re BIF registrations")
+endif()
+foreach(_target RuntimeStatic NIF Driver ETFObjects)
     if(NOT TARGET BEAM::${_target})
         message(FATAL_ERROR "Selected BEAM SDK does not export BEAM::${_target}")
     endif()
 endforeach()
-foreach(_command beam_check_runtime_sdk beam_get_runtime_artifact beam_install_runtime_artifacts beam_install_native_headers beam_install_core_modules beam_target_nif)
+foreach(_command beam_target_etf_objects beam_check_runtime_sdk beam_get_runtime_artifact beam_install_runtime_artifacts beam_install_native_headers beam_install_core_modules beam_target_nif)
     if(NOT COMMAND "${_command}")
         message(FATAL_ERROR "Selected BEAM SDK lacks ${_command}; install a runtime with public artifact acquisition and deployment support")
     endif()
@@ -45,14 +48,20 @@ if(WIN32)
     endif()
 endif()
 
+beam_get_runtime_artifact(_etf_header NAME api.etf KIND embedding-header)
+file(STRINGS "${_etf_header}" _etf_api_version REGEX "^#define BEAM_ETF_SDK_API_VERSION ")
+if(NOT _etf_api_version STREQUAL "#define BEAM_ETF_SDK_API_VERSION 1")
+    message(FATAL_ERROR "OTP requires the version 1 ETF incorporation interface")
+endif()
+
 # These are declared SDK capabilities, not knowledge of private install paths.
-set(_required_artifacts runtime.static api.beam api.runtime api.zlib)
+set(_required_artifacts runtime.static api.beam api.runtime api.zlib etf.objects api.etf api.beam_etf)
 if(NOT WIN32)
     list(APPEND _required_artifacts helper.child_setup)
 endif()
 set(_core_artifacts)
 foreach(_artifact IN LISTS BEAM_RUNTIME_ARTIFACTS)
-    if(_artifact MATCHES "^(core[.]|core-source[.]|link[.]static|header[.])")
+    if(_artifact MATCHES "^(etf[.]|link[.]etf|sdk[.]etf|core[.]|core-source[.]|link[.]static|header[.])")
         beam_get_runtime_artifact(_path NAME "${_artifact}")
         list(APPEND _core_artifacts "${_artifact}")
     endif()
@@ -64,27 +73,56 @@ foreach(_artifact IN ITEMS ${_required_artifacts} ${_core_artifacts} header.beam
     string(JSON _artifact_json SET "${_artifact_json}" "${_artifact}" "\"${_sha256}\"")
 endforeach()
 
-# Compile against the selected installed headers, before building any host.
+# Check the selected installed SDK before building any host. Native builds
+# also prepare the host manifest, so unknown implementation identifiers fail
+# configuration. Cross builds verify its API and validate when a host starts.
 include(CheckCSourceCompiles)
 set(CMAKE_REQUIRED_LIBRARIES BEAM::RuntimeStatic)
+set(CMAKE_REQUIRED_INCLUDES "${CMAKE_CURRENT_LIST_DIR}/../tools")
 unset(OTP_HAS_PUBLIC_PRELOAD_COMPOSITION CACHE)
-check_c_source_compiles("#include <beam/beam.h>
+set(_otp_composition_probe "#include <beam/beam.h>
+#include \"otp_builtin_bindings.h\"
 int main(void) {
-    beam_composition_options options = {0};
+    _Static_assert(BEAM_BUILTIN_BINDING_API_VERSION == 1, \"BIF binding API\");
+    beam_composition_options options = {.struct_size = sizeof options};
     options.builtin_nif_count = 0;
     options.builtin_driver_count = 0;
     options.preload_count = 0;
     options.preloads = (const beam_module_spec *)0;
+    options.builtin_binding_count = sizeof otp_builtin_bindings / sizeof *otp_builtin_bindings;
+    options.builtin_bindings = otp_builtin_bindings;
+    options.core_export_count = sizeof otp_core_exports / sizeof *otp_core_exports;
+    options.core_exports = otp_core_exports;
     beam_embedded_dependency dependency = {sizeof(beam_embedded_dependency), \"probe\", BEAM_EMBEDDED_INCLUDED};
     options.embedded_dependency_count = 1;
     options.embedded_dependencies = &dependency;
     beam_vm_options vm = {0};
     vm.break_policy = BEAM_BREAK_DISABLED;
-    return (int) options.preload_count;
-}" OTP_HAS_PUBLIC_PRELOAD_COMPOSITION)
+    beam_composition *prepared = 0;
+    beam_error error = {0};
+    beam_status status = beam_composition_prepare(&options, &prepared, &error);
+    beam_composition_release(&prepared);
+    return status != BEAM_OK;
+}")
+if(CMAKE_CROSSCOMPILING)
+    check_c_source_compiles("${_otp_composition_probe}" OTP_HAS_PUBLIC_PRELOAD_COMPOSITION)
+else()
+    include(CheckCSourceRuns)
+    check_c_source_runs("${_otp_composition_probe}" OTP_HAS_PUBLIC_PRELOAD_COMPOSITION)
+endif()
+unset(_otp_composition_probe)
+unset(CMAKE_REQUIRED_INCLUDES)
 unset(CMAKE_REQUIRED_LIBRARIES)
 if(NOT OTP_HAS_PUBLIC_PRELOAD_COMPOSITION)
-    message(FATAL_ERROR "Selected BEAM SDK lacks public preload composition, embedded dependency reporting or process interrupt policy required for OTP compatibility")
+    message(FATAL_ERROR "Selected BEAM SDK lacks public BIF bindings, preload composition, embedded dependency reporting or process interrupt policy required for OTP compatibility")
+endif()
+
+set(CMAKE_REQUIRED_LIBRARIES BEAM::RuntimeStatic)
+unset(OTP_HAS_PUBLIC_REGEX_SUPPORT CACHE)
+check_c_source_compiles("#include <beam/native.h>\n#include <beam/zlib.h>\nint main(void) { beam_native_report_cleanup(0, \"\"); return beam_native_stack_has_space(10240) + beam_native_stop_requested() + (int)beam_zlib_crc32_z(0, 0, 0); }" OTP_HAS_PUBLIC_REGEX_SUPPORT)
+unset(CMAKE_REQUIRED_LIBRARIES)
+if(NOT OTP_HAS_PUBLIC_REGEX_SUPPORT)
+    message(FATAL_ERROR "Selected SDK lacks public native stack, lifecycle or checksum support")
 endif()
 
 function(_otp_json_string output value)

@@ -9,14 +9,11 @@ add_library(otp_command_format STATIC
 target_include_directories(otp_command_format PUBLIC "${PROJECT_SOURCE_DIR}/erts/include/internal")
 target_compile_definitions(otp_command_format PRIVATE HAVE_CONFIG_H)
 
-set(_ei_sources)
-foreach(_part connect decode encode epmd misc global)
-    file(GLOB _part_sources CONFIGURE_DEPENDS "${_ei}/src/${_part}/*.c")
-    list(APPEND _ei_sources ${_part_sources})
-endforeach()
+include("${CMAKE_CURRENT_LIST_DIR}/OTPInterfaceSources.cmake")
 list(APPEND _ei_sources "${PROJECT_SOURCE_DIR}/erts/emulator/beam/erl_md5.c")
 foreach(_variant ei ei_st)
     add_library(otp_${_variant} STATIC ${_ei_sources})
+    beam_target_etf_objects(otp_${_variant})
     set_target_properties(otp_${_variant} PROPERTIES OUTPUT_NAME "${_variant}")
     target_compile_definitions(otp_${_variant} PRIVATE ERL_INTERFACE EI_NO_DEPR_WARN HAVE_CONFIG_H)
     target_include_directories(otp_${_variant} PUBLIC "${_ei}/include" PRIVATE

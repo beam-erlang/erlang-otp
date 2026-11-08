@@ -5,13 +5,13 @@ import argparse
 import hashlib
 import json
 from pathlib import Path, PurePosixPath, PureWindowsPath
+import re
 import shutil
 
 
 CORE = {"erts_code_purger", "erlang", "erts_internal",
-        "erts_literal_area_collector", "erts_trace_cleaner",
-        "erts_dirty_process_signal_handler", "atomics", "counters",
-        "persistent_term"}
+        "erts_literal_area_collector", "beam_internal",
+        "erts_dirty_process_signal_handler"}
 
 
 def digest(path):
@@ -45,8 +45,8 @@ def manifest(source):
     if len(names) != len(set(names)) or CORE.intersection(names):
         raise ValueError("Duplicate bootstrap modules or VM-owned core bytecode")
     preloads = data["preloads"]
-    if len(preloads) != 13 or len(set(preloads)) != 13 or not set(preloads) <= set(names):
-        raise ValueError("Expected thirteen distinct OTP-owned preloads")
+    if len(preloads) != 17 or len(set(preloads)) != 17 or not set(preloads) <= set(names):
+        raise ValueError("Expected seventeen distinct OTP-owned preloads")
     module_files = {entry["path"] for entry in data["modules"]}
     if module_files != {p for p in data["files"] if p.endswith(".beam")}:
         raise ValueError("Bootstrap module and artifact inventories differ")
@@ -84,6 +84,7 @@ def verify_seeds(directory, data):
 
 def verify_sources(source, data):
     verify_files(source, data["sources"])
+    verify_native_profile(source)
     for app in ("kernel", "stdlib", "compiler"):
         prefix = f"lib/{app}/src/"
         actual = {p.relative_to(source).as_posix() for p in (source / prefix).glob("*.erl")}
@@ -92,6 +93,24 @@ def verify_sources(source, data):
                     entry["source"]["path"].startswith(prefix)}
         if actual != expected:
             raise ValueError(f"{app} bootstrap source inventory differs")
+
+
+def verify_native_profile(source):
+    """The compiler's default target comes from the OTP host's own inventory."""
+    host = "\n".join((source / "tools" / name).read_text() for name in
+                     ("otp_builtin_bindings.h", "otp_native_bindings.def"))
+    bindings = re.findall(r'\{sizeof\(beam_builtin_binding\),\s*"([^"]+)",\s*'
+                          r'"([^"]+)",\s*"([^"]+)",\s*(\d+)\}', host)
+    profile = re.findall(r"\{'([^']+)','([^']+)','([^']+)',(\d+)\}",
+        (source / "lib/compiler/src/otp_native_profile.hrl").read_text())
+    if (not bindings or len({b[0] for b in bindings}) != len(bindings) or
+            len({b[1:] for b in bindings}) != len(bindings) or
+            sorted(bindings) != sorted(profile)):
+        raise ValueError("OTP compiler native target profile differs from host inventory")
+    contracts = dict(re.findall(r"native_contract\('([^']+)'\) -> \{'[^']+','[^']+',(\d+),",
+        (source / "lib/compiler/src/beam_native_contracts.hrl").read_text()))
+    if any(contracts.get(identifier) != arity for identifier, _, _, arity in profile):
+        raise ValueError("OTP native profile has an unknown contract or mismatched arity")
 
 
 def stage(source, directory, data, output, seeds):

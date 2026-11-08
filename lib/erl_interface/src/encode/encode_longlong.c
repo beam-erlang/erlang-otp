@@ -51,56 +51,12 @@ int ei_x_encode_longlong(ei_x_buff* x, EI_LONGLONG n)
 #ifdef EI_64BIT
 int ei_encode_long(char *buf, int *index, long p)
 {
-    return ei_encode_longlong(buf, index, p);
+    return beam_etf_embed_encode_long(buf, index, p);
 }
 #endif
 
 int ei_encode_longlong(char *buf, int *index, EI_LONGLONG p)
 {
-    char *s = buf + *index;
-    char *s0 = s;
-
-    if ((p < 256) && (p >= 0)) {
-	if (!buf) s += 2;
-	else {
-	    put8(s,ERL_SMALL_INTEGER_EXT);
-	    put8(s,(p & 0xff));
-	}
-    } else if ((p <= ERL_MAX) && (p >= ERL_MIN)) {
-	/* FIXME: Non optimal, could use (p <= LONG_MAX) && (p >= LONG_MIN)
-	   and skip next case */
-	if (!buf) s += 5;
-	else {
-	    put8(s,ERL_INTEGER_EXT);
-	    put32be(s,p);
-	}
-    } else {
-	/* We know 28-64 bits needed, i.e four to eight bytes  */
-	EI_ULONGLONG up = abs(p); /* FIXME name uabs(x) not to confuse with abs */
-	if (buf) {
-	    char *arityp;
-	    int arity = 0;
-
-	    put8(s,ERL_SMALL_BIG_EXT);
-	    arityp = s++;	/* fill in later */
-	    put8(s, p < 0);            /* save sign separately */
-	    while (up) {
-		*s++ = up & 0xff; /* take lowest byte */
-		up >>= 8;	  /* shift unsigned */
-		arity++;
-	    }
-	    put8(arityp,arity);
-	} else {
-	    s += 3;		/* Type, arity and sign */
-	    while (up) {
-		s++;		/* take lowest byte */
-		up >>= 8;	/* shift unsigned */
-	    }
-	}
-    }
-  
-    *index += s-s0; 
-
-    return 0; 
+    return beam_etf_embed_encode_longlong(buf, index, p);
 }
 

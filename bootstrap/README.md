@@ -4,10 +4,11 @@ This directory owns the private compiler foundation used to build OTP against
 an explicitly installed BEAM SDK. It contains no SDK implementation or VM
 executable and contributes no files directly to the installed distribution.
 
-`seeds/` contains 277 source-attested modules and one boot resource.
+`seeds/` contains 281 source-attested modules and one boot resource.
 `recipe.term`, `boot.script` and `manifest.json` specify sources, generated
-inputs, compiler options and exact inventories. The nine VM core modules are
-excluded; the selected SDK supplies their inspection artifacts. These checked
+inputs, compiler options and exact inventories. The six physical VM core modules, including private `beam_internal`, are
+excluded; the selected SDK supplies inspection artifacts for the five canonical
+core names. OTP supplies the canonical cleaner facade itself. These checked
 inputs are functional bootstrap data, not validation reports.
 
 ## Host stages and verification
@@ -16,7 +17,7 @@ OTP builds a common public-SDK host implementation for seed bootstrap,
 source-built tooling and installed product. Version/startup declarations precede
 ordinary application generation so host construction cannot depend on the
 foundation it must compile. Each host links the selected `BEAM::RuntimeStatic`
-and OTP-native inventory and embeds its selected thirteen OTP preloads. The
+and OTP-native inventory and embeds its selected seventeen OTP preloads. The
 hostname helper and verified SDK child helper are staged explicitly.
 
 The seed host invokes `otp_build_driver` with literal arguments to generate
@@ -47,3 +48,11 @@ bootstrap, installed product and SDK-boundary checks.
 [compatibility](../docs/compatibility.md) owns integration/stop rules. Retired
 upstream bootstrap copies remain recoverable from their pinned original source
 and Git history; they are not fallback build inputs.
+
+The seventeen product preloads include unchanged `atomics`, `counters` and
+`persistent_term` facades. The canonical cleaner facade delegates to mandatory `beam_internal` code.
+Together with the five reported SDK core modules these preserve
+OTP's 22-module preload/sticky set. The 281-module compiler inventory includes
+those facades and is reproduced completely with the selected matching SDK.
+Boot resources are independent attested inputs and remain unchanged by facade
+placement. Canonical native selection is explicit in every product/compiler host.

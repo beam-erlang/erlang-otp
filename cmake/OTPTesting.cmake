@@ -15,6 +15,13 @@ if(WIN32)
     return()
 endif()
 if(BUILD_TESTING)
+    include("${CMAKE_CURRENT_LIST_DIR}/OTPRegexTesting.cmake")
+    add_test(NAME otp-regex
+        COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tools/check_regex.py"
+            --source "${PROJECT_SOURCE_DIR}" --build "${PROJECT_BINARY_DIR}"
+            --sdk "${BEAM_SDK_ROOT}" --cmake "${CMAKE_COMMAND}")
+    set_tests_properties(otp-regex PROPERTIES TIMEOUT 420 RUN_SERIAL TRUE
+        LABELS "installed;native;regex;lifetime;upgrade")
     add_test(NAME otp-upstream-evidence
         COMMAND "${Python3_EXECUTABLE}" -m unittest discover
             -s "${PROJECT_SOURCE_DIR}/tools" -p test_upstream_results.py)
@@ -49,7 +56,8 @@ if(BUILD_TESTING)
     target_compile_features(otp_host_preparation_probe PRIVATE c_std_11)
     target_include_directories(otp_host_preparation_probe PRIVATE
         "${PROJECT_SOURCE_DIR}/tools" "${PROJECT_BINARY_DIR}/generated")
-    target_link_libraries(otp_host_preparation_probe PRIVATE BEAM::RuntimeStatic ${_otp_linked_native} m)
+    # RuntimeStatic publishes platform libraries after its archive.
+    target_link_libraries(otp_host_preparation_probe PRIVATE BEAM::RuntimeStatic ${_otp_linked_native})
     if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
         target_compile_options(otp_host_preparation_probe PRIVATE -Wall -Wextra -Werror)
     endif()
@@ -100,6 +108,13 @@ if(BUILD_TESTING)
     set_tests_properties(otp-development-support PROPERTIES TIMEOUT 180 LABELS "installed;native")
     set(OTP_REFERENCE_PREFIX "" CACHE PATH "Original-build OTP 29.0 reference of the selected flavor")
     set(OTP_REFERENCE_PROVENANCE "" CACHE FILEPATH "External original-build installation provenance")
+    add_test(NAME otp-ei-interop
+        COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tools/check_ei_interop.py"
+            --source "${PROJECT_SOURCE_DIR}" --build "${PROJECT_BINARY_DIR}"
+            --cmake "${CMAKE_COMMAND}" --cc "${CMAKE_C_COMPILER}"
+            --reference-prefix "${OTP_REFERENCE_PREFIX}"
+            --reference-provenance "${OTP_REFERENCE_PROVENANCE}")
+    set_tests_properties(otp-ei-interop PROPERTIES TIMEOUT 180 LABELS "installed;reference;erl-interface")
     add_test(NAME otp-installed-tree
         COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tools/check_installed_tree.py"
             --build "${PROJECT_BINARY_DIR}" --cmake "${CMAKE_COMMAND}"
@@ -149,9 +164,10 @@ if(BUILD_TESTING)
         LABELS "upstream;installed;ram-file;resource-heavy")
     set(OTP_LDAP_ROOT "" CACHE PATH "Extracted OpenLDAP dependency for upstream ELDAP interoperability")
     set(OTP_SHORT_TEST_ROOT "" CACHE PATH "Optional short scratch root for filename-to-atom tests")
+    set(OTP_EI_UNREACHABLE_HOST "" CACHE STRING "Explicit unreachable test host for the original ei_tmo_SUITE prerequisite")
     find_program(OTP_FTP_SERVER NAMES vsftpd DOC "vsftpd executable for upstream FTP interoperability")
     option(OTP_DISPOSABLE_WORKER "Run unchanged global process-kill suites on an explicitly disposable Darwin worker" OFF)
-    foreach(_suite IN ITEMS prim_file_SUITE sendfile_SUITE zlib_SUITE zstd_SUITE ram_file_SUITE base64_SUITE math_SUITE queue_SUITE lists_SUITE dirty_nif_SUITE engine_SUITE asn1_app_SUITE syntax_SUITE error_SUITE asn1_SUITE pbe_SUITE pubkey_policy_tree_SUITE ssl_rfc_5869_SUITE ssl_cipher_SUITE tls_1_3_record_SUITE runtime_tools_SUITE dbg_SUITE mnesia_install_test inets_SUITE http_format_SUITE httpc_cookie_SUITE eunit_SUITE xmerl_sax_SUITE xmerl_sax_stream_SUITE xmerl_SUITE xmerl_xsd_SUITE ftp_format_SUITE tftp_SUITE ftp_SUITE ssh_basic_SUITE edoc_SUITE eep48_SUITE eldap_basic_SUITE diameter_app_SUITE diameter_compiler_SUITE diameter_codec_SUITE diameter_config_SUITE diameter_sync_SUITE diameter_reg_SUITE os_mon_SUITE cpu_sup_SUITE disksup_SUITE memsup_SUITE jinterface_SUITE nc_SUITE dialyzer_utils_SUITE dialyzer_SUITE dialyzer_cl_SUITE cplt_SUITE iplt_SUITE typer_SUITE abstract_SUITE incremental_SUITE snmp_app_SUITE snmp_compiler_SUITE snmp_pdus_SUITE snmp_conf_SUITE megaco_app_SUITE megaco_flex_SUITE megaco_binary_term_id_SUITE megaco_sdp_SUITE megaco_codec_mini_SUITE megaco_codec_v1_SUITE megaco_codec_v2_SUITE megaco_codec_v3_SUITE odbc_start_SUITE odbc_connect_SUITE odbc_query_SUITE odbc_data_type_SUITE et_SUITE observer_SUITE etop_SUITE ttb_SUITE crashdump_viewer_SUITE reltool_app_SUITE reltool_server_SUITE debugger_SUITE int_SUITE int_eval_SUITE int_break_SUITE wx_app_SUITE wx_basic_SUITE wx_event_SUITE wx_class_SUITE wx_xtra_SUITE wx_opengl_SUITE)
+    foreach(_suite IN ITEMS ei_encode_SUITE ei_decode_SUITE ei_decode_encode_SUITE ei_format_SUITE ei_print_SUITE ei_connect_SUITE ei_accept_SUITE ei_tmo_SUITE ei_global_SUITE erl_call_SUITE port_call_SUITE re_SUITE prim_file_SUITE sendfile_SUITE zlib_SUITE zstd_SUITE ram_file_SUITE base64_SUITE math_SUITE queue_SUITE lists_SUITE maps_SUITE string_SUITE unicode_SUITE binary_module_SUITE ets_SUITE ets_tough_SUITE ets_property_test_SUITE dirty_nif_SUITE engine_SUITE asn1_app_SUITE syntax_SUITE error_SUITE asn1_SUITE pbe_SUITE pubkey_policy_tree_SUITE ssl_rfc_5869_SUITE ssl_cipher_SUITE tls_1_3_record_SUITE runtime_tools_SUITE dbg_SUITE mnesia_install_test inets_SUITE http_format_SUITE httpc_cookie_SUITE eunit_SUITE xmerl_sax_SUITE xmerl_sax_stream_SUITE xmerl_SUITE xmerl_xsd_SUITE ftp_format_SUITE tftp_SUITE ftp_SUITE ssh_basic_SUITE edoc_SUITE eep48_SUITE eldap_basic_SUITE diameter_app_SUITE diameter_compiler_SUITE diameter_codec_SUITE diameter_config_SUITE diameter_sync_SUITE diameter_reg_SUITE os_mon_SUITE cpu_sup_SUITE disksup_SUITE memsup_SUITE jinterface_SUITE nc_SUITE dialyzer_utils_SUITE dialyzer_SUITE dialyzer_cl_SUITE cplt_SUITE iplt_SUITE typer_SUITE abstract_SUITE incremental_SUITE snmp_app_SUITE snmp_compiler_SUITE snmp_pdus_SUITE snmp_conf_SUITE megaco_app_SUITE megaco_flex_SUITE megaco_binary_term_id_SUITE megaco_sdp_SUITE megaco_codec_mini_SUITE megaco_codec_v1_SUITE megaco_codec_v2_SUITE megaco_codec_v3_SUITE odbc_start_SUITE odbc_connect_SUITE odbc_query_SUITE odbc_data_type_SUITE et_SUITE observer_SUITE etop_SUITE ttb_SUITE crashdump_viewer_SUITE reltool_app_SUITE reltool_server_SUITE debugger_SUITE int_SUITE int_eval_SUITE int_break_SUITE wx_app_SUITE wx_basic_SUITE wx_event_SUITE wx_class_SUITE wx_xtra_SUITE wx_opengl_SUITE)
         set(_suite_args)
         if(APPLE AND OTP_DISPOSABLE_WORKER)
             list(APPEND _suite_args --disposable-worker)
@@ -172,12 +188,28 @@ if(BUILD_TESTING)
             list(APPEND _suite_args --ftp-server "${OTP_FTP_SERVER}")
         elseif(_suite STREQUAL eldap_basic_SUITE)
             list(APPEND _suite_args --ldap-root "${OTP_LDAP_ROOT}")
+        elseif(_suite STREQUAL ei_tmo_SUITE AND OTP_EI_UNREACHABLE_HOST)
+            list(APPEND _suite_args --ei-unreachable-host "${OTP_EI_UNREACHABLE_HOST}")
         endif()
         add_test(NAME "upstream-${_suite}"
             COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tools/check_upstream.py"
                 --source "${PROJECT_SOURCE_DIR}" --build "${PROJECT_BINARY_DIR}"
                 --cmake "${CMAKE_COMMAND}" --suite "${_suite}" ${_suite_args})
         set_tests_properties("upstream-${_suite}" PROPERTIES LABELS upstream TIMEOUT 1320)
+        if(_suite STREQUAL binary_module_SUITE)
+            set_tests_properties("upstream-${_suite}" PROPERTIES TIMEOUT 16320 RUN_SERIAL TRUE)
+        endif()
+        if(_suite STREQUAL ets_SUITE)
+            set_tests_properties("upstream-${_suite}" PROPERTIES TIMEOUT 43320 RUN_SERIAL TRUE)
+        elseif(_suite STREQUAL ets_tough_SUITE OR _suite STREQUAL ets_property_test_SUITE)
+            set_tests_properties("upstream-${_suite}" PROPERTIES TIMEOUT 720 RUN_SERIAL TRUE)
+        elseif(_suite STREQUAL maps_SUITE)
+            set_tests_properties("upstream-${_suite}" PROPERTIES TIMEOUT 2520 RUN_SERIAL TRUE)
+        elseif(_suite STREQUAL string_SUITE)
+            set_tests_properties("upstream-${_suite}" PROPERTIES TIMEOUT 3720 RUN_SERIAL TRUE)
+        elseif(_suite STREQUAL unicode_SUITE)
+            set_tests_properties("upstream-${_suite}" PROPERTIES TIMEOUT 25320 RUN_SERIAL TRUE)
+        endif()
         if(APPLE AND NOT OTP_DISPOSABLE_WORKER AND _suite MATCHES "^(cpu_sup|disksup|memsup)_SUITE$")
             set_tests_properties("upstream-${_suite}" PROPERTIES LABELS "upstream;prerequisite-blocked;disposable-worker-required")
         endif()

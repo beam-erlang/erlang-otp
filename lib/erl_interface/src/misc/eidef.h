@@ -94,4 +94,94 @@ typedef signed   int   int32;
 #  define EI_UNDEF(V,I) V = I
 #endif
 
+
+/* Installed-SDK codec adapters. These types are intentionally independent of ei.h. */
+#include <beam/sdk/etf.h>
+#include <string.h>
+static inline void ei_etf_pid_to(BeamEtfPid *d, const erlang_pid *s)
+{
+    memcpy(d->node, s->node, sizeof d->node);
+    d->num = s->num;
+    d->serial = s->serial;
+    d->creation = s->creation;
+}
+static inline void ei_etf_pid_from(erlang_pid *d, const BeamEtfPid *s)
+{
+    memcpy(d->node, s->node, sizeof d->node);
+    d->num = s->num;
+    d->serial = s->serial;
+    d->creation = s->creation;
+}
+static inline void ei_etf_port_to(BeamEtfPort *d, const erlang_port *s)
+{
+    memcpy(d->node, s->node, sizeof d->node);
+    d->id = s->id;
+    d->creation = s->creation;
+}
+static inline void ei_etf_port_from(erlang_port *d, const BeamEtfPort *s)
+{
+    memcpy(d->node, s->node, sizeof d->node);
+    d->id = s->id;
+    d->creation = s->creation;
+}
+static inline void ei_etf_ref_to(BeamEtfRef *d, const erlang_ref *s)
+{
+    memcpy(d->node, s->node, sizeof d->node);
+    d->len = s->len;
+    memcpy(d->n, s->n, sizeof d->n);
+    d->creation = s->creation;
+}
+static inline void ei_etf_ref_from(erlang_ref *d, const BeamEtfRef *s)
+{
+    memcpy(d->node, s->node, sizeof d->node);
+    d->len = s->len;
+    memcpy(d->n, s->n, sizeof d->n);
+    d->creation = s->creation;
+}
+static inline void ei_etf_fun_to(BeamEtfFun *d, const erlang_fun *s)
+{
+    d->arity = s->arity;
+    memcpy(d->module, s->module, sizeof d->module);
+    if (s->type == EI_FUN_CLOSURE) {
+        d->type = BEAM_ETF_FUN_CLOSURE;
+        memcpy(d->u.closure.md5, s->u.closure.md5, sizeof d->u.closure.md5);
+        d->u.closure.index = s->u.closure.index;
+        d->u.closure.old_index = s->u.closure.old_index;
+        d->u.closure.uniq = s->u.closure.uniq;
+        d->u.closure.n_free_vars = s->u.closure.n_free_vars;
+        d->u.closure.free_var_len = s->u.closure.free_var_len;
+        d->u.closure.free_vars = s->u.closure.free_vars;
+        ei_etf_pid_to(&d->u.closure.pid, &s->u.closure.pid);
+    } else if (s->type == EI_FUN_EXPORT) {
+        d->type = BEAM_ETF_FUN_EXPORT;
+        d->u.exprt.func_allocated = s->u.exprt.func_allocated;
+        d->u.exprt.func = s->u.exprt.func;
+    } else {
+        /* Preserve the original encoder behavior for unknown discriminants. */
+        d->type = s->type;
+    }
+}
+static inline void ei_etf_fun_from(erlang_fun *d, const BeamEtfFun *s)
+{
+    d->arity = s->arity;
+    memcpy(d->module, s->module, sizeof d->module);
+    if (s->type == BEAM_ETF_FUN_CLOSURE) {
+        d->type = EI_FUN_CLOSURE;
+        memcpy(d->u.closure.md5, s->u.closure.md5, sizeof d->u.closure.md5);
+        d->u.closure.index = s->u.closure.index;
+        d->u.closure.old_index = s->u.closure.old_index;
+        d->u.closure.uniq = s->u.closure.uniq;
+        d->u.closure.n_free_vars = s->u.closure.n_free_vars;
+        d->u.closure.free_var_len = s->u.closure.free_var_len;
+        d->u.closure.free_vars = s->u.closure.free_vars;
+        ei_etf_pid_from(&d->u.closure.pid, &s->u.closure.pid);
+    } else {
+        d->type = EI_FUN_EXPORT;
+        d->u.exprt.func_allocated = s->u.exprt.func_allocated;
+        d->u.exprt.func = s->u.exprt.func;
+        if (!s->u.exprt.func_allocated && s->u.exprt.func)
+            d->u.exprt.func = d->module + (s->u.exprt.func - s->module);
+    }
+}
+
 #endif /* _EIDEF_H */

@@ -10,6 +10,7 @@ from pathlib import Path
 from scratch import scratch
 import pty
 import re
+import shutil
 import select
 import signal
 import subprocess
@@ -132,6 +133,11 @@ def main():
         environment.update(HOME=str(root), PATH='/usr/bin:/bin')
         execute([args.cmake, '--install', args.build, '--prefix', prefix], root,
                 environment, root / 'install.log', timeout=120)
+        fixture = root / 'fixture'
+        fixture.mkdir()
+        execute([prefix / 'bin/erlc', '-o', fixture,
+                 args.source / 'tools/fixtures/otp_terminal_regex.erl'], root,
+                environment, root / 'compile.log')
         phases = []
         for label in ('fresh', 'relocated', 'isolated'):
             if label == 'relocated':
@@ -140,6 +146,7 @@ def main():
                 prefix = moved
             work = root / label
             work.mkdir()
+            shutil.copy2(fixture / 'otp_terminal_regex.beam', work)
             environment['HOME'] = str(work)
             command = [prefix / 'bin/erl', '+S1', '+SDcpu1', '+SDio1']
             if label == 'isolated' and sys.platform == 'darwin':
@@ -164,6 +171,15 @@ def main():
                             environment, root / f'absent-{number}.log')
                 command = [*isolation, '/OTP 日本/bin/erl', *command[1:]]
             shell(command, work, environment, root / (label + '.log'), label == 'isolated')
+            fixture_path = '/work' if label == 'isolated' and sys.platform != 'darwin' else work
+            output, error_output = execute(
+                [*command, '-noshell', '-noinput', '-pa', fixture_path,
+                 '-s', 'otp_terminal_regex', 'run', '-s', 'init', 'stop'],
+                work, environment, root / (label + '-regex.log'), timeout=30)
+            if output.splitlines() != ['OTP_TERMINAL_REGEX_OK']:
+                raise RuntimeError(f'{label}: terminal regex probe did not complete')
+            if error_output != 'OTP_TERMINAL_DIRECT\n':
+                raise RuntimeError(f'{label}: direct terminal write changed bytes')
             phases.append(label)
             (root / 'results.json').write_text(json.dumps({'phases': phases}, indent=2) + '\n')
             print(f'{label}: shell binding, break/continue and terminal restoration passed', flush=True)

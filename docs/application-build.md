@@ -14,6 +14,8 @@ the build tree. Application compilation preserves upstream metadata and profile
 options; deterministic bootstrap verification remains separate. Installation
 includes the original selected sources, generated sources/headers, development
 resources, examples and licenses where required by upstream layout.
+Native-lowering header fragments remain private bootstrap/build inputs; they do
+not extend the installed upstream source-header inventory.
 
 ## Foundation, commands and metadata
 
@@ -131,6 +133,11 @@ Dialyzer compiles its analysis modules with upstream version definitions and
 installs the retained native `dialyzer`/`typer` front ends, sources and headers.
 PLTs must be built by the selected installed product and use its actual files;
 removing default base applications to obtain a pass changes the workload.
+The analyzer resolves compiler call metadata against its target binding profile,
+using the OTP host inventory by default. Ordinary calls retain their source MFAs;
+native type models follow the selected descriptor. Absent or unknown native
+contracts remain opaque. This analysis step does not alter executable bytecode
+or infer the target profile from the VM executing Dialyzer.
 
 [OTPSNMP.cmake](../cmake/OTPSNMP.cmake) generates the Yecc parser, BER codec,
 MIB compiler seed, standard MIBs and public headers in dependency order before

@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include "otp_host_inputs.h"
 #include "otp_host_assets.h"
+#include "otp_builtin_bindings.h"
 #include <errno.h>
 #include <stdarg.h>
 #include <stdint.h>
@@ -179,15 +180,24 @@ beam_status otp_host_acquire(const char *root, size_t argc,
     byte(&arguments, 106); byte(&arguments, 106);
     data->arguments = arguments.data;
     if (state.status != BEAM_OK) { release(data); return state.status; }
+    static const beam_system_worker_entry cleaner_entry = {
+        sizeof(beam_system_worker_entry), BEAM_SYSTEM_WORKER_TRACE_CLEANER,
+        "erts_trace_cleaner", "start"};
     *output = (otp_host_inputs){
         .composition = {.struct_size = sizeof(beam_composition_options),
             .preload_count = OTP_PRELOAD_COUNT, .preloads = otp_preloads,
+            .default_tracer_module = "erl_tracer",
+            .system_worker_entry_count = 1, .system_worker_entries = &cleaner_entry,
             .builtin_nif_count = OTP_NIF_COUNT, .builtin_nifs = otp_nifs,
             .embedded_dependency_count = sizeof(otp_embedded_dependencies) / sizeof(*otp_embedded_dependencies),
             .embedded_dependencies = otp_embedded_dependencies,
             .builtin_driver_count = OTP_DRIVER_COUNT, .builtin_drivers = otp_drivers,
             .program_helper = data->helper,
-            .native_admission = BEAM_NATIVE_NIFS | BEAM_NATIVE_DRIVERS | BEAM_NATIVE_PORTS | BEAM_NATIVE_DISTRIBUTION},
+            .native_admission = BEAM_NATIVE_NIFS | BEAM_NATIVE_DRIVERS | BEAM_NATIVE_PORTS | BEAM_NATIVE_DISTRIBUTION,
+            .builtin_binding_count = sizeof otp_builtin_bindings / sizeof otp_builtin_bindings[0],
+            .builtin_bindings = otp_builtin_bindings,
+            .core_export_count = sizeof otp_core_exports / sizeof *otp_core_exports,
+            .core_exports = otp_core_exports},
         .entry = {"erl_init", "start", {data->arguments, arguments.size}},
         .storage = data};
     return BEAM_OK;

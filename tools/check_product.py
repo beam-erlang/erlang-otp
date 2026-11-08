@@ -300,6 +300,28 @@ def main():
                      *(["-pthread"] if library == "ei" else []), "-lm", "-o", str(client)])
             if execute([str(client)]) != "ei_passed\n":
                 raise RuntimeError(f"Unexpected {library} client output")
+        if sys.platform.startswith("linux"):
+            fault_source = work / "ei_growth_failure.c"
+            shutil.copyfile(args.source / "tools/fixtures/ei_growth_failure.c", fault_source)
+            for library in ("ei", "ei_st"):
+                client = work / f"{library}_growth_failure"
+                execute([args.cc, str(fault_source), "-I", str(prefix / "usr/include"),
+                         str(prefix / f"usr/lib/lib{library}.a"), "-Wl,--wrap=realloc",
+                         *(["-pthread"] if library == "ei" else []), "-lm", "-o", str(client)])
+                if execute([str(client)]) != "ei_growth_failure_passed\n":
+                    raise RuntimeError(f"Unexpected {library} failed-growth state")
+        if not args.bwrap:
+            # Coexistence deliberately selects an SDK; the isolated standalone
+            # probe above separately establishes that libei requires none.
+            coexistence = work / "ei-coexistence"
+            shutil.copytree(args.source / "tools/fixtures/ei_coexistence", coexistence)
+            execute([args.cmake, "-S", str(coexistence), "-B", str(coexistence / "build"),
+                     f"-DBEAM_DIR={args.sdk}/lib/cmake/BEAM", f"-DOTP_PREFIX={prefix}"])
+            execute([args.cmake, "--build", str(coexistence / "build"), "--parallel", "2"])
+            for library in ("ei", "ei_st"):
+                for linkage in ("shared", "static_first", "static_last"):
+                    if execute([str(coexistence / "build" / f"{library}_{linkage}")]) != "ei_runtime_coexistence_passed\n":
+                        raise RuntimeError(f"Unexpected {library}/{linkage} coexistence result")
         snmp = next((prefix / "lib").glob("snmp-*"))
         mib_out = work / "mib-output"
         mib_out.mkdir()
@@ -338,6 +360,13 @@ def main():
         inferred = execute([str(prefix / "bin/typer"), "--plt", str(plt), str(type_source)])
         if "-spec identity(integer()) -> integer()." not in inferred:
             raise RuntimeError(f"Missing inferred integer signature: {inferred}")
+        analysis_probe = work / "analysis_profile_probe.erl"
+        shutil.copyfile(args.source / "tools/fixtures/analysis_profile_probe.erl", analysis_probe)
+        execute([str(prefix / "bin/erlc"), "-o", str(work), str(analysis_probe)])
+        analysis = execute([str(prefix / "bin/erl"), "+S1", "-noshell", "-pa", str(work),
+                            "-eval", f'analysis_profile_probe:run({term(work)}),halt().'])
+        if analysis != "ANALYSIS_PROFILES_OK\n":
+            raise RuntimeError(f"Unexpected analyzer target profile result: {analysis}")
         bad_source = work / "command_bad_type.erl"
         bad_source.write_text("-module(command_bad_type).\n-export([broken/0]).\n"
                               "broken() -> command_type_probe:identity(not_an_integer).\n")

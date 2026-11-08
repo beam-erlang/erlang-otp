@@ -26,6 +26,8 @@
 -export_type([mp/0, compile_options/0, options/0]).
 
 -compile(nowarn_deprecated_catch).
+-on_load(on_load/0).
+-nifs([compile_nif/2, run_nif/4, inspect_nif/2, import_nif/1, version_nif/0]).
 
 -doc """
 Opaque data type containing a compiled regular expression.
@@ -85,7 +87,7 @@ Erlang/OTP releases.
 
 -type replace_fun() :: fun((binary(), [binary()]) -> iodata() | unicode:charlist()).
 
-%%% BIFs
+%%% Ordinary native operations
 
 -export([internal_run/4]).
 
@@ -99,11 +101,19 @@ importing is cheap if the importing node is compatible enough to the exporting
 node. If incompatible, as a fallback the `import/1` function will re-compile the regular
 expression from its string format, which is included in
 [`exported()`](`t:exported/0`).
+
+Exported patterns must come from a trusted producer: they contain native PCRE
+bytecode. The checksum detects accidental corruption and does not authenticate
+the producer or verify arbitrary bytecode. Use textual patterns across an
+untrusted boundary.
 """.
 -doc(#{since => <<"OTP 28.1">>}).
 -spec import(Exported :: exported()) -> mp().
-import(_) ->
-    erlang:nif_error(undef).
+import(Exported) ->
+    try native_result(import_nif(Exported))
+    catch error:Reason:Stack ->
+        raise_public(import, [Exported], Reason, Stack)
+    end.
 
 
 -doc """
@@ -118,15 +128,18 @@ was used in the Erlang/OTP compilation.
 -compile({inline, [badarg_with_cause/2, badarg_with_info/1]}).
 
 version() ->
-    erlang:nif_error(undef).
+    version_nif().
 
 -doc "The same as [`compile(Regexp,[])`](`compile/2`)".
 -spec compile(Regexp) -> {ok, mp()} | {error, ErrSpec} when
       Regexp :: iodata(),
       ErrSpec :: {ErrString :: string(), Position :: non_neg_integer()}.
 
-compile(_) ->
-    erlang:nif_error(undef).
+compile(RE) ->
+    try native_result(compile_nif(RE, []))
+    catch error:Reason:Stack ->
+        raise_public(compile, [RE], Reason, Stack)
+    end.
 
 -doc """
 Compiles a regular expression, with the syntax described below, into an internal
@@ -285,8 +298,11 @@ Options:
       Option :: compile_option() | export,
       ErrSpec :: {ErrString :: string(), Position :: non_neg_integer()}.
 
-compile(_, _) ->
-    erlang:nif_error(undef).
+compile(RE, Options) ->
+    try native_result(compile_nif(RE, Options))
+    catch error:Reason:Stack ->
+        raise_public(compile, [RE, Options], Reason, Stack)
+    end.
 
 -doc #{ equiv => run(Subject,RE,[]) }.
 -spec run(Subject, RE) -> {match, Captured} | nomatch when
@@ -295,8 +311,11 @@ compile(_, _) ->
       Captured :: [CaptureData],
       CaptureData :: {integer(), integer()}.
 
-run(_, _) ->
-    erlang:nif_error(undef).
+run(Subject, RE) ->
+    try native_result(run_nif(Subject, RE, [], true))
+    catch error:Reason:Stack ->
+        raise_public(run, [Subject, RE], Reason, Stack)
+    end.
 
 -doc """
 Executes a regular expression matching, and returns `match/{match, Captured}` or
@@ -813,8 +832,11 @@ For a descriptions of options only affecting the compilation step, see
       ErrType :: match_limit | match_limit_recursion | {compile,  CompileErr}, 
       CompileErr :: {ErrString :: string(), Position :: non_neg_integer()}.
 
-run(_, _, _) ->
-    erlang:nif_error(undef).
+run(Subject, RE, Options) ->
+    try native_result(run_nif(Subject, RE, Options, true))
+    catch error:Reason:Stack ->
+        raise_public(run, [Subject, RE, Options], Reason, Stack)
+    end.
 
 -doc false.
 -spec internal_run(Subject, RE, Options, FirstCall) -> {match, Captured} |
@@ -847,8 +869,11 @@ run(_, _, _) ->
       CompileErr :: {ErrString :: string(), Position :: non_neg_integer()},
       FirstCall :: boolean().
 
-internal_run(_, _, _, _) ->
-    erlang:nif_error(undef).
+internal_run(Subject, RE, Options, First) ->
+    try native_result(run_nif(Subject, RE, Options, First))
+    catch error:Reason:Stack ->
+        raise_public(internal_run, [Subject, RE, Options, First], Reason, Stack)
+    end.
 
 -doc """
 Takes a compiled regular expression and an item, and returns the relevant data
@@ -899,8 +924,11 @@ mapping from the result of [`run/3`](`run/3`) like this:
       MP :: mp(),
       Item :: namelist.
 
-inspect(_,_) ->
-    erlang:nif_error(undef).
+inspect(RE, Item) ->
+    try native_result(inspect_nif(RE, Item))
+    catch error:Reason:Stack ->
+        raise_public(inspect, [RE, Item], Reason, Stack)
+    end.
     
 
 %%% End of BIFs
@@ -1989,3 +2017,86 @@ badarg_with_cause(Args, Cause) ->
 
 badarg_with_info(Args) ->
     erlang:error(badarg, Args, [{error_info, #{module => erl_stdlib_errors}}]).
+
+%% Native dispatch retains the upstream Erlang algorithms without allowing a
+%% native callback to synchronously enter Erlang code.
+native_result({otp_re_dispatch, ucompile, [RE, Options]}) ->
+    ucompile(RE, Options);
+native_result({otp_re_dispatch, urun, [Subject, RE, Options]}) ->
+    urun(Subject, RE, Options);
+native_result({otp_re_dispatch, grun, [Subject, RE, Options]}) ->
+    grun(Subject, RE, Options);
+native_result({otp_re_error, badarg, none}) ->
+    erlang:error(badarg, [], [{error_info, #{module => erl_stdlib_errors}}]);
+native_result({otp_re_error, badarg, Cause}) ->
+    erlang:error(badarg, [],
+                 [{error_info, #{module => erl_stdlib_errors, cause => Cause}}]);
+native_result(Result) ->
+    Result.
+
+%% A native continuation and helper calls must not appear between the public
+%% operation and its caller in an exception stacktrace.
+raise_public(Function, Args, Reason, Stack) ->
+    Info = public_frame_info(Function, Stack),
+    ErrorInfo = (stack_error_info(Stack))#{module => erl_stdlib_errors},
+    PublicInfo = [{error_info, ErrorInfo} | without_error_info(Info)],
+    erlang:raise(error, Reason,
+                 [{?MODULE, Function, Args, PublicInfo} | outside_re(Function, Stack)]).
+
+public_frame_info(Function, [{?MODULE, Function, _, Info} | _]) ->
+    Info;
+public_frame_info(Function, [_ | Rest]) ->
+    public_frame_info(Function, Rest);
+public_frame_info(_, []) ->
+    [].
+
+stack_error_info([{_, _, _, Info} | Rest]) ->
+    case error_info_property(Info) of
+        none -> stack_error_info(Rest);
+        Map -> Map
+    end;
+stack_error_info([_ | Rest]) ->
+    stack_error_info(Rest);
+stack_error_info([]) ->
+    #{}.
+
+error_info_property([{error_info, Map} | _]) when is_map(Map) -> Map;
+error_info_property([_ | Rest]) -> error_info_property(Rest);
+error_info_property([]) -> none.
+
+without_error_info([{error_info, _} | Rest]) ->
+    without_error_info(Rest);
+without_error_info([Item | Rest]) ->
+    [Item | without_error_info(Rest)];
+without_error_info([]) ->
+    [].
+
+outside_re(Function, Stack) ->
+    case after_public_frame(Function, Stack) of
+        {ok, Rest} -> drop_re_frames(Rest);
+        none -> outside_first_re(Stack, Stack)
+    end.
+
+%% Conversion primitives can head the original trace. Locate the facade frame
+%% before discarding its helpers, rather than retaining that primitive prefix.
+after_public_frame(Function, [{?MODULE, Function, _, _} | Rest]) -> {ok, Rest};
+after_public_frame(Function, [{?MODULE, Function, _} | Rest]) -> {ok, Rest};
+after_public_frame(Function, [_ | Rest]) -> after_public_frame(Function, Rest);
+after_public_frame(_, []) -> none.
+
+outside_first_re([{?MODULE, _, _, _} | Rest], _) -> drop_re_frames(Rest);
+outside_first_re([{?MODULE, _, _} | Rest], _) -> drop_re_frames(Rest);
+outside_first_re([_ | Rest], Original) -> outside_first_re(Rest, Original);
+outside_first_re([], Original) -> Original.
+
+drop_re_frames([{?MODULE, _, _, _} | Rest]) -> drop_re_frames(Rest);
+drop_re_frames([{?MODULE, _, _} | Rest]) -> drop_re_frames(Rest);
+drop_re_frames(Stack) -> Stack.
+
+compile_nif(_, _) -> erlang:nif_error(nif_not_loaded).
+run_nif(_, _, _, _) -> erlang:nif_error(nif_not_loaded).
+inspect_nif(_, _) -> erlang:nif_error(nif_not_loaded).
+import_nif(_) -> erlang:nif_error(nif_not_loaded).
+version_nif() -> erlang:nif_error(nif_not_loaded).
+
+on_load() -> erlang:load_nif("re", re).

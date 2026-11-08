@@ -27,47 +27,13 @@
 #include "eiext.h"
 #include "putget.h"
 
-int ei_decode_big(const char *buf, int *index, erlang_big *b) {
-    unsigned int digit_bytes;
-    const unsigned char *s = (unsigned char*) buf + *index;
-    const unsigned char *s0 = s;
-
-    switch ( get8(s) ) {
-	case ERL_SMALL_BIG_EXT:
-	digit_bytes = get8(s);
-	break;
-    case ERL_LARGE_BIG_EXT:
-	digit_bytes = get32be(s);
-	break;
-    default:
-	return -1;
-    }
-    if ( b ) {
-	unsigned short *dt = b->digits;
-	unsigned int n = (digit_bytes+1)/2;
-	int i;
-
-	if ( digit_bytes != b->arity ) {
-	    return -1;
-	}
-
-	b->is_neg = get8(s);
-	  
-	for (i = 0; i < n; ++i) {
-	    dt[i] = s[i*2];
-	    if ((i*2 + 1) < digit_bytes) {
-		dt[i] |= ((unsigned short) s[(i*2)+1]) << 8;
-	    }
-	}
-    } else {
-	s++; /* skip sign byte */
-    }
-
-    s += digit_bytes;
-
-    *index += s-s0; 
-  
-    return 0; 
+int ei_decode_big(const char *buf, int *index, erlang_big *b)
+{
+    BeamEtfCompatBig value = {0};
+    if (b) { value.arity = b->arity; value.is_neg = b->is_neg; value.digits = b->digits; }
+    int status = beam_etf_compat_decode_big(buf, index, b ? &value : NULL);
+    if (b && status == 0) b->is_neg = value.is_neg;
+    return status;
 }
 
 erlang_big *ei_alloc_big(unsigned int digit_bytes) {

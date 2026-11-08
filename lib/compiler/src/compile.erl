@@ -1558,9 +1558,9 @@ passes_1([]) ->
 pass(from_abstr) ->
     {".abstr", [?pass(consult_abstr) | abstr_passes(non_verified_abstr)]};
 pass(from_core) ->
-    {".core",[?pass(parse_core)|core_passes(non_verified_core)]};
+    {".core",[?pass(parse_core),?pass(native_core_calls)|core_passes(non_verified_core)]};
 pass(from_asm) ->
-    {".S",[?pass(beam_consult_asm)|asm_passes()]};
+    {".S",[?pass(beam_consult_asm),?pass(native_assembly_calls)|asm_passes()]};
 pass(_) -> none.
 
 %% For compilation from forms, replace the first pass with a pass
@@ -1780,6 +1780,7 @@ abstr_passes(AbstrStatus) ->
                  {iff,beam_debug_info,?pass(beam_debug_info)}]},
          {iff,'dcover',{src_listing,"cover"}},
 
+         ?pass(native_calls),
          ?pass(expand_records),
          {iff,'dexp',{listing,"expand"}},
          {iff,'E',?pass(legalize_vars)},
@@ -2278,7 +2279,7 @@ add_default_base(St, Forms) ->
     end.
 
 lint_module(Code, St) ->
-    case erl_lint:module(Code, St#compile.ifile, St#compile.options) of
+    case erl_lint:module(native_lint_forms(Code, St#compile.options), St#compile.ifile, St#compile.options) of
 	{ok,Ws} ->
 	    %% Insert name of module as base name, if needed. This is
 	    %% for compile:forms to work with listing files.
@@ -3218,3 +3219,8 @@ pre_load() ->
 	 v3_core],
     _ = code:ensure_modules_loaded(L),
     ok.
+
+-include("beam_native_calls.hrl").
+-include("beam_native_contracts.hrl").
+-include("beam_native_eval.hrl").
+-include("beam_native_inputs.hrl").

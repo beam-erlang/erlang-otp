@@ -43,6 +43,14 @@ int main(int argc, char **argv)
         131, 108, 0, 0, 0, 1, 119, 10,
         'e', 'm', 'u', '_', 'f', 'l', 'a', 'v', 'o', 'r', 106
     };
+    static const beam_builtin_binding binding = {
+        sizeof(beam_builtin_binding), "vm_system_info_1", "erlang", "system_info", 1
+    };
+    const beam_composition_options selection = {
+        .struct_size = sizeof(beam_composition_options),
+        .builtin_binding_count = 1, .builtin_bindings = &binding
+    };
+    beam_composition *composition = NULL;
     beam_system *system = NULL;
     beam_vm *vm = NULL;
     beam_vm_options options;
@@ -84,9 +92,14 @@ int main(int argc, char **argv)
         fprintf(stderr, "Loaded runtime differs from selected SDK: %s\n", loaded);
         goto cleanup;
     }
-    status = beam_core_modules(&core, &core_count);
+    status = beam_module_core_names(&core, &core_count);
     if (status != BEAM_OK || !core || !core_count) {
         fputs("Public embedded-core inventory is unavailable\n", stderr);
+        goto cleanup;
+    }
+    status = beam_composition_prepare(&selection, &composition, &error);
+    if (status != BEAM_OK) {
+        fail_status("select runtime query", status, &error);
         goto cleanup;
     }
     status = beam_init(&system, &error);
@@ -95,6 +108,7 @@ int main(int argc, char **argv)
         goto cleanup;
     }
     beam_vm_options_init(&options);
+    options.composition = composition;
     status = beam_vm_init(system, &options, &vm, &error);
     if (status != BEAM_OK) {
         fail_status("initialize bare VM", status, &error);
@@ -121,6 +135,7 @@ int main(int argc, char **argv)
     failed = 0;
 
 cleanup:
+    beam_composition_release(&composition);
     beam_result_release(&result);
     if (vm) {
         status = beam_vm_terminate(&vm, &halt_status);

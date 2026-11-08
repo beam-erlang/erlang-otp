@@ -50,7 +50,7 @@ run(Prefix, Flavor, Work) ->
         true = code:is_sticky(Module)
     end, erlang:pre_loaded()),
     lists:foreach(fun(File) ->
-        %% make_preload retains these chunks, following the upstream generator.
+        %% make_preload retains executable chunks and native binding metadata.
         %% Tooling gets the original file, including documentation/debug metadata.
         {ok, Module, Chunks} = beam_lib:all_chunks(File),
         {ok, {Module, [{abstract_code, {raw_abstract_v1, Forms}},
@@ -59,10 +59,10 @@ run(Prefix, Flavor, Work) ->
         true = is_list(Forms) andalso Forms =/= [],
         true = is_list(Attributes),
         true = is_list(CompileInfo),
-        Embedded = [Chunk || {Name, _} = Chunk <- Chunks,
+        EmbeddedChunks = [Chunk || {Name, _} = Chunk <- Chunks,
                     lists:member(Name, ["Code", "AtU8", "ImpT", "ExpT", "StrT",
-                                        "FunT", "LitT", "Type"])],
-        {ok, Binary} = beam_lib:build_module(Embedded),
+                                        "FunT", "LitT", "Type", "Meta"])],
+        {ok, Binary} = beam_lib:build_module(EmbeddedChunks),
         {ok, {Module, Digest}} = beam_lib:md5(Binary),
         preloaded = code:which(Module),
         Digest = Module:module_info(md5)
@@ -79,6 +79,8 @@ run(Prefix, Flavor, Work) ->
         false = erl_ddll:info(Name, permanent),
         linked_in_driver = erl_ddll:info(Name, processes)
     end, ["tcp_inet", "udp_inet", "ram_file_drv"]),
+    canonical_base_interfaces(),
+    canonical_stdlib_interfaces(),
     %% Retained SDK coexistence check now uses OTP's ordinary re wrapper.
     {match,[{0,8},{0,5},{6,2}]} = re:run("hello 42", "^(hello) ([0-9]+)$"),
     nomatch = re:run("goodbye", "^(hello) ([0-9]+)$"),
@@ -228,6 +230,73 @@ run(Prefix, Flavor, Work) ->
             init:restart(),
             receive after infinity -> ok end
     end.
+
+canonical_base_interfaces() ->
+    %% OTP retains its canonical destinations when modern library names change.
+    3.0 = math:sqrt(9),
+    1.0 = math:cos(0),
+    3.0 = math:floor(3.75),
+    4.0 = math:ceil(3.25),
+    Pi = math:pi(),
+    true = Pi > 3.14 andalso Pi < 3.15,
+    true = math:tau() =:= 2 * Pi,
+    try math:sqrt(-1) of
+        _ -> error(math_domain_error_missing)
+    catch
+        error:badarith -> ok
+    end,
+    {error, {already_started, undefined}} = erl_ddll:start(),
+    ok = erl_ddll:stop(),
+    false = erl_debugger:supported(),
+    try erl_debugger:whereis() of
+        _ -> error(disabled_debugger_call_succeeded)
+    catch
+        error:undef -> ok
+    end,
+    4 = erts_debug:flat_size([a, b]),
+    true = erlang:is_builtin(math, sqrt, 1),
+    true = erlang:is_builtin(erl_ddll, loaded_drivers, 0),
+    true = erlang:is_builtin(erl_debugger, supported, 0),
+    false = erlang:is_builtin(beam_math, sqrt, 1),
+    false = erlang:is_builtin(beam_ddll, loaded_drivers, 0),
+    false = erlang:is_builtin(beam_debugger, supported, 0),
+    ok.
+
+canonical_stdlib_interfaces() ->
+    %% These canonical modules belong to OTP's own installed STDLIB.
+    Ebin = filename:join(code:lib_dir(stdlib), "ebin"),
+    lists:foreach(fun(Module) ->
+        {module, Module} = code:ensure_loaded(Module),
+        Ebin = filename:dirname(code:which(Module))
+    end, [array,dict,graph,gb_sets,gb_trees,orddict,ordsets,proplists,
+          queue,sets,sofs,digraph,digraph_utils]),
+    value = array:get(2,array:set(2,value,array:new())),
+    {ok,1} = dict:find(a,dict:from_list([{a,1}])),
+    [a,b] = gb_sets:to_list(gb_sets:from_list([b,a])),
+    {value,1} = gb_trees:lookup(a,gb_trees:from_orddict([{a,1}])),
+    [{a,1}] = orddict:to_list(orddict:from_list([{a,1}])),
+    [a,b] = ordsets:from_list([b,a,a]),
+    #{a := true,b := 2} = proplists:to_map([a,{b,2}]),
+    {[[a],[{b,2}]],[]} = proplists:split([a,{b,2}],[a,b]),
+    [a,b] = queue:to_list(queue:from_list([a,b])),
+    lists:foreach(fun(Version) ->
+        [a,b] = lists:sort(sets:to_list(sets:from_list([b,a,a],[{version,Version}])))
+    end,[1,2]),
+    G0 = graph:new(),
+    G1 = graph:add_vertex(graph:add_vertex(G0,a),b),
+    [] = graph:vertices(G0),
+    [a,b] = graph:topsort(graph:add_edge(G1,a,b)),
+    Family = sofs:family([{a,[b]},{b,[]}]),
+    lists:foreach(fun(G) ->
+        try
+            Family = sofs:digraph_to_family(G),
+            Family = sofs:digraph_to_family(G,sofs:type(Family)),
+            C = digraph_utils:condensation(G),
+            try 2 = digraph:no_vertices(C)
+            after true = digraph:delete(C) end
+        after true = digraph:delete(G) end
+    end,[sofs:family_to_digraph(Family),sofs:family_to_digraph(Family,[acyclic])]),
+    ok.
 
 event_collection(Work) ->
     ok = file:make_dir(Work),

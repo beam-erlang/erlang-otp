@@ -28,7 +28,7 @@
 test(RootDir) ->
     %%put(verbose,true),
     erts_debug:set_internal_state(available_internal_state,true),
-    io:format("oldlimit: ~p~n",[ erts_debug:set_internal_state(re_loop_limit,1)]),
+    io:format("oldlimit: ~p~n",[ otp_re_test:set_internal_state(re_loop_limit,1)]),
     Testfiles0 = ["testoutput1",
                   "testoutput2",
                   "testoutput4",
@@ -38,7 +38,7 @@ test(RootDir) ->
                  ],
     Testfiles = [ filename:join([RootDir,FN]) || FN <- Testfiles0 ], 
     Res = [ t(X) || X <- Testfiles ],
-    io:format("limit was: ~p~n",[ erts_debug:set_internal_state(re_loop_limit,default)]),
+    io:format("limit was: ~p~n",[ otp_re_test:set_internal_state(re_loop_limit,default)]),
     Res2 = Res ++ [ t(X) || X <- Testfiles ],
     erts_debug:set_internal_state(available_internal_state,false),
     Res2.

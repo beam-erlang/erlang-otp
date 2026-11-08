@@ -26,25 +26,8 @@
 
 int ei_encode_pid(char *buf, int *index, const erlang_pid *p)
 {
-  char* s = buf + *index;
-
-  ++(*index); /* skip ERL_PID_EXT */
-  if (ei_encode_atom_len_as(buf, index, p->node, strlen(p->node),
-			    ERLANG_UTF8, ERLANG_LATIN1|ERLANG_UTF8) < 0)
-      return -1;
-
-  if (buf) {
-    put8(s, ERL_NEW_PID_EXT);
-
-    s = buf + *index;
-
-    /* now the integers */
-    put32be(s, p->num);
-    put32be(s, p->serial);
-    put32be(s, p->creation); /* 32 bits */
-  }
-
-  *index += 4 + 4 + 4;
-  return 0;
+    BeamEtfPid value;
+    ei_etf_pid_to(&value, p);
+    return beam_etf_embed_encode_pid(buf, index, &value);
 }
 

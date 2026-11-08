@@ -281,8 +281,20 @@ python3 tools/installation_inventory.py compare --candidate "$OTP_PROVENANCE" \
 
 The source/build attestation identifies the upstream pin, product source inputs,
 selected SDK identity, static archive and link-support hashes. Candidate records
-use `build.linkage = "static"` and `build.sdk` with `build-id`, `runtime` and
-`runtime.static` checksums. Store records outside installed prefixes in ignored
-build output or CI artifacts. Provenance is an acceptance input, not a runtime
-requirement for ordinary users. [Qualification](local-qualification.md) describes
+use `build.linkage = "static"` and `build.sdk_selection` containing the selected
+`sdk-selection.json` identity and artifact checksums. Store records outside
+installed prefixes in ignored build output or CI artifacts. Provenance is an
+acceptance input, not a runtime requirement for ordinary users.
+[Qualification](local-qualification.md) describes
 artifact-bound content review and compatibility reconciliation.
+
+### Erl_Interface SDK payload
+
+The selected installed SDK must provide the `ETF` component, `BEAM::ETFObjects`
+and `beam_target_etf_objects`. Its object payload, bridge/modern headers and
+link metadata are verified and recorded in SDK provenance. Both `otp_ei` and
+`otp_ei_st` incorporate actual object members, including on Windows. Rebuild
+against the exact selected SDK; no sibling source checkout is a build input.
+The installed archives remain standalone: downstream clients use OTP's
+`usr/include` and `usr/lib/libei.a` or `libei_st.a`, with the existing system
+link flags. No BEAM include path, `libbeam` or extra codec link flag is needed.

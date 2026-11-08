@@ -180,9 +180,20 @@ int main(int argc, char **argv)
     const char *arguments[] = {
         "-root", argv[1], "-bindir", bindir, "-boot", argv[2], "-noshell", "-noinput", "-eval",
         "22=length(erlang:pre_loaded()),"
+        "true=erlang:is_builtin(binary,split,2),"
+        "true=erlang:is_builtin(binary,split,3),"
+        "false=erlang:is_builtin(beam_bytes,split,2),"
+        "false=erlang:is_builtin(beam_bytes,split,3),"
+        "true=erlang:is_builtin(atomics,get,2),false=erlang:is_builtin(atomics,new,2),"
+        "false=erlang:is_builtin(counters,new,2),false=erlang:is_builtin(counters,get,2),"
+        "true=erlang:is_builtin(persistent_term,get,1),"
+        "false=erlang:is_builtin(beam_atomics,get,2),false=erlang:is_builtin(beam_persistent_term,get,1),"
+        "A=atomics:new(1,[]),ok=atomics:put(A,1,3),3=atomics:get(A,1),"
+        "C=counters:new(1,[write_concurrency]),ok=counters:add(C,1,1),1=counters:get(C,1),"
+        "[<<\"b\">>,<<\"nana\">>]=binary:split(<<\"banana\">>,<<\"a\">>),"
         "preloaded=code:which(erl_tracer),true=code:is_sticky(erl_tracer),"
         "Modules=[erl_init,init,prim_buffer,prim_eval,prim_inet,prim_file,zlib,"
-        "socket_registry,prim_socket,prim_net,prim_zip,erl_prim_loader,erl_tracer],"
+        "socket_registry,prim_socket,prim_net,prim_zip,erl_prim_loader,erl_tracer,atomics,counters,persistent_term],"
         "lists:foreach(fun(M)->preloaded=code:which(M),true=code:is_sticky(M),"
         "{error,enoent}=file:read_file(filename:join(code:lib_dir(erts,ebin),"
         "atom_to_list(M)++\".beam\")) end,Modules),"
@@ -192,7 +203,10 @@ int main(int argc, char **argv)
     };
     const size_t argument_count = sizeof(arguments) / sizeof(arguments[0]);
     CHECK(snprintf(bindir, sizeof(bindir), "%s/erts-%s/bin", argv[1], OTP_ERTS_VERSION) < (int)sizeof(bindir));
-    CHECK(OTP_PRELOAD_COUNT == 13 && !strcmp(otp_preloads[12].name, "erl_tracer"));
+    CHECK(OTP_PRELOAD_COUNT == 17 && !strcmp(otp_preloads[12].name, "erl_tracer") &&
+          !strcmp(otp_preloads[13].name, "atomics") && !strcmp(otp_preloads[14].name, "counters") &&
+          !strcmp(otp_preloads[15].name, "persistent_term") &&
+          !strcmp(otp_preloads[16].name, "erts_trace_cleaner"));
     CHECK(snprintf(asset, sizeof(asset), "%s/%s", argv[1], OTP_CHILD_HELPER) < (int)sizeof(asset));
     CHECK(snprintf(held, sizeof(held), "%s.held", asset) < (int)sizeof(held));
     CHECK(access(held, F_OK) < 0 && errno == ENOENT);
@@ -284,6 +298,9 @@ int main(int argc, char **argv)
         CHECK(!memcmp(&inputs, &unchanged, sizeof(inputs)));
         beam_module_spec duplicates[] = {inputs.composition.preloads[0], inputs.composition.preloads[0]};
         beam_composition_options invalid = inputs.composition;
+        /* Isolate malformed-code validation from the custom worker destination. */
+        invalid.system_worker_entry_count = 0;
+        invalid.system_worker_entries = NULL;
         invalid.preload_count = 2;
         invalid.preloads = duplicates;
         CHECK(beam_composition_prepare(&invalid, &composition, &error) == BEAM_INVALID_ARGUMENT);

@@ -3,7 +3,8 @@
 find_package(Python3 3.9 REQUIRED COMPONENTS Interpreter)
 find_package(Perl REQUIRED)
 set(_preloads erl_init init prim_buffer prim_eval prim_inet prim_file zlib
-    socket_registry prim_socket prim_net prim_zip erl_prim_loader erl_tracer)
+    socket_registry prim_socket prim_net prim_zip erl_prim_loader erl_tracer
+    atomics counters persistent_term erts_trace_cleaner)
 set(_preload_sources)
 set(_preload_outputs)
 otp_application_version(erts _erts_version)
@@ -19,7 +20,7 @@ foreach(_module IN LISTS _preloads)
 endforeach()
 list(LENGTH _preloads _count)
 set(_assets "/* Generated from OTP policy and the selected public SDK. */\n#include \"sdk_selection.h\"\n#define OTP_PRELOAD_COUNT ${_count}\nextern const beam_module_spec otp_preloads[OTP_PRELOAD_COUNT];\n")
-set(_nifs prim_file prim_buffer prim_socket prim_net erl_tracer zlib prim_tty zstd)
+set(_nifs prim_file prim_buffer prim_socket prim_net erl_tracer zlib prim_tty zstd re)
 set(_otp_linked_native otp_socket_backend)
 foreach(_module IN LISTS _nifs)
     string(APPEND _assets "extern struct enif_entry_t *otp_${_module}_nif_init(void);\n")
@@ -33,7 +34,7 @@ foreach(_module IN LISTS _nifs)
 endforeach()
 list(LENGTH _nifs _count)
 string(APPEND _assets "};\n#define OTP_NIF_COUNT ${_count}\n")
-string(APPEND _assets "static const beam_embedded_dependency otp_embedded_dependencies[] = {\n    {sizeof(beam_embedded_dependency), \"zstd\", BEAM_EMBEDDED_INCLUDED}\n};\n")
+string(APPEND _assets "static const beam_embedded_dependency otp_embedded_dependencies[] = {\n    {sizeof(beam_embedded_dependency), \"zstd\", BEAM_EMBEDDED_INCLUDED},\n    {sizeof(beam_embedded_dependency), \"pcre2\", BEAM_EMBEDDED_INCLUDED}\n};\n")
 set(_drivers)
 foreach(_protocol IN LISTS OTP_INET_PROTOCOLS)
     list(APPEND _drivers "${_protocol}_inet")
@@ -61,6 +62,15 @@ file(CONFIGURE OUTPUT "${PROJECT_BINARY_DIR}/generated/otp_host_version.h"
     CONTENT "/* Generated from the OTP application version table. */\n#define OTP_ERTS_VERSION \"${_erts_version}\"\n" @ONLY)
 
 function(otp_add_host target preload_directory)
+    cmake_parse_arguments(PARSE_ARGV 2 HOST "" "HOST_INPUTS" "NATIVE_TARGETS")
+    set(_inputs otp_host_inputs)
+    if(HOST_HOST_INPUTS)
+        set(_inputs "${HOST_HOST_INPUTS}")
+    endif()
+    set(_native "${_otp_linked_native}")
+    if(HOST_NATIVE_TARGETS)
+        set(_native "${HOST_NATIVE_TARGETS}")
+    endif()
     if(NOT TARGET otp_host_objects)
         add_library(otp_host_objects OBJECT "${PROJECT_SOURCE_DIR}/tools/otp_host.c")
         add_library(otp_host_inputs OBJECT "${PROJECT_SOURCE_DIR}/tools/otp_host_inputs.c")
@@ -80,11 +90,11 @@ function(otp_add_host target preload_directory)
             --perl "${PERL_EXECUTABLE}"
             --generator "${PROJECT_SOURCE_DIR}/erts/emulator/utils/make_preload" ${_preloads}
         DEPENDS "${PROJECT_SOURCE_DIR}/tools/embed_preloads.py"
-            "${PROJECT_SOURCE_DIR}/erts/emulator/utils/make_preload" ${ARGN}
+            "${PROJECT_SOURCE_DIR}/erts/emulator/utils/make_preload" ${HOST_UNPARSED_ARGUMENTS}
         COMMENT "Embedding canonical preloads into ${target}" VERBATIM)
     add_executable("${target}" $<TARGET_OBJECTS:otp_host_objects>
-        $<TARGET_OBJECTS:otp_host_inputs> "${_embedded}")
-    target_link_libraries("${target}" PRIVATE BEAM::RuntimeStatic ${_otp_linked_native})
+        $<TARGET_OBJECTS:${_inputs}> "${_embedded}")
+    target_link_libraries("${target}" PRIVATE BEAM::RuntimeStatic ${_native})
     if(MINGW)
         target_link_options("${target}" PRIVATE -municode)
     endif()

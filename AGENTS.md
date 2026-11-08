@@ -9,8 +9,8 @@ run reports to product source or link product guidance to them.
 ## Runtime and installed boundary
 
 `libbeam` is the sole VM. Product, seed and source-built compiler hosts link
-`BEAM::RuntimeStatic`, embed thirteen OTP-owned preloads and explicitly compose
-OTP's linked native implementations. The SDK supplies exactly nine core Erlang
+`BEAM::RuntimeStatic`, embed seventeen OTP-owned preloads and explicitly compose
+OTP's linked native implementations. The SDK supplies exactly six core Erlang
 modules; preserve OTP's 22 preloaded/sticky modules and restart semantics.
 Modern BEAM commands/libraries are separately owned. Removed runtime-family
 selectors, locks, OTP boot adapters and BEAM-side OTP ownership stay removed.

@@ -114,3 +114,14 @@ incompatibility from an untested concern. Missing generic mechanisms belong in
 a reviewed SDK boundary; this does not permit silently reinterpreting discovered
 VM semantics. [Testing](upstream-testing.md) and
 [fixture preparation](test-preparation.md) describe the runnable interfaces.
+
+### ETF adapter acceptance
+
+ETF ownership changes must preserve the complete `ei.h` API and the ordinary
+standalone link contract of both installed archives. Product probes own
+compatibility atoms, buffer updates, legacy big integers and fun pointer
+ownership. Installed shared/static `libbeam` coexistence is a distinct link
+boundary. The complete Erl_Interface suites own original codec, formatting,
+C-node/distribution and port-call assertions. Registering these suites does
+not establish that their cases pass; source/SDK-bound execution results and
+reference interoperability remain required.

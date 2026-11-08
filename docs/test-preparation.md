@@ -174,3 +174,12 @@ isolation or full upstream qualification. The owned interactive GUI fixture is
 invoked through installed commands as described in [build instructions](build.md).
 Run one application at a time, exercise a control and close normally; retain
 renderer/resource assertions and attendance requirements for the OpenGL probe.
+
+### Erl_Interface native fixtures
+
+`tools/fixtures/erl_interface/CMakeLists.txt` builds the original copied native
+sources. `init_tc.erl` generates the original case-number headers and C dispatch
+files before suite compilation. Threaded node helpers and user-supplied socket
+callbacks remain included. The port-call driver links the installed standalone
+archive. Preparation records source hashes and keeps generated files in the
+runner's disposable tree; suite sources and expected behavior are unchanged.

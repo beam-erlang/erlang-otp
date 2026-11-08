@@ -60,7 +60,7 @@ def main():
     runtime = symbols(args.nm, args.runtime, "--defined-only")
     entries = json.loads(args.compile_commands.read_text())
     inventory = json.loads(args.inventory.read_text())
-    expected = {("builtin-nif", name) for name in ("prim_buffer", "prim_file", "zlib", "erl_tracer", "prim_tty", "zstd")}
+    expected = {("builtin-nif", name) for name in ("prim_buffer", "prim_file", "zlib", "erl_tracer", "prim_tty", "zstd", "re")}
     expected.add(("nif", "dyntrace"))
     expected |= {("driver", name) for name in ("trace_file_drv", "trace_ip_drv")}
     expected.add(("builtin-driver", "ram_file_drv"))
@@ -107,6 +107,10 @@ def main():
         if record["module"] == "zstd":
             vendor = args.source_root.resolve() / "erts/emulator/zstd"
             allowed_local.update(vendor.rglob("*.h"))
+        if record["module"] == "re":
+            vendor = args.source_root.resolve() / "lib/stdlib/c_src/re/pcre2"
+            allowed_local.update(vendor.glob("*.h"))
+            allowed_local.update((args.compile_commands.resolve().parent / "generated/otp-re").glob("*.h"))
         if record["module"] in {name + "_inet" for name in args.protocols}:
             allowed_local.add(sources[0].parent / "otp_inet_support.h")
             allowed_local.add(args.compile_commands.resolve().parent / "generated/otp_inet_config.h")
@@ -147,6 +151,14 @@ def main():
             imports |= symbols(args.nm, library, "--undefined-only")
             exported |= symbols(args.nm, library, "--defined-only")
         imports -= exported
+        if record["module"] == "re":
+            if any(name.startswith(("pcre2_", "_pcre2_", "beam_re_", "beam_private_pcre_"))
+                   for name in imports | exported):
+                raise RuntimeError("Regex backend symbols lack the OTP namespace")
+            if any(name.startswith("otp_re_test_") for name in exported):
+                raise RuntimeError("Production regex contains test controls")
+            if not any(name.startswith("otp_re_backend_") for name in exported):
+                raise RuntimeError("Missing OTP-owned regex backend")
         private = (imports & runtime) - public
         private |= {name for name in imports if name.startswith(("erts_", "beam_")) and name not in public}
         if private:

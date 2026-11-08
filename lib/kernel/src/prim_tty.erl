@@ -235,13 +235,10 @@ init(UserOptions) when is_map(UserOptions) ->
                      IOEncoding =:= unicode -> true;
                      true -> UnicodeSupported
                   end,
-    {ok, ANSI_RE_MP} = re:compile(?ANSI_REGEXP, [unicode]),
-
     HaveTermCap = setupterm() =:= ok,
 
     init_term(#state{ tty = TTY, have_termcap = HaveTermCap,
-                      unicode = UnicodeMode, options = Options,
-                      ansi_regexp = ANSI_RE_MP }).
+                      unicode = UnicodeMode, options = Options }).
 init_term(State = #state{ tty = TTY, options = Options }) ->
     TTYState =
         case maps:get(input, Options) of
@@ -306,14 +303,13 @@ init_term(State = #state{ tty = TTY, options = Options }) ->
     update_geometry(ReaderState).
 
 init_ssh(UserOptions, {Cols, Rows}, IOEncoding) ->
-    {ok, ANSI_RE_MP} = re:compile(?ANSI_REGEXP, [unicode]),
     Options = options(UserOptions),
     UnicodeMode = if IOEncoding =:= unicode -> true;
                      IOEncoding =:= utf8 -> true;
                      true -> false
                   end,
     State = init(#state{ tty = undefined, unicode = UnicodeMode,
-                 options = Options, ansi_regexp = ANSI_RE_MP }, ssh),
+                 options = Options }, ssh),
     update_geometry(State, Cols, Rows).
 
 
@@ -584,6 +580,12 @@ handle_request(State = #state{ options = #{ output := raw } }, Request) ->
         _Ignore ->
             {<<>>, State}
     end;
+handle_request(State = #state{ options = #{ output := cooked },
+                              ansi_regexp = undefined }, Request) ->
+    %% Early standard_error initialization and direct writes need no regex.
+    %% Cache here: some rendering callers discard insert_buf's returned state.
+    {ok, Pattern} = re:compile(?ANSI_REGEXP, [unicode]),
+    handle_request(State#state{ ansi_regexp = Pattern }, Request);
 handle_request(State, {redraw_prompt, Pbs, Pbs2, {LB, {Bef, Aft}, LA}}) ->
     {ClearLine, Cleared} = handle_request(State, delete_line),
     CL = lists:reverse(Bef,Aft),

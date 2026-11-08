@@ -29,6 +29,24 @@
       "reason": "Use the selected PostgreSQL ODBC driver version for the existing Unicode group capability guard; preserve case assertions, SQL Server-only case guards and the legacy fallback for unidentified drivers.",
       "sha256": "b4b320937d6d51fb16d67f85f5bf8179bddcd201c3d4b9284bb265dfa491e766",
       "upstream_sha256": "af75545ea45f0c126cabf8e242775c469be7d0c308ef54cb01c2b4941429eb63"
+    },
+    "lib/stdlib/test/re_SUITE.erl": {
+      "kind": "test-setup",
+      "reason": "Route regex-only loop/coverage controls to the explicit instrumented OTP provider and observe its ordinary NIF continuation; preserve selections, timetraps and every behavioral assertion. Initialize that explicitly registered test-only provider in suite setup.",
+      "sha256": "01b6a9ced1df8a3fe46bec09beb8227d23196ff0e145d3d6c86ea62a45da58c4",
+      "upstream_sha256": "9b4daf209df7ed956babb8dd1b5d65c7b8ac785a952b0af60fce0e5fe629efc2"
+    },
+    "lib/stdlib/test/run_old_pcre1_tests.erl": {
+      "kind": "test-setup",
+      "reason": "Route regex-only loop/coverage controls to the explicit instrumented OTP provider and observe its ordinary NIF continuation; preserve selections, timetraps and every behavioral assertion.",
+      "sha256": "de4d8aa58fec0bc7e01a8995e3d464eb4bcad1765c59806ae05f2e3ca5268f64",
+      "upstream_sha256": "7ed7bc87a0ac6fffe2be54e45a01309a079856dc48ef8f0054554e5b5bbfb52e"
+    },
+    "lib/stdlib/test/run_pcre_tests.erl": {
+      "kind": "test-setup",
+      "reason": "Route regex-only loop/coverage controls to the explicit instrumented OTP provider and observe its ordinary NIF continuation; preserve selections, timetraps and every behavioral assertion.",
+      "sha256": "c750e9d6f2cfe0fcd218bdb1a172c9437401c4cb168d563fbefbd5d4b4f10ab5",
+      "upstream_sha256": "872729750ea32c55e4f9a4a12362fdfeeea465961ab9a7f340c041ddae619650"
     }
   },
   "format": 1,
