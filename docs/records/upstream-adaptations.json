@@ -1,0 +1,2934 @@
+{
+  "format": 1,
+  "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+  "policy": "Every retained-source setup or behavior change requires its own hash, rationale, affected cases and evidence. Generated variants are recipe outputs recorded in manifest.json, not retained-source edits.",
+  "adaptations": [
+    {
+      "id": "public-sdk-dyntrace",
+      "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+      "path": "lib/runtime_tools/c_src/dyntrace.c",
+      "upstream_sha256": "13d57c13a0b3b22b74d1ae1b7e8f10f05f300e1422ad53399576892982dca16b",
+      "modified_sha256": "61cab5544a84abd6a89b356a40838dd1c674d86c8bd71ca380659c8b41f1081b",
+      "category": "native-build-boundary",
+      "changed_behavior": "Guard tracing-only private includes; preserve all NIF functions and upstream disabled-tracing behavior. No Erlang test selection or assertion change.",
+      "rationale": "The supported SDK requires dynamic tracing disabled. Its active dyntrace implementation needs only the public NIF API, so sys.h and dtrace-wrapper.h are included only for the unchanged tracing-enabled branches. See docs/upstream-differences.md.",
+      "relevant_cases": [
+        "dyntrace_SUITE"
+      ],
+      "assertions_changed": false,
+      "validation": [
+        {
+          "kind": "prior-bounded-validation",
+          "modified_sha256": "5184e0c65b8a5152ead278c49c5f48dc03ad5a9cfd8256bab2b5f9c1190937ce",
+          "source_commit": "79da2310b9cf4986d206c0cabe20e710da904b0b",
+          "evidence": "docs/testing.md: installed native boundary checks; this is not full upstream suite qualification.",
+          "full_suite_status": "pending"
+        },
+        {
+          "kind": "bounded-linux-native-validation",
+          "modified_sha256": "61cab5544a84abd6a89b356a40838dd1c674d86c8bd71ca380659c8b41f1081b",
+          "configuration": "linux-x86_64-emu Release",
+          "evidence": "docs/upstream-differences.md: native compilation, SDK-backed bootstrap and installed candidate NIF checks on 2026-11-16.",
+          "checks": ["available returns false", "user_trace_s1 returns error"],
+          "full_suite_status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "public-sdk-trace_ip_drv",
+      "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+      "path": "lib/runtime_tools/c_src/trace_ip_drv.c",
+      "upstream_sha256": "316f5021c0e5d675f6b443e496eb4626acf641497a00de15a1f0fc896342e54a",
+      "modified_sha256": "2dade2e0ffac48600c09fcc124a030d6987e855d4d8081649b641af8d5857e4e",
+      "category": "native-build-boundary",
+      "changed_behavior": "Replace the private nonblocking macro with the same OS operations; retain the discarded result and unconditional return zero. No Erlang test selection or assertion change.",
+      "rationale": "The upstream macro expands to fcntl on supported Unix platforms or ioctlsocket on Windows. Calling those operations directly removes the sys.h dependency without exporting VM internals or changing socket behavior. See docs/upstream-differences.md.",
+      "relevant_cases": [
+        "trace_ip_drv_SUITE"
+      ],
+      "assertions_changed": false,
+      "validation": [
+        {
+          "kind": "prior-bounded-validation",
+          "modified_sha256": "3b6488f9e550fef933791e8e5388484d05d55d6f9fb784a23cd2099a9fa41e9c",
+          "source_commit": "79da2310b9cf4986d206c0cabe20e710da904b0b",
+          "evidence": "docs/testing.md: installed native boundary checks; this is not full upstream suite qualification.",
+          "full_suite_status": "pending"
+        },
+        {
+          "kind": "bounded-linux-native-validation",
+          "modified_sha256": "2dade2e0ffac48600c09fcc124a030d6987e855d4d8081649b641af8d5857e4e",
+          "configuration": "linux-x86_64-emu Release",
+          "evidence": "docs/upstream-differences.md: native compilation, SDK-backed bootstrap and installed candidate driver checks on 2026-11-16.",
+          "checks": ["driver load succeeds", "driver unload succeeds"],
+          "full_suite_status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "snmp-generator-modern-perl",
+      "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+      "path": "lib/snmp/bin/snmp-v2tov1.pl",
+      "upstream_sha256": "dc0eebe349fd8bfc6d0c515d7549c5bb5d7c82e4fca815055a28182cfe6e3a0d",
+      "modified_sha256": "f617230a167e0eb26717ec898c587abb1b0db50c6d18e69474fb5c5cb24073e7",
+      "category": "generator-compatibility",
+      "changed_behavior": "Remove unsupported nonzero Perl array-base assignment and preserve field indices with an unused leading field.",
+      "rationale": "Modern Perl rejects the original array-base assignment. Prepending an unused field preserves the converter's existing one-based indexing without changing its translation rules. The original wrapper masks the Perl failure through its final sed command and can install an empty resource. See docs/upstream-differences.md.",
+      "relevant_cases": [
+        "snmp production MIB generation",
+        "snmp application tests"
+      ],
+      "assertions_changed": false,
+      "validation": [
+        {
+          "kind": "prior-bounded-validation",
+          "modified_sha256": "0a0ca35ee43b9a11d28c4a9df5273cb06b6dac06edf465ca63a78a69063d0678",
+          "evidence": "tmp/otp21-snmp-perl-compatibility/evidence.json",
+          "original_exit": 255,
+          "original_perl": "v5.34.1",
+          "equivalence": "Candidate padding and independently shifted zero-based field indexing produce identical bytes for every retained production MIB input. Hash-key indexing remains one-based in both. No other indexed arrays exist in this script.",
+          "compared_inputs": [
+            "INET-ADDRESS-MIB.mib",
+            "OTP-REG.mib",
+            "OTP-SNMPEA-MIB.mib",
+            "OTP-TC.mib",
+            "RFC-1212.mib",
+            "RFC-1215.mib",
+            "RFC1155-SMI.mib",
+            "RFC1213-MIB.mib",
+            "SNMP-COMMUNITY-MIB.mib",
+            "SNMP-FRAMEWORK-MIB.mib",
+            "SNMP-MPD-MIB.mib",
+            "SNMP-NOTIFICATION-MIB.mib",
+            "SNMP-TARGET-MIB.mib",
+            "SNMP-USER-BASED-SM-MIB.mib",
+            "SNMP-USM-AES-MIB.mib",
+            "SNMP-USM-HMAC-SHA2-MIB.mib",
+            "SNMP-VIEW-BASED-ACM-MIB.mib",
+            "SNMPv2-CONF.mib",
+            "SNMPv2-MIB.mib",
+            "SNMPv2-SMI.mib",
+            "SNMPv2-TC.mib",
+            "SNMPv2-TM.mib",
+            "STANDARD-MIB.mib",
+            "TRANSPORT-ADDRESS-MIB.mib"
+          ],
+          "limitation": "The unchanged converter logic generates a v1 MIB rejected by snmpc; preserved separately in v1-compile.log."
+        },
+        {
+          "kind": "bounded-linux-generator-validation",
+          "modified_sha256": "f617230a167e0eb26717ec898c587abb1b0db50c6d18e69474fb5c5cb24073e7",
+          "configuration": "linux-x86_64-emu Release",
+          "evidence": "docs/upstream-differences.md: generator and filter equivalence checks on 2026-11-16.",
+          "compared_input_count": 24,
+          "converter_equivalence": "All outputs match an independently shifted zero-based model; this is not execution under historical Perl.",
+          "filter_equivalence": "The original sed pass and project filter match for every input.",
+          "generated_resource_bytes": 18576,
+          "generated_resource_sha256": "3ad2194102e80768d333fd050a08ec8ccd5f32a7b21610f2b48843a2602b5582",
+          "resource_compile_status": "failed: syntax error before ACCESS at line 111; unchanged SMIv1 and original SMIv2 controls passed",
+          "full_suite_status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "ei-unused-legacy-runner-object",
+      "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+      "path": "lib/erl_interface/test/all_SUITE_data/Makefile.src",
+      "category": "generated-pinned-recipe-correction",
+      "original_recipe_sha256": "f9aa1d3dcce4d3076e59e966b6ff6080897450ddec568a1af9fdadce98213938",
+      "generated_recipe_sha256": "0f351c940a1713aa770447c8639ec55a4836be5e232957a893fd56ac89d1d73e",
+      "changed_behavior": "Omit the unused legacy runner.o goal; preserve ei_runner.o and my_ussi.o and all active EI links. Original recipe markers stay byte-identical.",
+      "rationale": "Pinned all_SUITE_data recipe lists runner.o, but the pin has no runner.c; all 11 active EI link recipes use the EI runner. The obsolete top-level aggregate Makefile.src remains inactive.",
+      "relevant_cases": [
+        "erl_interface.spec"
+      ],
+      "assertions_changed": false,
+      "recipe_correction": {
+        "id": "ei-unused-legacy-runner-object",
+        "path": "lib/erl_interface/test/all_SUITE_data/Makefile.src",
+        "upstream_sha256": "f9aa1d3dcce4d3076e59e966b6ff6080897450ddec568a1af9fdadce98213938",
+        "modified_sha256": "0f351c940a1713aa770447c8639ec55a4836be5e232957a893fd56ac89d1d73e",
+        "before": "EI_COMMON_OBJS = runner@obj@ ei_runner@obj@ my_ussi@obj@",
+        "after": "EI_COMMON_OBJS = ei_runner@obj@ my_ussi@obj@",
+        "rationale": "Pinned recipe requests runner.o although pin contains no runner.c; every active EI link uses ei_runner.o/my_ussi.o. Remove only the unused legacy aggregate goal.",
+        "original_failure": "missing native object source all_SUITE_data/runner.c",
+        "relevant_cases": [
+          "ei_accept_SUITE",
+          "ei_connect_SUITE",
+          "ei_decode_SUITE",
+          "ei_decode_encode_SUITE",
+          "ei_encode_SUITE",
+          "ei_format_SUITE",
+          "ei_global_SUITE",
+          "ei_print_SUITE",
+          "ei_tmo_SUITE",
+          "erl_call_SUITE",
+          "port_call_SUITE"
+        ]
+      },
+      "validation": [
+        {
+          "evidence": "tmp/upstream-prep-dev/ei-original-recipe-evidence.json",
+          "original_preparation": "blocked: missing runner.c",
+          "original_reproducer": "prepare context apply_recipe_corrections=False",
+          "active_links_checked": 11
+        },
+        {
+          "evidence": "tmp/upstream-prep-dev/ei-original-reference-preparation.json",
+          "kind": "exact-original-reference-preparation",
+          "original_outcome": "blocked: missing all_SUITE_data/runner.c",
+          "preserved": true
+        }
+      ]
+    },
+    {
+      "id": "private-openssh-1",
+      "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+      "path": "lib/ssh/test/ssh_test_lib.erl",
+      "upstream_sha256": "77a54d2f144d4056b1d6b6a308fa744948e122596a46c14d60f55912d5d5b9c3",
+      "modified_sha256": "b14c9614689aa3f48cd8da84e4a57e8d8fbf09bb0657b14336306f9ec268920d",
+      "category": "test-setup",
+      "changed_behavior": "Use an explicitly selected private service endpoint and paths; default upstream setup remains available when the adapter is unset.",
+      "rationale": "Explicit private high-port OpenSSH peer; preserve default22 when no profile, keep assertions and deadlines unchanged Existing private-OpenSSH setup helper now exports its existing conditional host mapping so the direct SFTP probe shares the same loopback endpoint. Without OTP_TEST_OPENSSH_PORT it preserves the original hostname/port behavior.",
+      "relevant_cases": [
+        "ssh_to_openssh_SUITE",
+        "ssh_algorithms_SUITE",
+        "ssh_connection_SUITE",
+        "ssh_options_SUITE"
+      ],
+      "assertions_changed": false,
+      "validation": [
+        {
+          "evidence": "tmp/upstream-reference-validation/service-adaptations.json",
+          "checks": [
+            "original-reference compiler accepts five SSH modules",
+            "proxy shell sh -n",
+            "unprivileged private sshd key authentication and /usr/bin/true exit 0; daemon stopped"
+          ],
+          "full_suite_status": "pending"
+        },
+        {
+          "evidence": "tmp/upstream-final-macos-jit/runs/20261108T224504Z-ed672884/ssh/ct-logs/events.jsonl; tmp/ssh-private-auth-setup-proof/receipt.json",
+          "checks": [
+            "Explicit private SFTP endpoint and OpenSSH client authorization proof passed; original out-of-HOME key layout reproduces exit255."
+          ],
+          "full_suite_status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "private-openssh-2",
+      "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+      "path": "lib/ssh/test/ssh_to_openssh_SUITE.erl",
+      "upstream_sha256": "97be8952e8f5f5f7ee680748476e33a8ef770ef24ad9d25ae29bc13eeab628d1",
+      "modified_sha256": "21e340f74ad6b4e1b9fb22eba15d70b1dffab9318b1b4716a9a56d23314376ed",
+      "category": "test-setup",
+      "changed_behavior": "Use an explicitly selected private service endpoint and paths; default upstream setup remains available when the adapter is unset.",
+      "rationale": "Explicit private high-port OpenSSH peer; preserve default22 when no profile, keep assertions and deadlines unchanged",
+      "relevant_cases": [
+        "ssh_to_openssh_SUITE",
+        "ssh_algorithms_SUITE",
+        "ssh_connection_SUITE",
+        "ssh_options_SUITE"
+      ],
+      "assertions_changed": false,
+      "validation": [
+        {
+          "evidence": "tmp/upstream-reference-validation/service-adaptations.json",
+          "checks": [
+            "original-reference compiler accepts five SSH modules",
+            "proxy shell sh -n",
+            "unprivileged private sshd key authentication and /usr/bin/true exit 0; daemon stopped"
+          ],
+          "full_suite_status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "private-openssh-3",
+      "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+      "path": "lib/ssh/test/ssh_algorithms_SUITE.erl",
+      "upstream_sha256": "5e944607328b67f36d54559a2f7b6251080a74aed89a1d5d0cc3b6d84d0a6f06",
+      "modified_sha256": "55ebc90a7a68ae88f146d2b6a3e101931db7225eac0a63469d4c9ee84a40ccb7",
+      "category": "test-setup",
+      "changed_behavior": "Use an explicitly selected private service endpoint and paths; default upstream setup remains available when the adapter is unset.",
+      "rationale": "Explicit private high-port OpenSSH peer; preserve default22 when no profile, keep assertions and deadlines unchanged",
+      "relevant_cases": [
+        "ssh_to_openssh_SUITE",
+        "ssh_algorithms_SUITE",
+        "ssh_connection_SUITE",
+        "ssh_options_SUITE"
+      ],
+      "assertions_changed": false,
+      "validation": [
+        {
+          "evidence": "tmp/upstream-reference-validation/service-adaptations.json",
+          "checks": [
+            "original-reference compiler accepts five SSH modules",
+            "proxy shell sh -n",
+            "unprivileged private sshd key authentication and /usr/bin/true exit 0; daemon stopped"
+          ],
+          "full_suite_status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "private-openssh-4",
+      "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+      "path": "lib/ssh/test/ssh_connection_SUITE.erl",
+      "upstream_sha256": "47612f0efb866fcaf082bd2c716efe3e5e1da4bee6efe73678eae59cb7996707",
+      "modified_sha256": "bdf7bb1f25e7b55bffe7b7c9e763fc936d55a1d0d97ed2e67c8cb06eaceecaa0",
+      "category": "test-setup",
+      "changed_behavior": "Use an explicitly selected private service endpoint and paths; default upstream setup remains available when the adapter is unset.",
+      "rationale": "Explicit private high-port OpenSSH peer; preserve default22 when no profile, keep assertions and deadlines unchanged",
+      "relevant_cases": [
+        "ssh_to_openssh_SUITE",
+        "ssh_algorithms_SUITE",
+        "ssh_connection_SUITE",
+        "ssh_options_SUITE"
+      ],
+      "assertions_changed": false,
+      "validation": [
+        {
+          "evidence": "tmp/upstream-reference-validation/service-adaptations.json",
+          "checks": [
+            "original-reference compiler accepts five SSH modules",
+            "proxy shell sh -n",
+            "unprivileged private sshd key authentication and /usr/bin/true exit 0; daemon stopped"
+          ],
+          "full_suite_status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "private-openssh-5",
+      "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+      "path": "lib/ssh/test/ssh_options_SUITE.erl",
+      "upstream_sha256": "9e2f8d7542321d761d4598acb61d352f0024d8d80ae2a154348dbdc755abb818",
+      "modified_sha256": "968ee9458b700eb95701335eabf76fa1e2a6a354fc56c041f9bd82c11deac9f8",
+      "category": "test-setup-and-callback-contract-correction",
+      "changed_behavior": "Use an explicitly selected private service endpoint and paths; default upstream setup remains available when the adapter is unset. Correct suite cleanup to accept only successful or exact already-stopped SSH application results.",
+      "rationale": "Explicit private high-port OpenSSH peer; preserve default22 when no profile, keep assertions and deadlines unchanged Per-testcase cleanup already stops the SSH application. Both exact-original and candidate return {error,{not_started,ssh}} from end_per_suite, emitted as two raw callback failures although both selected case bodies pass. Accept only ok or the exact already-stopped SSH result and return ok; every unexpected reply still fails by case_clause. This explicitly corrects the cleanup callback contract and does not alter testcase assertions, wire/authentication protocols or deadlines.",
+      "relevant_cases": [
+        "ssh_to_openssh_SUITE",
+        "ssh_algorithms_SUITE",
+        "ssh_connection_SUITE",
+        "ssh_options_SUITE",
+        "ssh_options_SUITE:end_per_suite",
+        "ssh_options_SUITE:server_password_option"
+      ],
+      "assertions_changed": false,
+      "validation": [
+        {
+          "evidence": "tmp/upstream-reference-validation/service-adaptations.json",
+          "checks": [
+            "original-reference compiler accepts five SSH modules",
+            "proxy shell sh -n",
+            "unprivileged private sshd key authentication and /usr/bin/true exit 0; daemon stopped"
+          ],
+          "full_suite_status": "pending"
+        },
+        {
+          "kind": "preserved-original-callback-state",
+          "evidence": "tmp/upstream-reference-validation/ssh-cleanup-callback-proof/receipt.json"
+        },
+        {
+          "kind": "real-ct-baseline-and-private-correction",
+          "evidence": "tmp/ssh-private-cleanup-source/comparison.json",
+          "cases": [
+            "ssh_options_SUITE:server_password_option",
+            "ssh_sftpd_SUITE:relative_root"
+          ],
+          "result": "Each original/candidate baseline has two passing bodies plus two raw callback failures; each private correction is strict two passed, zero failures/skips and zero failed_events.",
+          "full_suite_status": "pending"
+        },
+        {
+          "kind": "actual-callback-states-and-unexpected-reply-rejection",
+          "evidence": "tmp/ssh-private-cleanup-source/reply-filter-proof.json",
+          "result": "Both actual callbacks accept started/already-stopped application states on original and candidate. Extracted actual compiled case AST has exactly two clauses and rejects five unexpected replies with case_clause."
+        }
+      ],
+      "deadlines_changed": false,
+      "protocol_changed": false,
+      "callback_contract_changed": true
+    },
+    {
+      "id": "private-http-proxy-6",
+      "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+      "path": "lib/inets/test/httpc_proxy_SUITE_data/server_proxy.sh",
+      "upstream_sha256": "9b821b54624da920fdc4d92b118ef94275e4bc0be16638005ebace903a5091b3",
+      "modified_sha256": "8623fe050012abfd353c5cfb6658651bfca38ff96edb9262ebd8f4d74faeb69f",
+      "category": "test-setup",
+      "changed_behavior": "Use an explicitly selected private service endpoint and paths; default upstream setup remains available when the adapter is unset.",
+      "rationale": "Explicit private Apache/tinyproxy paths, high ports, task-owned daemon registry and quoted resource paths; preserve proxy requests/assertions/deadlines",
+      "relevant_cases": [
+        "httpc_proxy_SUITE"
+      ],
+      "assertions_changed": false,
+      "validation": [
+        {
+          "evidence": "tmp/upstream-reference-validation/service-adaptations.json",
+          "checks": [
+            "original-reference compiler accepts five SSH modules",
+            "proxy shell sh -n",
+            "unprivileged private sshd key authentication and /usr/bin/true exit 0; daemon stopped"
+          ],
+          "full_suite_status": "blocked: tinyproxy and ncat unavailable"
+        }
+      ]
+    },
+    {
+      "id": "private-http-proxy-7",
+      "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+      "path": "lib/inets/test/httpc_proxy_SUITE_data/apache2/apache2.conf",
+      "upstream_sha256": "a0ac8a6f0d5c924c7ecd8f607e3e6b5dc9864a8338660b250a9712c0fc9be7ce",
+      "modified_sha256": "38681b5caa7355b18d2ce2a06593070a17af638ed7937d4e59f465586cf88b69",
+      "category": "test-setup",
+      "changed_behavior": "Use an explicitly selected private service endpoint and paths; default upstream setup remains available when the adapter is unset.",
+      "rationale": "Explicit private Apache/tinyproxy paths, high ports, task-owned daemon registry and quoted resource paths; preserve proxy requests/assertions/deadlines",
+      "relevant_cases": [
+        "httpc_proxy_SUITE"
+      ],
+      "assertions_changed": false,
+      "validation": [
+        {
+          "evidence": "tmp/upstream-reference-validation/service-adaptations.json",
+          "checks": [
+            "original-reference compiler accepts five SSH modules",
+            "proxy shell sh -n",
+            "unprivileged private sshd key authentication and /usr/bin/true exit 0; daemon stopped"
+          ],
+          "full_suite_status": "blocked: tinyproxy and ncat unavailable"
+        }
+      ]
+    },
+    {
+      "id": "pinned-diagnostic-runtime_tools-dbg_SUITE",
+      "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+      "path": "lib/runtime_tools/test/dbg_SUITE.erl",
+      "upstream_sha256": "f292213039a338c4c266ec50027901ec0cdbbe34068f742ddc03eaaaead58642",
+      "modified_sha256": "f292213039a338c4c266ec50027901ec0cdbbe34068f742ddc03eaaaead58642",
+      "retained_source_edited": false,
+      "category": "preparation-profile",
+      "recipe": "lib/runtime_tools/test/Makefile",
+      "recipe_sha256": "5f8a6caba34c5050af43ed02f47b865a38ecb1b6f43acb1c19cb0a8457651552",
+      "before_flags": [
+        "-Werror"
+      ],
+      "additional_flags": [
+        "+nowarn_deprecated_catch"
+      ],
+      "after_policy": "-Werror and every other original flag retained; additional options only for this exact source hash",
+      "rationale": "Exact original reference compiler rejects unchanged upstream release module due the recorded diagnostic; scoped diagnostic allowance preserves all executable chunks.",
+      "relevant_cases": [
+        "dbg_SUITE"
+      ],
+      "assertions_changed": false,
+      "changed_behavior": "Preparation diagnostic policy only; source, assertions and executable BEAM chunks unchanged.",
+      "validation": [
+        {
+          "kind": "original-reference-compiler-reproduction",
+          "reference_upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+          "original_werror_returncode": 1,
+          "original_without_werror_returncode": 0,
+          "adapted_werror_returncode": 0,
+          "evidence": "tmp/upstream-prep-dev/diagnostic-policy-proof/results.json",
+          "module": "dbg_SUITE",
+          "original_diagnostics_sha256": "3f426def0eec93ea16a04fa70e731d63c0a496121a7bc3beaa9cc2336db9f636",
+          "execution_chunks_identical": true,
+          "execution_chunks": {
+            "Code": {
+              "original": "6734ceb539a3ba1e25c975dbeb0269566c1f35aa82bdae29c18e87a7dab56f8d",
+              "adapted": "6734ceb539a3ba1e25c975dbeb0269566c1f35aa82bdae29c18e87a7dab56f8d"
+            },
+            "AtU8": {
+              "original": "3147117947c68f0110e445120eeee735acbd61de88d53f0449b15b356efe4dae",
+              "adapted": "3147117947c68f0110e445120eeee735acbd61de88d53f0449b15b356efe4dae"
+            },
+            "ImpT": {
+              "original": "b0dcef661fcee2cd41be8c9a44086e3d699ca144c6ca47b5bc185c36d2a590a5",
+              "adapted": "b0dcef661fcee2cd41be8c9a44086e3d699ca144c6ca47b5bc185c36d2a590a5"
+            },
+            "ExpT": {
+              "original": "d770121b0398955f84109fddc06d46c910ed562ac027994494b0358fd7b425e5",
+              "adapted": "d770121b0398955f84109fddc06d46c910ed562ac027994494b0358fd7b425e5"
+            },
+            "LocT": {
+              "original": "6d5e6aa4203090343d9b6394c1c1fbe2c594233e70a64513ecb65517d95f6977",
+              "adapted": "6d5e6aa4203090343d9b6394c1c1fbe2c594233e70a64513ecb65517d95f6977"
+            },
+            "LitT": {
+              "original": "18f3f04ccee3023e45a1e8c33b71db12c4132eb66d205404a0a2c7da2a8528ca",
+              "adapted": "18f3f04ccee3023e45a1e8c33b71db12c4132eb66d205404a0a2c7da2a8528ca"
+            },
+            "FunT": {
+              "original": "a09c7747c9bcf6536ec598da16a186ebe13f408c63af1675e367b569fa57dc8b",
+              "adapted": "a09c7747c9bcf6536ec598da16a186ebe13f408c63af1675e367b569fa57dc8b"
+            },
+            "StrT": {
+              "original": "7284020c6f53150cc33112b2c76de116be8f37bb074ba4b80f79ce84676a1e61",
+              "adapted": "7284020c6f53150cc33112b2c76de116be8f37bb074ba4b80f79ce84676a1e61"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "pinned-diagnostic-snmp-snmp_test_lib",
+      "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+      "path": "lib/snmp/test/snmp_test_lib.erl",
+      "upstream_sha256": "b9ee2e1c41cb3999162ba06f0e86add8b46fc8947462208573b5df6c36685698",
+      "modified_sha256": "b9ee2e1c41cb3999162ba06f0e86add8b46fc8947462208573b5df6c36685698",
+      "retained_source_edited": false,
+      "category": "preparation-profile",
+      "recipe": "lib/snmp/test/Makefile",
+      "recipe_sha256": "441fb3fc79b636d0c199834adf9f8cabd46e4c085069d51f8b696960a7e9cf27",
+      "before_flags": [
+        "-Werror"
+      ],
+      "additional_flags": [
+        "+nowarn_deprecated_catch"
+      ],
+      "after_policy": "-Werror and every other original flag retained; additional options only for this exact source hash",
+      "rationale": "Exact original reference compiler rejects unchanged upstream release module due the recorded diagnostic; scoped diagnostic allowance preserves all executable chunks.",
+      "relevant_cases": [
+        "snmp_agent_SUITE",
+        "snmp_agent_conf_SUITE",
+        "snmp_agent_mibs_SUITE",
+        "snmp_agent_nfilter_SUITE",
+        "snmp_app_SUITE",
+        "snmp_compiler_SUITE",
+        "snmp_conf_SUITE",
+        "snmp_log_SUITE",
+        "snmp_manager_SUITE",
+        "snmp_manager_config_SUITE",
+        "snmp_manager_user_SUITE",
+        "snmp_note_store_SUITE",
+        "snmp_pdus_SUITE",
+        "snmp_to_snmpnet_SUITE"
+      ],
+      "assertions_changed": false,
+      "changed_behavior": "Preparation diagnostic policy only; source, assertions and executable BEAM chunks unchanged.",
+      "validation": [
+        {
+          "kind": "original-reference-compiler-reproduction",
+          "reference_upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+          "original_werror_returncode": 1,
+          "original_without_werror_returncode": 0,
+          "adapted_werror_returncode": 0,
+          "evidence": "tmp/upstream-prep-dev/diagnostic-policy-proof/results.json",
+          "module": "snmp_test_lib",
+          "original_diagnostics_sha256": "851cf4530106cc7872c141c6c4f1f70e8ecbe9ae2680974369ed1a2bd91a9281",
+          "execution_chunks_identical": true,
+          "execution_chunks": {
+            "Code": {
+              "original": "63703bb11884a922266704429202c2f38b97d68a675433f3841a0c9c4e8844d2",
+              "adapted": "63703bb11884a922266704429202c2f38b97d68a675433f3841a0c9c4e8844d2"
+            },
+            "AtU8": {
+              "original": "e8abd047d5af8c23f1338e8d2c77ed556fd8571312357f1e8a6b41af6a71c95d",
+              "adapted": "e8abd047d5af8c23f1338e8d2c77ed556fd8571312357f1e8a6b41af6a71c95d"
+            },
+            "ImpT": {
+              "original": "6e09d7f48cc01b8eed105ece5ab93a84cd48a6a48ebabcb40b08741b5a65f77e",
+              "adapted": "6e09d7f48cc01b8eed105ece5ab93a84cd48a6a48ebabcb40b08741b5a65f77e"
+            },
+            "ExpT": {
+              "original": "34b97835a07fa8c3c29dd9e654d578f140703a6a164a610ff26923c88046a74a",
+              "adapted": "34b97835a07fa8c3c29dd9e654d578f140703a6a164a610ff26923c88046a74a"
+            },
+            "LocT": {
+              "original": "2277b39e71c63ce5a39d8366bd102d5a52575fc3bb81eb40dd37c4a75fcee154",
+              "adapted": "2277b39e71c63ce5a39d8366bd102d5a52575fc3bb81eb40dd37c4a75fcee154"
+            },
+            "LitT": {
+              "original": "fd3247a2d1afbed43e85ffa0a1125830338d3d6e6e2b2991890e62b7e1fe8232",
+              "adapted": "fd3247a2d1afbed43e85ffa0a1125830338d3d6e6e2b2991890e62b7e1fe8232"
+            },
+            "FunT": {
+              "original": "c7e5df7e8d49b50320f30dcb20fa1bdc969d81d50aaa6d9e271030f3ed37d050",
+              "adapted": "c7e5df7e8d49b50320f30dcb20fa1bdc969d81d50aaa6d9e271030f3ed37d050"
+            },
+            "StrT": {
+              "original": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "adapted": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "pinned-diagnostic-snmp-snmp_agent_test_lib",
+      "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+      "path": "lib/snmp/test/snmp_agent_test_lib.erl",
+      "upstream_sha256": "d2e6cb96cbbd04f3fcd41f84bdf67aeee81d2c15266c70de9047d5869db63207",
+      "modified_sha256": "d2e6cb96cbbd04f3fcd41f84bdf67aeee81d2c15266c70de9047d5869db63207",
+      "retained_source_edited": false,
+      "category": "preparation-profile",
+      "recipe": "lib/snmp/test/Makefile",
+      "recipe_sha256": "441fb3fc79b636d0c199834adf9f8cabd46e4c085069d51f8b696960a7e9cf27",
+      "before_flags": [
+        "-Werror"
+      ],
+      "additional_flags": [
+        "+nowarn_deprecated_catch"
+      ],
+      "after_policy": "-Werror and every other original flag retained; additional options only for this exact source hash",
+      "rationale": "Exact original reference compiler rejects unchanged upstream release module due the recorded diagnostic; scoped diagnostic allowance preserves all executable chunks.",
+      "relevant_cases": [
+        "snmp_agent_SUITE",
+        "snmp_agent_conf_SUITE",
+        "snmp_agent_mibs_SUITE",
+        "snmp_agent_nfilter_SUITE",
+        "snmp_app_SUITE",
+        "snmp_compiler_SUITE",
+        "snmp_conf_SUITE",
+        "snmp_log_SUITE",
+        "snmp_manager_SUITE",
+        "snmp_manager_config_SUITE",
+        "snmp_manager_user_SUITE",
+        "snmp_note_store_SUITE",
+        "snmp_pdus_SUITE",
+        "snmp_to_snmpnet_SUITE"
+      ],
+      "assertions_changed": false,
+      "changed_behavior": "Preparation diagnostic policy only; source, assertions and executable BEAM chunks unchanged.",
+      "validation": [
+        {
+          "kind": "original-reference-compiler-reproduction",
+          "reference_upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+          "original_werror_returncode": 1,
+          "original_without_werror_returncode": 0,
+          "adapted_werror_returncode": 0,
+          "evidence": "tmp/upstream-prep-dev/diagnostic-policy-proof/results.json",
+          "module": "snmp_agent_test_lib",
+          "original_diagnostics_sha256": "6608f7b46ecab0999c566cbd9c537810e154208686b6fb5dce5ac77910b0e125",
+          "execution_chunks_identical": true,
+          "execution_chunks": {
+            "Code": {
+              "original": "545f7196f4391348d1b1a7986da680b4e5873b263ba023c887484066833ab434",
+              "adapted": "545f7196f4391348d1b1a7986da680b4e5873b263ba023c887484066833ab434"
+            },
+            "AtU8": {
+              "original": "d4c0e93df82a6abc5fc4c2e8d7c730e714712353fe94e2cfcbca641d9bb2e208",
+              "adapted": "d4c0e93df82a6abc5fc4c2e8d7c730e714712353fe94e2cfcbca641d9bb2e208"
+            },
+            "ImpT": {
+              "original": "8aaf1fcf5b1714eb85c4328a9c8335bf22006f30391dd6ad9ba065464f9441a7",
+              "adapted": "8aaf1fcf5b1714eb85c4328a9c8335bf22006f30391dd6ad9ba065464f9441a7"
+            },
+            "ExpT": {
+              "original": "7f38218985d51e8ce59500a326c2f5737d70037978efb01485815430676910f3",
+              "adapted": "7f38218985d51e8ce59500a326c2f5737d70037978efb01485815430676910f3"
+            },
+            "LocT": {
+              "original": "3173eca5ef66051c1108b3dc882152a7eb8c6d463e7d99e23b7f198761eac8ef",
+              "adapted": "3173eca5ef66051c1108b3dc882152a7eb8c6d463e7d99e23b7f198761eac8ef"
+            },
+            "LitT": {
+              "original": "2e3115dd812c278b2bc25f4b52206c1a4cab862760d0862dc2232ac0ee4d35bf",
+              "adapted": "2e3115dd812c278b2bc25f4b52206c1a4cab862760d0862dc2232ac0ee4d35bf"
+            },
+            "FunT": {
+              "original": "e0f6b6d66822cef774b3f7b08d9d573f43968e4e7b46e7c98177b4b2567ba373",
+              "adapted": "e0f6b6d66822cef774b3f7b08d9d573f43968e4e7b46e7c98177b4b2567ba373"
+            },
+            "StrT": {
+              "original": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "adapted": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "pinned-diagnostic-snmp-snmp_manager_user",
+      "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+      "path": "lib/snmp/test/snmp_manager_user.erl",
+      "upstream_sha256": "88ccdf1546d3685b67cd5840d250b2265fda41a5a95dde415d29dff99f37130a",
+      "modified_sha256": "88ccdf1546d3685b67cd5840d250b2265fda41a5a95dde415d29dff99f37130a",
+      "retained_source_edited": false,
+      "category": "preparation-profile",
+      "recipe": "lib/snmp/test/Makefile",
+      "recipe_sha256": "441fb3fc79b636d0c199834adf9f8cabd46e4c085069d51f8b696960a7e9cf27",
+      "before_flags": [
+        "-Werror"
+      ],
+      "additional_flags": [
+        "+nowarn_deprecated_catch"
+      ],
+      "after_policy": "-Werror and every other original flag retained; additional options only for this exact source hash",
+      "rationale": "Exact original reference compiler rejects unchanged upstream release module due the recorded diagnostic; scoped diagnostic allowance preserves all executable chunks.",
+      "relevant_cases": [
+        "snmp_agent_SUITE",
+        "snmp_agent_conf_SUITE",
+        "snmp_agent_mibs_SUITE",
+        "snmp_agent_nfilter_SUITE",
+        "snmp_app_SUITE",
+        "snmp_compiler_SUITE",
+        "snmp_conf_SUITE",
+        "snmp_log_SUITE",
+        "snmp_manager_SUITE",
+        "snmp_manager_config_SUITE",
+        "snmp_manager_user_SUITE",
+        "snmp_note_store_SUITE",
+        "snmp_pdus_SUITE",
+        "snmp_to_snmpnet_SUITE"
+      ],
+      "assertions_changed": false,
+      "changed_behavior": "Preparation diagnostic policy only; source, assertions and executable BEAM chunks unchanged.",
+      "validation": [
+        {
+          "kind": "original-reference-compiler-reproduction",
+          "reference_upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+          "original_werror_returncode": 1,
+          "original_without_werror_returncode": 0,
+          "adapted_werror_returncode": 0,
+          "evidence": "tmp/upstream-prep-dev/diagnostic-policy-proof/results.json",
+          "module": "snmp_manager_user",
+          "original_diagnostics_sha256": "e54c5ef72bf1c7734075ed9517555e60a14af19877edf50b6eac76c801553ecf",
+          "execution_chunks_identical": true,
+          "execution_chunks": {
+            "Code": {
+              "original": "4673f45b79e90c32690e89a88bf0a239c8827050eef5c9d2ad2578aaf97476dc",
+              "adapted": "4673f45b79e90c32690e89a88bf0a239c8827050eef5c9d2ad2578aaf97476dc"
+            },
+            "AtU8": {
+              "original": "0b250d832ecf605618b542599329c0d2885a540d8b07e0094d7f48c607f3046c",
+              "adapted": "0b250d832ecf605618b542599329c0d2885a540d8b07e0094d7f48c607f3046c"
+            },
+            "ImpT": {
+              "original": "0e75a220791ff39b69e04564b3fe17224122f01c1eaec7241d5ddfb473eb5910",
+              "adapted": "0e75a220791ff39b69e04564b3fe17224122f01c1eaec7241d5ddfb473eb5910"
+            },
+            "ExpT": {
+              "original": "1b353b145d3f3657e5073250aa08a2d5eb8c14acda1bd43a5530112682bfc000",
+              "adapted": "1b353b145d3f3657e5073250aa08a2d5eb8c14acda1bd43a5530112682bfc000"
+            },
+            "LocT": {
+              "original": "97f447cf9a0f267378053cd44eeff16087b56a860150077415b55408a6c3db44",
+              "adapted": "97f447cf9a0f267378053cd44eeff16087b56a860150077415b55408a6c3db44"
+            },
+            "LitT": {
+              "original": "4048c4373dd64b743c20db11dde7314c2e01114be4fb486532e8be33e84e9ccf",
+              "adapted": "4048c4373dd64b743c20db11dde7314c2e01114be4fb486532e8be33e84e9ccf"
+            },
+            "StrT": {
+              "original": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "adapted": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "pinned-diagnostic-snmp-snmp_test_manager",
+      "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+      "path": "lib/snmp/test/snmp_test_manager.erl",
+      "upstream_sha256": "9cb3bfac924da0711f27db653e5fabc1b78c640590b6eecf0d21f8a95a9ea3c8",
+      "modified_sha256": "9cb3bfac924da0711f27db653e5fabc1b78c640590b6eecf0d21f8a95a9ea3c8",
+      "retained_source_edited": false,
+      "category": "preparation-profile",
+      "recipe": "lib/snmp/test/Makefile",
+      "recipe_sha256": "441fb3fc79b636d0c199834adf9f8cabd46e4c085069d51f8b696960a7e9cf27",
+      "before_flags": [
+        "-Werror"
+      ],
+      "additional_flags": [
+        "+nowarn_deprecated_catch"
+      ],
+      "after_policy": "-Werror and every other original flag retained; additional options only for this exact source hash",
+      "rationale": "Exact original reference compiler rejects unchanged upstream release module due the recorded diagnostic; scoped diagnostic allowance preserves all executable chunks.",
+      "relevant_cases": [
+        "snmp_agent_SUITE",
+        "snmp_agent_conf_SUITE",
+        "snmp_agent_mibs_SUITE",
+        "snmp_agent_nfilter_SUITE",
+        "snmp_app_SUITE",
+        "snmp_compiler_SUITE",
+        "snmp_conf_SUITE",
+        "snmp_log_SUITE",
+        "snmp_manager_SUITE",
+        "snmp_manager_config_SUITE",
+        "snmp_manager_user_SUITE",
+        "snmp_note_store_SUITE",
+        "snmp_pdus_SUITE",
+        "snmp_to_snmpnet_SUITE"
+      ],
+      "assertions_changed": false,
+      "changed_behavior": "Preparation diagnostic policy only; source, assertions and executable BEAM chunks unchanged.",
+      "validation": [
+        {
+          "kind": "original-reference-compiler-reproduction",
+          "reference_upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+          "original_werror_returncode": 1,
+          "original_without_werror_returncode": 0,
+          "adapted_werror_returncode": 0,
+          "evidence": "tmp/upstream-prep-dev/diagnostic-policy-proof/results.json",
+          "module": "snmp_test_manager",
+          "original_diagnostics_sha256": "0aaa7aba422ed1ab72b3a58dcf435d87bb19b901af698476fca029923abf592d",
+          "execution_chunks_identical": true,
+          "execution_chunks": {
+            "Code": {
+              "original": "0307f4a8e2175b3c9699c63340286bdd235e0b29722d76e8da1a0078ea15bf3e",
+              "adapted": "0307f4a8e2175b3c9699c63340286bdd235e0b29722d76e8da1a0078ea15bf3e"
+            },
+            "AtU8": {
+              "original": "643ba9f689181589e9ccc80fd4afb3c194983350ef3d24c46871e5e0ec9439ec",
+              "adapted": "643ba9f689181589e9ccc80fd4afb3c194983350ef3d24c46871e5e0ec9439ec"
+            },
+            "ImpT": {
+              "original": "46032ee028d784a331398f677940e36264ae3971c4fe9f314e3d010575b99b98",
+              "adapted": "46032ee028d784a331398f677940e36264ae3971c4fe9f314e3d010575b99b98"
+            },
+            "ExpT": {
+              "original": "6c9064fb724b3bdd9b9bfa46ddfd43af3a49df63a452ed51e0c03e08e135bd2b",
+              "adapted": "6c9064fb724b3bdd9b9bfa46ddfd43af3a49df63a452ed51e0c03e08e135bd2b"
+            },
+            "LocT": {
+              "original": "04eda97f9257947c3d6163617fbcf95cef1d41f6cbca5a5f1cdf58a5dfdf9945",
+              "adapted": "04eda97f9257947c3d6163617fbcf95cef1d41f6cbca5a5f1cdf58a5dfdf9945"
+            },
+            "LitT": {
+              "original": "f62df8b66e8db74de6ff767b4444b925a204522c79cdd6cfba5dc34262d94b96",
+              "adapted": "f62df8b66e8db74de6ff767b4444b925a204522c79cdd6cfba5dc34262d94b96"
+            },
+            "FunT": {
+              "original": "d3a5cc5b61f8b9c5765a1afcf955620ac5d0dfaee279c847a897554fdb008c96",
+              "adapted": "d3a5cc5b61f8b9c5765a1afcf955620ac5d0dfaee279c847a897554fdb008c96"
+            },
+            "StrT": {
+              "original": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "adapted": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "pinned-diagnostic-snmp-snmp_test_mgr",
+      "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+      "path": "lib/snmp/test/snmp_test_mgr.erl",
+      "upstream_sha256": "454ba127feb24ae80c112e5c41393d11b70ebcc11bcaf2c0572f7fa41ebd9aa6",
+      "modified_sha256": "454ba127feb24ae80c112e5c41393d11b70ebcc11bcaf2c0572f7fa41ebd9aa6",
+      "retained_source_edited": false,
+      "category": "preparation-profile",
+      "recipe": "lib/snmp/test/Makefile",
+      "recipe_sha256": "441fb3fc79b636d0c199834adf9f8cabd46e4c085069d51f8b696960a7e9cf27",
+      "before_flags": [
+        "-Werror"
+      ],
+      "additional_flags": [
+        "+nowarn_deprecated_catch"
+      ],
+      "after_policy": "-Werror and every other original flag retained; additional options only for this exact source hash",
+      "rationale": "Exact original reference compiler rejects unchanged upstream release module due the recorded diagnostic; scoped diagnostic allowance preserves all executable chunks.",
+      "relevant_cases": [
+        "snmp_agent_SUITE",
+        "snmp_agent_conf_SUITE",
+        "snmp_agent_mibs_SUITE",
+        "snmp_agent_nfilter_SUITE",
+        "snmp_app_SUITE",
+        "snmp_compiler_SUITE",
+        "snmp_conf_SUITE",
+        "snmp_log_SUITE",
+        "snmp_manager_SUITE",
+        "snmp_manager_config_SUITE",
+        "snmp_manager_user_SUITE",
+        "snmp_note_store_SUITE",
+        "snmp_pdus_SUITE",
+        "snmp_to_snmpnet_SUITE"
+      ],
+      "assertions_changed": false,
+      "changed_behavior": "Preparation diagnostic policy only; source, assertions and executable BEAM chunks unchanged.",
+      "validation": [
+        {
+          "kind": "original-reference-compiler-reproduction",
+          "reference_upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+          "original_werror_returncode": 1,
+          "original_without_werror_returncode": 0,
+          "adapted_werror_returncode": 0,
+          "evidence": "tmp/upstream-prep-dev/diagnostic-policy-proof/results.json",
+          "module": "snmp_test_mgr",
+          "original_diagnostics_sha256": "b00c66183b34ed79d851b39e4a4cb9a3b698701f26b0fd289d6dea8dbab5c57e",
+          "execution_chunks_identical": true,
+          "execution_chunks": {
+            "Code": {
+              "original": "8f7a1b61cf142700d0066a28c5f539ea278be5018bb23caf2ce0afd7bb2ed655",
+              "adapted": "8f7a1b61cf142700d0066a28c5f539ea278be5018bb23caf2ce0afd7bb2ed655"
+            },
+            "AtU8": {
+              "original": "f9a104a1990211c551501953851010af86d26a78796b000189da26d6b80b72e0",
+              "adapted": "f9a104a1990211c551501953851010af86d26a78796b000189da26d6b80b72e0"
+            },
+            "ImpT": {
+              "original": "a8c0d5c593d5652eaa76c4840ad0c83e9f446b5610a4d010219587949e0c1f90",
+              "adapted": "a8c0d5c593d5652eaa76c4840ad0c83e9f446b5610a4d010219587949e0c1f90"
+            },
+            "ExpT": {
+              "original": "4b41484d6863c4a9893f1becc2b3514959be9f678f9e4900f7e49c87ea807abb",
+              "adapted": "4b41484d6863c4a9893f1becc2b3514959be9f678f9e4900f7e49c87ea807abb"
+            },
+            "LocT": {
+              "original": "65a4a6be852e71b9e4708d301e64982c8f7421e1ef83c92280c3c5fdea3ab903",
+              "adapted": "65a4a6be852e71b9e4708d301e64982c8f7421e1ef83c92280c3c5fdea3ab903"
+            },
+            "LitT": {
+              "original": "381cac64d582677d70a8bc79fd6ad25a1da01fc69ea1c1ef0a53cc7d5ac3f390",
+              "adapted": "381cac64d582677d70a8bc79fd6ad25a1da01fc69ea1c1ef0a53cc7d5ac3f390"
+            },
+            "StrT": {
+              "original": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "adapted": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "pinned-diagnostic-snmp-snmp_test_mgr_misc",
+      "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+      "path": "lib/snmp/test/snmp_test_mgr_misc.erl",
+      "upstream_sha256": "32aaeb955c22f660b6f93b60c51d12895c8c98c940b23d3079bc9c8340d3cf31",
+      "modified_sha256": "32aaeb955c22f660b6f93b60c51d12895c8c98c940b23d3079bc9c8340d3cf31",
+      "retained_source_edited": false,
+      "category": "preparation-profile",
+      "recipe": "lib/snmp/test/Makefile",
+      "recipe_sha256": "441fb3fc79b636d0c199834adf9f8cabd46e4c085069d51f8b696960a7e9cf27",
+      "before_flags": [
+        "-Werror"
+      ],
+      "additional_flags": [
+        "+nowarn_deprecated_catch"
+      ],
+      "after_policy": "-Werror and every other original flag retained; additional options only for this exact source hash",
+      "rationale": "Exact original reference compiler rejects unchanged upstream release module due the recorded diagnostic; scoped diagnostic allowance preserves all executable chunks.",
+      "relevant_cases": [
+        "snmp_agent_SUITE",
+        "snmp_agent_conf_SUITE",
+        "snmp_agent_mibs_SUITE",
+        "snmp_agent_nfilter_SUITE",
+        "snmp_app_SUITE",
+        "snmp_compiler_SUITE",
+        "snmp_conf_SUITE",
+        "snmp_log_SUITE",
+        "snmp_manager_SUITE",
+        "snmp_manager_config_SUITE",
+        "snmp_manager_user_SUITE",
+        "snmp_note_store_SUITE",
+        "snmp_pdus_SUITE",
+        "snmp_to_snmpnet_SUITE"
+      ],
+      "assertions_changed": false,
+      "changed_behavior": "Preparation diagnostic policy only; source, assertions and executable BEAM chunks unchanged.",
+      "validation": [
+        {
+          "kind": "original-reference-compiler-reproduction",
+          "reference_upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+          "original_werror_returncode": 1,
+          "original_without_werror_returncode": 0,
+          "adapted_werror_returncode": 0,
+          "evidence": "tmp/upstream-prep-dev/diagnostic-policy-proof/results.json",
+          "module": "snmp_test_mgr_misc",
+          "original_diagnostics_sha256": "8f37fe371927e15aa16e466455f97fe95b5847b58784e7e0fd97cd2d2e96b357",
+          "execution_chunks_identical": true,
+          "execution_chunks": {
+            "Code": {
+              "original": "133efebe5b80f88aac73cee63b649323b1a0db2c591211320bb652d790b6f1e4",
+              "adapted": "133efebe5b80f88aac73cee63b649323b1a0db2c591211320bb652d790b6f1e4"
+            },
+            "AtU8": {
+              "original": "e5b6e1562456a11fbcb1f3b87a7d0bd116e71544192299f4ebc1b12849d4a90b",
+              "adapted": "e5b6e1562456a11fbcb1f3b87a7d0bd116e71544192299f4ebc1b12849d4a90b"
+            },
+            "ImpT": {
+              "original": "9295d97da19ecb3b105fb12d5732198cc7664970064559d43bb5e7d5b0f8586f",
+              "adapted": "9295d97da19ecb3b105fb12d5732198cc7664970064559d43bb5e7d5b0f8586f"
+            },
+            "ExpT": {
+              "original": "aa3f27f6c30283e81a0e66d707a81d1166daffebff5ecf2a024584333d7dd941",
+              "adapted": "aa3f27f6c30283e81a0e66d707a81d1166daffebff5ecf2a024584333d7dd941"
+            },
+            "LocT": {
+              "original": "c6715e2771f0eaf3e05cf4ce7ecc53cc4dd1f4d2b121cc07ecb31eb6449ed016",
+              "adapted": "c6715e2771f0eaf3e05cf4ce7ecc53cc4dd1f4d2b121cc07ecb31eb6449ed016"
+            },
+            "LitT": {
+              "original": "af50c24a597847fcfa5524d9054ccaa70f72e739d1b5e41add50bb9f34273586",
+              "adapted": "af50c24a597847fcfa5524d9054ccaa70f72e739d1b5e41add50bb9f34273586"
+            },
+            "FunT": {
+              "original": "0b90eca74ef1ab90c842d709fd7983b979e2545765bc810d7007b75f85fbecc0",
+              "adapted": "0b90eca74ef1ab90c842d709fd7983b979e2545765bc810d7007b75f85fbecc0"
+            },
+            "StrT": {
+              "original": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "adapted": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "pinned-diagnostic-snmp-sa",
+      "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+      "path": "lib/snmp/test/sa.erl",
+      "upstream_sha256": "69d76b9af3fbb1ed55a3d8074a253eb51e4152cfa1b36c340a3db6a1040e44a3",
+      "modified_sha256": "69d76b9af3fbb1ed55a3d8074a253eb51e4152cfa1b36c340a3db6a1040e44a3",
+      "retained_source_edited": false,
+      "category": "preparation-profile",
+      "recipe": "lib/snmp/test/Makefile",
+      "recipe_sha256": "441fb3fc79b636d0c199834adf9f8cabd46e4c085069d51f8b696960a7e9cf27",
+      "before_flags": [
+        "-Werror"
+      ],
+      "additional_flags": [
+        "+nowarn_export_all"
+      ],
+      "after_policy": "-Werror and every other original flag retained; additional options only for this exact source hash",
+      "rationale": "Exact original reference compiler rejects unchanged upstream release module due the recorded diagnostic; scoped diagnostic allowance preserves all executable chunks.",
+      "relevant_cases": [
+        "snmp_agent_SUITE",
+        "snmp_agent_conf_SUITE",
+        "snmp_agent_mibs_SUITE",
+        "snmp_agent_nfilter_SUITE",
+        "snmp_app_SUITE",
+        "snmp_compiler_SUITE",
+        "snmp_conf_SUITE",
+        "snmp_log_SUITE",
+        "snmp_manager_SUITE",
+        "snmp_manager_config_SUITE",
+        "snmp_manager_user_SUITE",
+        "snmp_note_store_SUITE",
+        "snmp_pdus_SUITE",
+        "snmp_to_snmpnet_SUITE"
+      ],
+      "assertions_changed": false,
+      "changed_behavior": "Preparation diagnostic policy only; source, assertions and executable BEAM chunks unchanged.",
+      "validation": [
+        {
+          "kind": "original-reference-compiler-reproduction",
+          "reference_upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+          "original_werror_returncode": 1,
+          "original_without_werror_returncode": 0,
+          "adapted_werror_returncode": 0,
+          "evidence": "tmp/upstream-prep-dev/diagnostic-policy-proof/results.json",
+          "module": "sa",
+          "original_diagnostics_sha256": "07403b93bda389b3c56d4a281fe3ad1f2e551cf12ff0d8837176687e8fb7c4f1",
+          "execution_chunks_identical": true,
+          "execution_chunks": {
+            "Code": {
+              "original": "0063fb4319b6693e107156a75ce5ab4972cd61f31f40959f7d4826e619d967ef",
+              "adapted": "0063fb4319b6693e107156a75ce5ab4972cd61f31f40959f7d4826e619d967ef"
+            },
+            "AtU8": {
+              "original": "17710d3f5c5f4d80f56aab3d96ebd1f1dca906215703f0ef9e6ac504867dfe06",
+              "adapted": "17710d3f5c5f4d80f56aab3d96ebd1f1dca906215703f0ef9e6ac504867dfe06"
+            },
+            "ImpT": {
+              "original": "6e88840ff05ca9c68c3af6ad7617b82c2003418742e6f87c2493e4e235dbeb8f",
+              "adapted": "6e88840ff05ca9c68c3af6ad7617b82c2003418742e6f87c2493e4e235dbeb8f"
+            },
+            "ExpT": {
+              "original": "b68603b9e91d1cd4a2e7f5dce6668b2e9e90541cb0c5a259f60f11867ab8ee21",
+              "adapted": "b68603b9e91d1cd4a2e7f5dce6668b2e9e90541cb0c5a259f60f11867ab8ee21"
+            },
+            "LocT": {
+              "original": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+              "adapted": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119"
+            },
+            "LitT": {
+              "original": "5644becdd1f67fb26fd950cdeb081b3ce11bd890a05832f088dbfd1b30152ef7",
+              "adapted": "5644becdd1f67fb26fd950cdeb081b3ce11bd890a05832f088dbfd1b30152ef7"
+            },
+            "StrT": {
+              "original": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "adapted": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "pinned-diagnostic-snmp-klas3",
+      "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+      "path": "lib/snmp/test/klas3.erl",
+      "upstream_sha256": "756f3c94ce78f404d73e0e787fadd6c17254bc8f7a528bc91b650f14450072da",
+      "modified_sha256": "756f3c94ce78f404d73e0e787fadd6c17254bc8f7a528bc91b650f14450072da",
+      "retained_source_edited": false,
+      "category": "preparation-profile",
+      "recipe": "lib/snmp/test/Makefile",
+      "recipe_sha256": "441fb3fc79b636d0c199834adf9f8cabd46e4c085069d51f8b696960a7e9cf27",
+      "before_flags": [
+        "-Werror"
+      ],
+      "additional_flags": [
+        "+nowarn_deprecated_catch",
+        "+nowarn_export_all"
+      ],
+      "after_policy": "-Werror and every other original flag retained; additional options only for this exact source hash",
+      "rationale": "Exact original reference compiler rejects unchanged upstream release module due the recorded diagnostic; scoped diagnostic allowance preserves all executable chunks.",
+      "relevant_cases": [
+        "snmp_agent_SUITE",
+        "snmp_agent_conf_SUITE",
+        "snmp_agent_mibs_SUITE",
+        "snmp_agent_nfilter_SUITE",
+        "snmp_app_SUITE",
+        "snmp_compiler_SUITE",
+        "snmp_conf_SUITE",
+        "snmp_log_SUITE",
+        "snmp_manager_SUITE",
+        "snmp_manager_config_SUITE",
+        "snmp_manager_user_SUITE",
+        "snmp_note_store_SUITE",
+        "snmp_pdus_SUITE",
+        "snmp_to_snmpnet_SUITE"
+      ],
+      "assertions_changed": false,
+      "changed_behavior": "Preparation diagnostic policy only; source, assertions and executable BEAM chunks unchanged.",
+      "validation": [
+        {
+          "kind": "original-reference-compiler-reproduction",
+          "reference_upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+          "original_werror_returncode": 1,
+          "original_without_werror_returncode": 0,
+          "adapted_werror_returncode": 0,
+          "evidence": "tmp/upstream-prep-dev/diagnostic-policy-proof/results.json",
+          "module": "klas3",
+          "original_diagnostics_sha256": "65bc5940dc5d30c524249b93b0107ac19e9bf91073ad451f8735b631f949d777",
+          "execution_chunks_identical": true,
+          "execution_chunks": {
+            "Code": {
+              "original": "78d6b2ef9bb67be9fce6d5be6938ee8d17ce0de299370470eea7b8f2e64bbf24",
+              "adapted": "78d6b2ef9bb67be9fce6d5be6938ee8d17ce0de299370470eea7b8f2e64bbf24"
+            },
+            "AtU8": {
+              "original": "8dac61846e5f29ad1b9c04d0ef5c1fe3e17963c45302cb076625230b360c44b2",
+              "adapted": "8dac61846e5f29ad1b9c04d0ef5c1fe3e17963c45302cb076625230b360c44b2"
+            },
+            "ImpT": {
+              "original": "2937e9286262548e1225c15b5e7c3f34e46e08f641e14948ae977ae2ae25421c",
+              "adapted": "2937e9286262548e1225c15b5e7c3f34e46e08f641e14948ae977ae2ae25421c"
+            },
+            "ExpT": {
+              "original": "b7f869f7d8029710f96bff987ca8c9c399efc28b33dcd661c3b2bba80319c4cb",
+              "adapted": "b7f869f7d8029710f96bff987ca8c9c399efc28b33dcd661c3b2bba80319c4cb"
+            },
+            "LocT": {
+              "original": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+              "adapted": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119"
+            },
+            "LitT": {
+              "original": "78ab96d2be95123c404f5da07b181a41b82be2024793f156cad89fe65bf2b655",
+              "adapted": "78ab96d2be95123c404f5da07b181a41b82be2024793f156cad89fe65bf2b655"
+            },
+            "StrT": {
+              "original": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "adapted": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "pinned-diagnostic-snmp-test1",
+      "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+      "path": "lib/snmp/test/test1.erl",
+      "upstream_sha256": "766cdfcd10165f2b22a2fa3c956553a61f619644ba65bd93de7b2b146c7a41cf",
+      "modified_sha256": "766cdfcd10165f2b22a2fa3c956553a61f619644ba65bd93de7b2b146c7a41cf",
+      "retained_source_edited": false,
+      "category": "preparation-profile",
+      "recipe": "lib/snmp/test/Makefile",
+      "recipe_sha256": "441fb3fc79b636d0c199834adf9f8cabd46e4c085069d51f8b696960a7e9cf27",
+      "before_flags": [
+        "-Werror"
+      ],
+      "additional_flags": [
+        "+nowarn_export_all"
+      ],
+      "after_policy": "-Werror and every other original flag retained; additional options only for this exact source hash",
+      "rationale": "Exact original reference compiler rejects unchanged upstream release module due the recorded diagnostic; scoped diagnostic allowance preserves all executable chunks.",
+      "relevant_cases": [
+        "snmp_agent_SUITE",
+        "snmp_agent_conf_SUITE",
+        "snmp_agent_mibs_SUITE",
+        "snmp_agent_nfilter_SUITE",
+        "snmp_app_SUITE",
+        "snmp_compiler_SUITE",
+        "snmp_conf_SUITE",
+        "snmp_log_SUITE",
+        "snmp_manager_SUITE",
+        "snmp_manager_config_SUITE",
+        "snmp_manager_user_SUITE",
+        "snmp_note_store_SUITE",
+        "snmp_pdus_SUITE",
+        "snmp_to_snmpnet_SUITE"
+      ],
+      "assertions_changed": false,
+      "changed_behavior": "Preparation diagnostic policy only; source, assertions and executable BEAM chunks unchanged.",
+      "validation": [
+        {
+          "kind": "original-reference-compiler-reproduction",
+          "reference_upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+          "original_werror_returncode": 1,
+          "original_without_werror_returncode": 0,
+          "adapted_werror_returncode": 0,
+          "evidence": "tmp/upstream-prep-dev/diagnostic-policy-proof/results.json",
+          "module": "test1",
+          "original_diagnostics_sha256": "12996c7e55aff37e8b535887b9e7cd63a3c8dd5a0d1da88da5ab146d8b6c84ce",
+          "execution_chunks_identical": true,
+          "execution_chunks": {
+            "Code": {
+              "original": "2709972e8287e858150fdd12e39051961e77d252144552ef8a38b4870d000df8",
+              "adapted": "2709972e8287e858150fdd12e39051961e77d252144552ef8a38b4870d000df8"
+            },
+            "AtU8": {
+              "original": "f3aae124ce16ecc3f97dbe346d19d41cef66084deb0b09bab6e1356617432f76",
+              "adapted": "f3aae124ce16ecc3f97dbe346d19d41cef66084deb0b09bab6e1356617432f76"
+            },
+            "ImpT": {
+              "original": "871d78b70cdcf5f3a495cd2c419ee85b03d8285a26c3158f8968f289d8b7ba81",
+              "adapted": "871d78b70cdcf5f3a495cd2c419ee85b03d8285a26c3158f8968f289d8b7ba81"
+            },
+            "ExpT": {
+              "original": "3e3e84a77118a411efc93bcdc1c26d2e030c8da787dc2eed148a5d4687437f04",
+              "adapted": "3e3e84a77118a411efc93bcdc1c26d2e030c8da787dc2eed148a5d4687437f04"
+            },
+            "LocT": {
+              "original": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+              "adapted": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119"
+            },
+            "LitT": {
+              "original": "906e222680dcfe10a342ebf924909b7cd5d59e3c94e9b9a27d09d47a6ab00bce",
+              "adapted": "906e222680dcfe10a342ebf924909b7cd5d59e3c94e9b9a27d09d47a6ab00bce"
+            },
+            "StrT": {
+              "original": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "adapted": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "pinned-diagnostic-snmp-snmp_agent_SUITE",
+      "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+      "path": "lib/snmp/test/snmp_agent_SUITE.erl",
+      "upstream_sha256": "3b299c150100c53eef755b64cc30fb6e25fd282b0a9ce13af293d96f9b024022",
+      "modified_sha256": "3b299c150100c53eef755b64cc30fb6e25fd282b0a9ce13af293d96f9b024022",
+      "retained_source_edited": false,
+      "category": "preparation-profile",
+      "recipe": "lib/snmp/test/Makefile",
+      "recipe_sha256": "441fb3fc79b636d0c199834adf9f8cabd46e4c085069d51f8b696960a7e9cf27",
+      "before_flags": [
+        "-Werror"
+      ],
+      "additional_flags": [
+        "+nowarn_deprecated_catch"
+      ],
+      "after_policy": "-Werror and every other original flag retained; additional options only for this exact source hash",
+      "rationale": "Exact original reference compiler rejects unchanged upstream release module due the recorded diagnostic; scoped diagnostic allowance preserves all executable chunks.",
+      "relevant_cases": [
+        "snmp_agent_SUITE"
+      ],
+      "assertions_changed": false,
+      "changed_behavior": "Preparation diagnostic policy only; source, assertions and executable BEAM chunks unchanged.",
+      "validation": [
+        {
+          "kind": "original-reference-compiler-reproduction",
+          "reference_upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+          "original_werror_returncode": 1,
+          "original_without_werror_returncode": 0,
+          "adapted_werror_returncode": 0,
+          "evidence": "tmp/upstream-prep-dev/diagnostic-policy-proof/results.json",
+          "module": "snmp_agent_SUITE",
+          "original_diagnostics_sha256": "87f998325eba26fbfba704351680aef0eace41d113fb5a97c55c6f75d385e72c",
+          "execution_chunks_identical": true,
+          "execution_chunks": {
+            "Code": {
+              "original": "3d442cb2d4b4285054215983aa752a035d435b08cdbb550cce9f96f237f398b3",
+              "adapted": "3d442cb2d4b4285054215983aa752a035d435b08cdbb550cce9f96f237f398b3"
+            },
+            "AtU8": {
+              "original": "d31971ea903ae1bf15580d7340b30ea95e1406ece2ccc71c11adc0693554c06e",
+              "adapted": "d31971ea903ae1bf15580d7340b30ea95e1406ece2ccc71c11adc0693554c06e"
+            },
+            "ImpT": {
+              "original": "a96860e758622355d607b980607fb7d15d5aaed0c756102510563928fa85982c",
+              "adapted": "a96860e758622355d607b980607fb7d15d5aaed0c756102510563928fa85982c"
+            },
+            "ExpT": {
+              "original": "9bd116b46ea245033290591edb441448d7255d7f471e9a4eafeb7a3a91096e4a",
+              "adapted": "9bd116b46ea245033290591edb441448d7255d7f471e9a4eafeb7a3a91096e4a"
+            },
+            "LocT": {
+              "original": "08fd452e3c21b45bfb0af19cab58018c31f8bf9f3ec23bf7639c5398cd01e68a",
+              "adapted": "08fd452e3c21b45bfb0af19cab58018c31f8bf9f3ec23bf7639c5398cd01e68a"
+            },
+            "LitT": {
+              "original": "bd95f204d2ca7c96242d7d54f3fbe549f31b1fc0e5fe37d8a8155c7c8fb3e753",
+              "adapted": "bd95f204d2ca7c96242d7d54f3fbe549f31b1fc0e5fe37d8a8155c7c8fb3e753"
+            },
+            "FunT": {
+              "original": "934426d37b43cd0f58e8f2d3934e50dfa0b669561b4226eca552b563ae9de26e",
+              "adapted": "934426d37b43cd0f58e8f2d3934e50dfa0b669561b4226eca552b563ae9de26e"
+            },
+            "StrT": {
+              "original": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "adapted": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "pinned-diagnostic-snmp-snmp_conf_SUITE",
+      "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+      "path": "lib/snmp/test/snmp_conf_SUITE.erl",
+      "upstream_sha256": "ead5bacf6713dfba55de0f5bbae33f652cd9984f797b1f7a30eca600ba1a2582",
+      "modified_sha256": "ead5bacf6713dfba55de0f5bbae33f652cd9984f797b1f7a30eca600ba1a2582",
+      "retained_source_edited": false,
+      "category": "preparation-profile",
+      "recipe": "lib/snmp/test/Makefile",
+      "recipe_sha256": "441fb3fc79b636d0c199834adf9f8cabd46e4c085069d51f8b696960a7e9cf27",
+      "before_flags": [
+        "-Werror"
+      ],
+      "additional_flags": [
+        "+nowarn_deprecated_catch"
+      ],
+      "after_policy": "-Werror and every other original flag retained; additional options only for this exact source hash",
+      "rationale": "Exact original reference compiler rejects unchanged upstream release module due the recorded diagnostic; scoped diagnostic allowance preserves all executable chunks.",
+      "relevant_cases": [
+        "snmp_conf_SUITE"
+      ],
+      "assertions_changed": false,
+      "changed_behavior": "Preparation diagnostic policy only; source, assertions and executable BEAM chunks unchanged.",
+      "validation": [
+        {
+          "kind": "original-reference-compiler-reproduction",
+          "reference_upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+          "original_werror_returncode": 1,
+          "original_without_werror_returncode": 0,
+          "adapted_werror_returncode": 0,
+          "evidence": "tmp/upstream-prep-dev/diagnostic-policy-proof/results.json",
+          "module": "snmp_conf_SUITE",
+          "original_diagnostics_sha256": "055c2691d6613b122047781b3d490132a57cae9f3cadb00785dbd8ef0e96c4b8",
+          "execution_chunks_identical": true,
+          "execution_chunks": {
+            "Code": {
+              "original": "9d87a1741b296544d0423650b994438d66d42b5f32b40fe459eece4010727105",
+              "adapted": "9d87a1741b296544d0423650b994438d66d42b5f32b40fe459eece4010727105"
+            },
+            "AtU8": {
+              "original": "d865cfb64525792deac0e18ef56f522fbf7de89b6d3d4dd576c6f2b9c5eac7ab",
+              "adapted": "d865cfb64525792deac0e18ef56f522fbf7de89b6d3d4dd576c6f2b9c5eac7ab"
+            },
+            "ImpT": {
+              "original": "af5009cee6568abf064ef63c554f1a7d14a4fc600d80ad7f228f5a05ec493a77",
+              "adapted": "af5009cee6568abf064ef63c554f1a7d14a4fc600d80ad7f228f5a05ec493a77"
+            },
+            "ExpT": {
+              "original": "4b443dbdadde321c60d277df601294424288eca0efe28650e0882560015c426c",
+              "adapted": "4b443dbdadde321c60d277df601294424288eca0efe28650e0882560015c426c"
+            },
+            "LocT": {
+              "original": "2e7d444cc3a2c2cf512e7c6edc67a9172171de99578a47a8384ecb69765bb1b3",
+              "adapted": "2e7d444cc3a2c2cf512e7c6edc67a9172171de99578a47a8384ecb69765bb1b3"
+            },
+            "LitT": {
+              "original": "0478692086b9250051430dd5f966259ff207e9603f747e5b35e144c68043287f",
+              "adapted": "0478692086b9250051430dd5f966259ff207e9603f747e5b35e144c68043287f"
+            },
+            "FunT": {
+              "original": "2fece40bc16835824fe0f0fd0049429a56cd7c5407c189d5ea1747a59682dc5e",
+              "adapted": "2fece40bc16835824fe0f0fd0049429a56cd7c5407c189d5ea1747a59682dc5e"
+            },
+            "StrT": {
+              "original": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "adapted": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "pinned-diagnostic-snmp-snmp_log_SUITE",
+      "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+      "path": "lib/snmp/test/snmp_log_SUITE.erl",
+      "upstream_sha256": "349e93c2ba8345c9a0accb7763835cba7eccecefaff1b5bf00d7ac687fd5ca40",
+      "modified_sha256": "349e93c2ba8345c9a0accb7763835cba7eccecefaff1b5bf00d7ac687fd5ca40",
+      "retained_source_edited": false,
+      "category": "preparation-profile",
+      "recipe": "lib/snmp/test/Makefile",
+      "recipe_sha256": "441fb3fc79b636d0c199834adf9f8cabd46e4c085069d51f8b696960a7e9cf27",
+      "before_flags": [
+        "-Werror"
+      ],
+      "additional_flags": [
+        "+nowarn_deprecated_catch"
+      ],
+      "after_policy": "-Werror and every other original flag retained; additional options only for this exact source hash",
+      "rationale": "Exact original reference compiler rejects unchanged upstream release module due the recorded diagnostic; scoped diagnostic allowance preserves all executable chunks.",
+      "relevant_cases": [
+        "snmp_log_SUITE"
+      ],
+      "assertions_changed": false,
+      "changed_behavior": "Preparation diagnostic policy only; source, assertions and executable BEAM chunks unchanged.",
+      "validation": [
+        {
+          "kind": "original-reference-compiler-reproduction",
+          "reference_upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+          "original_werror_returncode": 1,
+          "original_without_werror_returncode": 0,
+          "adapted_werror_returncode": 0,
+          "evidence": "tmp/upstream-prep-dev/diagnostic-policy-proof/results.json",
+          "module": "snmp_log_SUITE",
+          "original_diagnostics_sha256": "f3f785cc623962e528269c8d31df955a2d430dc96729764b6aae4fe82a400a08",
+          "execution_chunks_identical": true,
+          "execution_chunks": {
+            "Code": {
+              "original": "9c66a244c2dc2f901a2d10b64e25c61c5bd5f9109841d53f74ca5165b419a396",
+              "adapted": "9c66a244c2dc2f901a2d10b64e25c61c5bd5f9109841d53f74ca5165b419a396"
+            },
+            "AtU8": {
+              "original": "80150f3ea129c4da5b028e18abad875bd3c47c4d032de28119eb8036c8f2b952",
+              "adapted": "80150f3ea129c4da5b028e18abad875bd3c47c4d032de28119eb8036c8f2b952"
+            },
+            "ImpT": {
+              "original": "2599b79d42f6f1483065c585e627f3bf59a9523435025d274dc24ff0504f2c26",
+              "adapted": "2599b79d42f6f1483065c585e627f3bf59a9523435025d274dc24ff0504f2c26"
+            },
+            "ExpT": {
+              "original": "1377d7bd1f34eeb4eb7b5e6c9f1690aac3e048684ead454b0934048aac028f27",
+              "adapted": "1377d7bd1f34eeb4eb7b5e6c9f1690aac3e048684ead454b0934048aac028f27"
+            },
+            "LocT": {
+              "original": "33dde1aad9870e82c6a818a614c511c4ffb8ca4a83f817a6357de692aa8189ed",
+              "adapted": "33dde1aad9870e82c6a818a614c511c4ffb8ca4a83f817a6357de692aa8189ed"
+            },
+            "LitT": {
+              "original": "5e6be5c52704b710ac288231ac8229263445b580f72a160aa2ee6b77181a0102",
+              "adapted": "5e6be5c52704b710ac288231ac8229263445b580f72a160aa2ee6b77181a0102"
+            },
+            "FunT": {
+              "original": "061cd8e77694200dac57c95b0a91825d1d8a4fc86b78d1aa67ee1ee0265a4d09",
+              "adapted": "061cd8e77694200dac57c95b0a91825d1d8a4fc86b78d1aa67ee1ee0265a4d09"
+            },
+            "StrT": {
+              "original": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "adapted": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "pinned-diagnostic-snmp-snmp_manager_config_SUITE",
+      "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+      "path": "lib/snmp/test/snmp_manager_config_SUITE.erl",
+      "upstream_sha256": "cb714cf6122b77208c101854671dcba112df3aaad8bc0851829b8bab1b947f60",
+      "modified_sha256": "cb714cf6122b77208c101854671dcba112df3aaad8bc0851829b8bab1b947f60",
+      "retained_source_edited": false,
+      "category": "preparation-profile",
+      "recipe": "lib/snmp/test/Makefile",
+      "recipe_sha256": "441fb3fc79b636d0c199834adf9f8cabd46e4c085069d51f8b696960a7e9cf27",
+      "before_flags": [
+        "-Werror"
+      ],
+      "additional_flags": [
+        "+nowarn_deprecated_catch"
+      ],
+      "after_policy": "-Werror and every other original flag retained; additional options only for this exact source hash",
+      "rationale": "Exact original reference compiler rejects unchanged upstream release module due the recorded diagnostic; scoped diagnostic allowance preserves all executable chunks.",
+      "relevant_cases": [
+        "snmp_manager_config_SUITE"
+      ],
+      "assertions_changed": false,
+      "changed_behavior": "Preparation diagnostic policy only; source, assertions and executable BEAM chunks unchanged.",
+      "validation": [
+        {
+          "kind": "original-reference-compiler-reproduction",
+          "reference_upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+          "original_werror_returncode": 1,
+          "original_without_werror_returncode": 0,
+          "adapted_werror_returncode": 0,
+          "evidence": "tmp/upstream-prep-dev/diagnostic-policy-proof/results.json",
+          "module": "snmp_manager_config_SUITE",
+          "original_diagnostics_sha256": "4f3e5f128e2a0510c7810289ef21cada51aac1f71c52c20e750f7e876f171380",
+          "execution_chunks_identical": true,
+          "execution_chunks": {
+            "Code": {
+              "original": "7f9fc4eb8b41e4f65ffae4068af88c14e70c81e0e1304e3169fa9f56891fb44e",
+              "adapted": "7f9fc4eb8b41e4f65ffae4068af88c14e70c81e0e1304e3169fa9f56891fb44e"
+            },
+            "AtU8": {
+              "original": "9eda88a8da6410604f7a33abf6ea217dbc508a225eac70bc5a54f717a496e1f3",
+              "adapted": "9eda88a8da6410604f7a33abf6ea217dbc508a225eac70bc5a54f717a496e1f3"
+            },
+            "ImpT": {
+              "original": "3a4f8252d369eea114706c41ddec2c660d595f0531c8419f207ea210f920f2e6",
+              "adapted": "3a4f8252d369eea114706c41ddec2c660d595f0531c8419f207ea210f920f2e6"
+            },
+            "ExpT": {
+              "original": "24e03b2e99721d1bf81de19744b311cd9d8c774ee273c666c0e3ceab175aecb3",
+              "adapted": "24e03b2e99721d1bf81de19744b311cd9d8c774ee273c666c0e3ceab175aecb3"
+            },
+            "LocT": {
+              "original": "e6242f9f40ff1de159591313c0ae1ebee63dce6d345c7fbdcb65443828f9a9dc",
+              "adapted": "e6242f9f40ff1de159591313c0ae1ebee63dce6d345c7fbdcb65443828f9a9dc"
+            },
+            "LitT": {
+              "original": "650081d99c50d7c23e2f4bd0697d3d0a42ed15ffeaf0a44a1275153bed18d8e8",
+              "adapted": "650081d99c50d7c23e2f4bd0697d3d0a42ed15ffeaf0a44a1275153bed18d8e8"
+            },
+            "FunT": {
+              "original": "1cdff0e4ba306663f839b5c5f5a426723d2c0ab28ea97accf0e69af980a48a07",
+              "adapted": "1cdff0e4ba306663f839b5c5f5a426723d2c0ab28ea97accf0e69af980a48a07"
+            },
+            "StrT": {
+              "original": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "adapted": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "pinned-diagnostic-snmp-snmp_manager_SUITE",
+      "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+      "path": "lib/snmp/test/snmp_manager_SUITE.erl",
+      "upstream_sha256": "b0802ac3beacb8453e2dbfa729a0e5cae1e600565170634353d0dee26fbda509",
+      "modified_sha256": "b0802ac3beacb8453e2dbfa729a0e5cae1e600565170634353d0dee26fbda509",
+      "retained_source_edited": false,
+      "category": "preparation-profile",
+      "recipe": "lib/snmp/test/Makefile",
+      "recipe_sha256": "441fb3fc79b636d0c199834adf9f8cabd46e4c085069d51f8b696960a7e9cf27",
+      "before_flags": [
+        "-Werror"
+      ],
+      "additional_flags": [
+        "+nowarn_deprecated_catch",
+        "+nowarn_export_var_subexpr"
+      ],
+      "after_policy": "-Werror and every other original flag retained; additional options only for this exact source hash",
+      "rationale": "Exact original reference compiler rejects unchanged upstream release module due the recorded diagnostic; scoped diagnostic allowance preserves all executable chunks.",
+      "relevant_cases": [
+        "snmp_manager_SUITE"
+      ],
+      "assertions_changed": false,
+      "changed_behavior": "Preparation diagnostic policy only; source, assertions and executable BEAM chunks unchanged.",
+      "validation": [
+        {
+          "kind": "original-reference-compiler-reproduction",
+          "reference_upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+          "original_werror_returncode": 1,
+          "original_without_werror_returncode": 0,
+          "adapted_werror_returncode": 0,
+          "evidence": "tmp/upstream-prep-dev/diagnostic-policy-proof/results.json",
+          "module": "snmp_manager_SUITE",
+          "original_diagnostics_sha256": "3fcb9221f5e80225ca16fbb5e6119a5dc71295333b54115492c72a081de4c72b",
+          "execution_chunks_identical": true,
+          "execution_chunks": {
+            "Code": {
+              "original": "a61ff2f46db4f2e8101c3ab9f0e57d69bc33c5cab18b7333a0f40684428073df",
+              "adapted": "a61ff2f46db4f2e8101c3ab9f0e57d69bc33c5cab18b7333a0f40684428073df"
+            },
+            "AtU8": {
+              "original": "2fad0724b8bb0e0c97940ebda5dc3265ae119ce9df5b9ca22c736146423666c6",
+              "adapted": "2fad0724b8bb0e0c97940ebda5dc3265ae119ce9df5b9ca22c736146423666c6"
+            },
+            "ImpT": {
+              "original": "f4e6b3cc9997d6b94cd92fd659bff068cc5ed84818dc586a834c50a0706e5de3",
+              "adapted": "f4e6b3cc9997d6b94cd92fd659bff068cc5ed84818dc586a834c50a0706e5de3"
+            },
+            "ExpT": {
+              "original": "05836d244d8274d16ba87dacc06278ed8f74121f3d790d2e353a6c25b763c561",
+              "adapted": "05836d244d8274d16ba87dacc06278ed8f74121f3d790d2e353a6c25b763c561"
+            },
+            "LocT": {
+              "original": "219c4e2347882e72c6223f8a7d138248b13ea80436af4039294c3d7f1ea503a3",
+              "adapted": "219c4e2347882e72c6223f8a7d138248b13ea80436af4039294c3d7f1ea503a3"
+            },
+            "LitT": {
+              "original": "cac384c4a9ec4ec266cab037f9ad8487f8d6a4410d89eaa6a7a270d5c301a5f1",
+              "adapted": "cac384c4a9ec4ec266cab037f9ad8487f8d6a4410d89eaa6a7a270d5c301a5f1"
+            },
+            "FunT": {
+              "original": "b7229bd3fcc1828ba8ebbae4749847c8de9b19ac637dae5b98b8574acfa9b9c0",
+              "adapted": "b7229bd3fcc1828ba8ebbae4749847c8de9b19ac637dae5b98b8574acfa9b9c0"
+            },
+            "StrT": {
+              "original": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "adapted": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "pinned-diagnostic-snmp-snmp_pdus_SUITE",
+      "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+      "path": "lib/snmp/test/snmp_pdus_SUITE.erl",
+      "upstream_sha256": "9ed75bf535289147f943df37683d975c47316048671bc7d5ff1121be324b4373",
+      "modified_sha256": "9ed75bf535289147f943df37683d975c47316048671bc7d5ff1121be324b4373",
+      "retained_source_edited": false,
+      "category": "preparation-profile",
+      "recipe": "lib/snmp/test/Makefile",
+      "recipe_sha256": "441fb3fc79b636d0c199834adf9f8cabd46e4c085069d51f8b696960a7e9cf27",
+      "before_flags": [
+        "-Werror"
+      ],
+      "additional_flags": [
+        "+nowarn_deprecated_catch"
+      ],
+      "after_policy": "-Werror and every other original flag retained; additional options only for this exact source hash",
+      "rationale": "Exact original reference compiler rejects unchanged upstream release module due the recorded diagnostic; scoped diagnostic allowance preserves all executable chunks.",
+      "relevant_cases": [
+        "snmp_pdus_SUITE"
+      ],
+      "assertions_changed": false,
+      "changed_behavior": "Preparation diagnostic policy only; source, assertions and executable BEAM chunks unchanged.",
+      "validation": [
+        {
+          "kind": "original-reference-compiler-reproduction",
+          "reference_upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+          "original_werror_returncode": 1,
+          "original_without_werror_returncode": 0,
+          "adapted_werror_returncode": 0,
+          "evidence": "tmp/upstream-prep-dev/diagnostic-policy-proof/results.json",
+          "module": "snmp_pdus_SUITE",
+          "original_diagnostics_sha256": "d7d53a44a36b4c52fa7dbd14b91ced06cd68ec8e5b2b529210ee7043afa5995a",
+          "execution_chunks_identical": true,
+          "execution_chunks": {
+            "Code": {
+              "original": "89fc636332a38528928bb0df8783600c472eeda1b5cb85776f63051ec7d8f6b0",
+              "adapted": "89fc636332a38528928bb0df8783600c472eeda1b5cb85776f63051ec7d8f6b0"
+            },
+            "AtU8": {
+              "original": "026c30fcce693b496f2c6c0c9b5a7fc1e81c69cbe20435bb91e138c783c27f9f",
+              "adapted": "026c30fcce693b496f2c6c0c9b5a7fc1e81c69cbe20435bb91e138c783c27f9f"
+            },
+            "ImpT": {
+              "original": "9de0fe4dcf316f79538dbe30fca4202372190aad292b88e5086d60c91ea4bb40",
+              "adapted": "9de0fe4dcf316f79538dbe30fca4202372190aad292b88e5086d60c91ea4bb40"
+            },
+            "ExpT": {
+              "original": "338276927ce466b3b6aa127b02a5f870d0619a7a62d0569ce5b5293d0f8d5df6",
+              "adapted": "338276927ce466b3b6aa127b02a5f870d0619a7a62d0569ce5b5293d0f8d5df6"
+            },
+            "LocT": {
+              "original": "74b041465772adc5922ed0f66075c28bbc41d76e572524e7588289e9d42f8790",
+              "adapted": "74b041465772adc5922ed0f66075c28bbc41d76e572524e7588289e9d42f8790"
+            },
+            "LitT": {
+              "original": "e63d1ea169c0ec859248474f7f0308bc2f8d9be77ae29cf6fd1940f62ff837b4",
+              "adapted": "e63d1ea169c0ec859248474f7f0308bc2f8d9be77ae29cf6fd1940f62ff837b4"
+            },
+            "StrT": {
+              "original": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "adapted": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "pinned-diagnostic-snmp-snmp_to_snmpnet_SUITE",
+      "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+      "path": "lib/snmp/test/snmp_to_snmpnet_SUITE.erl",
+      "upstream_sha256": "5d0356a0b462fbaa8aaf01a55b747e7e48dcbfb4b96e0739519704d4433a3be3",
+      "modified_sha256": "5d0356a0b462fbaa8aaf01a55b747e7e48dcbfb4b96e0739519704d4433a3be3",
+      "retained_source_edited": false,
+      "category": "preparation-profile",
+      "recipe": "lib/snmp/test/Makefile",
+      "recipe_sha256": "441fb3fc79b636d0c199834adf9f8cabd46e4c085069d51f8b696960a7e9cf27",
+      "before_flags": [
+        "-Werror"
+      ],
+      "additional_flags": [
+        "+nowarn_deprecated_catch"
+      ],
+      "after_policy": "-Werror and every other original flag retained; additional options only for this exact source hash",
+      "rationale": "Exact original reference compiler rejects unchanged upstream release module due the recorded diagnostic; scoped diagnostic allowance preserves all executable chunks.",
+      "relevant_cases": [
+        "snmp_to_snmpnet_SUITE"
+      ],
+      "assertions_changed": false,
+      "changed_behavior": "Preparation diagnostic policy only; source, assertions and executable BEAM chunks unchanged.",
+      "validation": [
+        {
+          "kind": "original-reference-compiler-reproduction",
+          "reference_upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+          "original_werror_returncode": 1,
+          "original_without_werror_returncode": 0,
+          "adapted_werror_returncode": 0,
+          "evidence": "tmp/upstream-prep-dev/diagnostic-policy-proof/results.json",
+          "module": "snmp_to_snmpnet_SUITE",
+          "original_diagnostics_sha256": "932288a1ec38455d0e93b627e3c503775649fd38c184faf4e9f2253adb36261a",
+          "execution_chunks_identical": true,
+          "execution_chunks": {
+            "Code": {
+              "original": "1ffa368e9da8b85bd37eea0ef1962158c150c40f2882f6611014316d51788430",
+              "adapted": "1ffa368e9da8b85bd37eea0ef1962158c150c40f2882f6611014316d51788430"
+            },
+            "AtU8": {
+              "original": "3a3c0a55f922b3bf8b8a63e8e793ca977ed9b0a9c41a49df3aaa3f5ebf833e7e",
+              "adapted": "3a3c0a55f922b3bf8b8a63e8e793ca977ed9b0a9c41a49df3aaa3f5ebf833e7e"
+            },
+            "ImpT": {
+              "original": "529fb19c7f12096c06dd13d9f1062ec65664b34adbbb2ab3be056dff07392123",
+              "adapted": "529fb19c7f12096c06dd13d9f1062ec65664b34adbbb2ab3be056dff07392123"
+            },
+            "ExpT": {
+              "original": "0f5d1ff028ae0d960487d9d6c81540083e6dc8b77eace1f1c881dce82b34c9d7",
+              "adapted": "0f5d1ff028ae0d960487d9d6c81540083e6dc8b77eace1f1c881dce82b34c9d7"
+            },
+            "LocT": {
+              "original": "e2971744857baafccad55cff7ff0e8399078d5e79f73bfa02403c537350949e0",
+              "adapted": "e2971744857baafccad55cff7ff0e8399078d5e79f73bfa02403c537350949e0"
+            },
+            "LitT": {
+              "original": "6fa94db92cd9df7ddea8a40e5ba436b828cc3797e8e9ff69a76bf0998c712aec",
+              "adapted": "6fa94db92cd9df7ddea8a40e5ba436b828cc3797e8e9ff69a76bf0998c712aec"
+            },
+            "FunT": {
+              "original": "57a5b0c2174dddcad69376faeb403262339ee800467ddbbb0ea92aea4af192b7",
+              "adapted": "57a5b0c2174dddcad69376faeb403262339ee800467ddbbb0ea92aea4af192b7"
+            },
+            "StrT": {
+              "original": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "adapted": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "compiler-filtered-warnings-as-errors",
+      "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+      "path": "lib/compiler/src/compile.erl",
+      "upstream_sha256": "c386a2b42181d7e1ef8964893e415fc723b374d697400d678bc15d70c4722541",
+      "modified_sha256": "269dc53dc5c0076f0383c72f30c49a9a3174a4b2438d097188845f575ad216ae",
+      "category": "compiler-defect",
+      "changed_behavior": "warnings_as_errors rejects only warnings remaining after the explicitly requested diagnostic filters; it still rejects all unsuppressed warnings and syntax errors.",
+      "rationale": "The pinned compiler documentation says nowarn_nomatch disables unmatched-pattern warnings. Its werror predicate used the unfiltered warning list, preventing code generation despite that option. An exact original-reference reproducer fails; the corrected predicate passes without changing executable chunks.",
+      "relevant_cases": [
+        "SNMP test2 preparation",
+        "otp_probe_tests:filtered_warnings_as_errors_test",
+        "compile_SUITE"
+      ],
+      "assertions_changed": false,
+      "validation": [
+        {
+          "evidence": "tmp/compiler-warning-policy/results.json",
+          "regression": "tests/fixtures/otp_probe_tests.erl:filtered_warnings_as_errors_test",
+          "checks": [
+            "original reference fails filtered warning under -Werror",
+            "corrected compiler passes same unmodified input",
+            "execution chunks unchanged",
+            "remaining unused-function warning still fails -Werror",
+            "syntax error still fails"
+          ],
+          "original_returncode": 1,
+          "fixed_returncode": 0
+        }
+      ]
+    },
+    {
+      "id": "pinned-diagnostic-snmp-test2",
+      "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+      "path": "lib/snmp/test/test2.erl",
+      "upstream_sha256": "47f4b4ccc8b339b9ab4ff48acf5faac7506910e8b62c2914ffbab1eee40dcaa8",
+      "modified_sha256": "47f4b4ccc8b339b9ab4ff48acf5faac7506910e8b62c2914ffbab1eee40dcaa8",
+      "retained_source_edited": false,
+      "category": "preparation-profile",
+      "recipe": "lib/snmp/test/Makefile",
+      "recipe_sha256": "441fb3fc79b636d0c199834adf9f8cabd46e4c085069d51f8b696960a7e9cf27",
+      "before_flags": [
+        "-Werror"
+      ],
+      "additional_flags": [
+        "+nowarn_export_all",
+        "+nowarn_nomatch"
+      ],
+      "after_policy": "-Werror and all other original flags retained; exact source hash only",
+      "rationale": "Pinned SNMP TEST_UTIL_MODULES explicitly compiles test2, which deliberately exports all functions and tests an impossible match. Scoped diagnostic allowances preserve the fixture expressions and all executable chunks; honoring nowarn_nomatch with Werror requires the separately corrected compiler warning-policy defect.",
+      "relevant_cases": [
+        "snmp_agent_SUITE",
+        "snmp_agent_conf_SUITE",
+        "snmp_agent_mibs_SUITE",
+        "snmp_agent_nfilter_SUITE",
+        "snmp_app_SUITE",
+        "snmp_compiler_SUITE",
+        "snmp_conf_SUITE",
+        "snmp_log_SUITE",
+        "snmp_manager_SUITE",
+        "snmp_manager_config_SUITE",
+        "snmp_manager_user_SUITE",
+        "snmp_note_store_SUITE",
+        "snmp_pdus_SUITE",
+        "snmp_to_snmpnet_SUITE"
+      ],
+      "assertions_changed": false,
+      "changed_behavior": "Preparation diagnostic policy only; no source or execution change.",
+      "validation": [
+        {
+          "kind": "original-reference-vs-fixed-installed-candidate",
+          "evidence": "tmp/upstream-prep-dev/final-jit/test2-policy-proof/results.json",
+          "original_without_werror_returncode": 0,
+          "adapted_werror_returncode": 0,
+          "execution_chunks_identical": true,
+          "execution_chunks": {
+            "Code": {
+              "original": "9f9043c725377ec5c286f20e1d904cac73213a05dc006ae6340369d1a83ce8ee",
+              "adapted": "9f9043c725377ec5c286f20e1d904cac73213a05dc006ae6340369d1a83ce8ee"
+            },
+            "AtU8": {
+              "original": "89ae0ed5840244d14d2cc2b0d7c50efd58459603e4a47d57f326823cf15c9d4f",
+              "adapted": "89ae0ed5840244d14d2cc2b0d7c50efd58459603e4a47d57f326823cf15c9d4f"
+            },
+            "ImpT": {
+              "original": "1bb28396fa51f276567a829c131b1bdc5c02e4f8aa6844ee0baaf2db5619a4ab",
+              "adapted": "1bb28396fa51f276567a829c131b1bdc5c02e4f8aa6844ee0baaf2db5619a4ab"
+            },
+            "ExpT": {
+              "original": "a923fbac742f1789e3eb3b4104f4592a5753ab1df11a9c21f18cce1e29ae6f36",
+              "adapted": "a923fbac742f1789e3eb3b4104f4592a5753ab1df11a9c21f18cce1e29ae6f36"
+            },
+            "LocT": {
+              "original": "cd5791ee8c20b206be79466b04d0416bae0e89035dfff8601b2a647bb927f7d5",
+              "adapted": "cd5791ee8c20b206be79466b04d0416bae0e89035dfff8601b2a647bb927f7d5"
+            },
+            "LitT": {
+              "original": "52a3274325f2602879baed3e137d83c23895fee71292492babcca5672cf1763f",
+              "adapted": "52a3274325f2602879baed3e137d83c23895fee71292492babcca5672cf1763f"
+            },
+            "FunT": {
+              "original": "6f7f76f778b8bf2013d59282ff447d9b0c35aa0f84c41c682ab512797c844dff",
+              "adapted": "6f7f76f778b8bf2013d59282ff447d9b0c35aa0f84c41c682ab512797c844dff"
+            },
+            "StrT": {
+              "original": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "adapted": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "private-openssh-sftp-port",
+      "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+      "path": "lib/ssh/test/ssh_sftp_SUITE.erl",
+      "upstream_sha256": "38802a436fbee3931c348f5dc6b75db77ed2c4d21f2b133156f2d075f7b720a3",
+      "modified_sha256": "852b58e5a5f58cbb034b844cdc6a49a2d5e96e7f694fb99d2fb131b89c5a23b2",
+      "category": "test-setup",
+      "changed_behavior": "Pass the explicitly selected private OpenSSH host/port to both the group availability probe and every OpenSSH per-test SFTP channel setup; retain the original host and port22 defaults outside the harness.",
+      "rationale": "The first adaptation corrected the group availability probe but missed the PrepareOpenSSHServer closure. Its start_channel/2 still selected host:22, causing112 initialization auto skips despite a healthy task-owned private SSH server. Use the same existing explicit host/port helpers in start_channel/3. SFTP bodies, options, assertions, protocol and deadlines remain unchanged.",
+      "relevant_cases": [
+        "ssh_sftp_SUITE:openssh_server groups",
+        "ssh_sftp_SUITE:read_6GB shared OpenSSH setup"
+      ],
+      "assertions_changed": false,
+      "validation": [
+        {
+          "evidence": "tmp/upstream-final-macos-jit/runs/20261108T224504Z-ed672884/ssh/ct-logs/events.jsonl; openssh_server init skipped with econnrefused while task-owned service listened at 53835",
+          "full_suite_status": "pending"
+        },
+        {
+          "evidence": "tmp/upstream-final-macos-jit/runs/20261108T224504Z-ed672884/ssh/ct-logs/events.jsonl; tmp/ssh-private-auth-setup-proof/receipt.json",
+          "checks": [
+            "Explicit private SFTP endpoint and OpenSSH client authorization proof passed; original out-of-HOME key layout reproduces exit255."
+          ],
+          "full_suite_status": "pending"
+        },
+        {
+          "kind": "missed-per-test-endpoint-correction",
+          "previous_modified_sha256": "c2232957f467b519184a7bc7b05d45bd8dd806fcf791cfd41561ecf3dc6dd209",
+          "raw_baseline": "tmp/u-memu/runs/f7ede164/b16/ct-logs/events.jsonl",
+          "raw_baseline_outcome": "112 automatic skips from econnrefused in the original per-test setup; historical nonpassing raw results preserved.",
+          "static_evidence": "tmp/ssh-sftp-endpoint-private/receipt.json",
+          "positive_evidence": "tmp/sftp-positive-proof/attempt-004/receipt.json",
+          "positive_evidence_sha256": "b3090c9dd9bd2dedfce03facce8cf82af3a8d0bfe66901144689caaa5c6754e9",
+          "checks": [
+            "Installed candidate and exact-pin original reference each pass both original read_file configurations:2passed/0failed/0skipped, no failed callbacks, complete logs.",
+            "Only the task-owned loopback high port was contacted; no live original/default-port baseline was launched.",
+            "Owned SSH server/children cleanup passed; no survivors, process-group members or listener;48 frozen input hashes unchanged."
+          ],
+          "full_suite_status": "pending; focused read_file proof does not qualify the full SSH specification or read_6GB body",
+          "positive_proposal_source_sha256": "934400a732e7778f84e5e9c70210d042a405c9e8e961b72b56f13738a00e552d",
+          "retained_source_formatting": "Only the leading indentation of the changed start_channel statement differs from the focused positive proposal; its non-whitespace bytes and all other source bytes are identical. Full SSH execution remains pending for the exact retained source."
+        }
+      ],
+      "deadlines_changed": false,
+      "protocols_changed": false,
+      "case_selections_changed": false
+    },
+    {
+      "id": "private-epmd-explicit-child-port",
+      "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+      "path": "lib/kernel/test/erl_distribution_SUITE.erl",
+      "upstream_sha256": "6dc4b6e704614b3fde6735a7b5700d927afc47a361a43c1becc886d734d9ac1a",
+      "modified_sha256": "ddcaa806d9444b7ef07d116a9c995a76a5bcf13851e50729d8b7f0c3db96201f",
+      "category": "test-setup",
+      "changed_behavior": "Select an explicitly allocated alternate EPMD port from OTP_TEST_ALT_EPMD_PORT (retain upstream 12321 without a profile); unset ERL_EPMD_PORT only in child open_port environments whose DCfg explicitly selects -epmd_port. For those explicit alternate-port children only, consume the private service-generated OTP_TEST_ALT_EPMD_INETRC mapping the local node hostname to loopback; never set the controller or ordinary-peer resolver.",
+      "rationale": "The isolated harness intentionally supplies ERL_EPMD_PORT for ordinary peers. Upstream erlexec prepends it before explicit arguments; erl_epmd uses the first value, so the alternate-port test children contact the harness daemon instead of the daemon the unchanged case exercises. A private alternate port avoids killing unrelated daemons at fixed 12321. Preserve erlexec argument/environment precedence and parent environment. On the isolated internal bridge, the native hostname resolves to its bridge address while the private alternate EPMD deliberately listens on loopback. Unchanged erl_epmd:names/0 and peer lookup otherwise query the wrong interface. Both the candidate and exact original reference reproduce the same failure; a per-child inetrc preserves private fixture addressing without host resolver changes.",
+      "relevant_cases": [
+        "erl_distribution_SUITE:epmd_reconnect",
+        "erl_distribution_SUITE child launch helpers"
+      ],
+      "assertions_changed": false,
+      "validation": [
+        {
+          "evidence": "tmp/otp21-linux-arm64/epmd-explicit-port-precedence.json",
+          "result": "Unmodified launcher with ERL_EPMD_PORT49123 and explicit -epmd_port12321 reports both values with environment port first. No distribution connection required."
+        },
+        {
+          "evidence": "tmp/otp21-linux-arm64/epmd-setup/compile-evidence.json",
+          "result": "Modified suite compiles with installed candidate and exact original reference; same existing deprecation diagnostics.",
+          "full_suite_status": "pending"
+        },
+        {
+          "evidence": "tmp/otp21-linux-arm64/epmd-setup/child-environment-proof.json",
+          "result": "Candidate and exact original reference both preserve parent and ordinary-child ERL_EPMD_PORT defaults while child-only env deletion makes explicit -epmd_port first. Both exit 0; no distributed controller or service required."
+        },
+        {
+          "evidence": "tmp/otp21-linux-arm64/epmd-reconnect-candidate-before.json",
+          "result": "Candidate unchanged assertion fails initial wait_for_names with hostname bridge address versus loopback-only daemon;0pass/1fail/0skips; owned cleanup succeeds."
+        },
+        {
+          "evidence": "tmp/otp21-linux-arm64/epmd-reconnect-reference-before.json",
+          "result": "Exact original reference reproduces same assertion failure;0pass/1fail/0skips; owned cleanup succeeds."
+        },
+        {
+          "evidence": "tmp/otp21-linux-arm64/loopback-inetrc-proof.json",
+          "result": "Native OS hostname remains bridge address; only a selected Erlang child using private inetrc resolves it to127.0.0.1 and erl_epmd:names changes error,address to ok,[]. No host/container resolver files are changed."
+        },
+        {
+          "evidence": "tmp/otp21-linux-arm64/epmd-reconnect-child-inetrc-proof.json",
+          "result": "Candidate and exact original reference each pass unchanged real CT case1/0/0/0. Controller/ordinary VM retain native bridge hostname and ERL_INETRC=false; only explicit alternate-port children receive the private inetrc. Both candidate/reference installed trees remain byte-identical; owned services cleanup succeeds.",
+          "private_inetrcs": {
+            "candidate": {
+              "path": "/work/epmd-reconnect-proof-child-inetrc/candidate/services/ecdd7c83723942f5a12e31e4f97a778e/alternate-node.inetrc",
+              "sha256": "de98227502ff6921756fc25980d6ad6347b7d867c2e1c871bebb01ecdc1e9a2f",
+              "text": "{lookup,[file,native]}.\n{host,{127,0,0,1},[\"otp21-linux\"]}.\n"
+            },
+            "reference": {
+              "path": "/work/epmd-reconnect-proof-child-inetrc/reference/services/cc22a91d98b84233b5ceb6739ea7865f/alternate-node.inetrc",
+              "sha256": "de98227502ff6921756fc25980d6ad6347b7d867c2e1c871bebb01ecdc1e9a2f",
+              "text": "{lookup,[file,native]}.\n{host,{127,0,0,1},[\"otp21-linux\"]}.\n"
+            }
+          }
+        }
+      ],
+      "testcase_protocol_sha256": "1f40bf5f1a15536d9be034e275d2cdade7cd769e96f5518664dfcd72d75a878c",
+      "testcase_protocol_unchanged": true,
+      "deadlines_changed": false
+    },
+    {
+      "id": "ssl-chacha20-capability-identifier",
+      "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+      "path": "lib/ssl/test/openssl_cipher_suite_SUITE.erl",
+      "upstream_sha256": "3e411514de7846c12c5d5e5c617867ba8387d4c0ebc5b1c96628c8e83c7a6f82",
+      "modified_sha256": "6388623b197099af9172561b58ec30baf45870e11f136ce6f1a812f7d2c9f0c5",
+      "category": "test-capability-identifier-correction",
+      "changed_behavior": "The original TLS1.3 ChaCha20-Poly1305 interoperability case recognizes the crypto cipher atom already used by its unchanged testcase body, so the capability guard permits execution instead of falsely skipping.",
+      "rationale": "Pinned init_per_testcase probes chacha20_poly1305_sha256, while crypto:supports(ciphers) advertises chacha20_poly1305. Both candidate and exact original reference have that cipher and sha256; selected OpenSSL3.6.3 DEFAULT ciphers includes ChaCha20. Changing only this guard argument makes the exact helper return true in both runtimes.",
+      "relevant_cases": [
+        "openssl_cipher_suite_SUITE:chacha20_poly1305_sha256"
+      ],
+      "relevant_groups": [
+        [
+          "openssl_server",
+          "tlsv1.3",
+          "ecdhe_1_3_rsa_cert"
+        ],
+        [
+          "openssl_client",
+          "tlsv1.3",
+          "ecdhe_1_3_rsa_cert"
+        ]
+      ],
+      "assertions_changed": false,
+      "deadlines_changed": false,
+      "testcase_name_changed": false,
+      "testcase_body_sha256_unchanged": "8cb4a66115cc2e21e6808536bd3cd6f0062625f1e28a24ad0450729ff63b377c",
+      "recipe": {
+        "path": "lib/ssl/test/Makefile",
+        "sha256": "1ed416a32f42faa9bda7733444492fcedbcdf05f8962fe540dee762209a794c4"
+      },
+      "validation": [
+        {
+          "kind": "exact-original-and-corrected-capability-probe",
+          "evidence": "tmp/upstream-prep-dev/ssl-capability-probe/results.json",
+          "original_source_sha256": "3e411514de7846c12c5d5e5c617867ba8387d4c0ebc5b1c96628c8e83c7a6f82",
+          "helper_functions_sha256": "bd00960bb671d46b24cae929ba87fdd5e23892c367fece9a3b8b4a63bb4d276a",
+          "candidate_original": false,
+          "candidate_corrected": true,
+          "reference_original": false,
+          "reference_corrected": true,
+          "reference_metadata_sha256": "231c8c245385dffb9c165f09f3d8325e5e8ecdaf0146029bfbb84fed7abbbeb6",
+          "openssl": {
+            "name": "openssl",
+            "path": "/opt/homebrew/opt/openssl@3/bin/openssl",
+            "sha256": "103fc7706cf6646f226d96f29242d81890363499afc730e7ef1fadd64b3a123c",
+            "version": "3.6.3"
+          },
+          "scope": "Exact pinned supported_cipher/2 and /3 bodies, compiled in memory by each installed runtime compiler. Original/corrected CHACHA call differs only in crypto atom argument. No retained source changes or CT launch."
+        },
+        {
+          "kind": "preserved-original-ct-skips",
+          "event_file": "/Users/intjutsu/Workspace/beam-erlang/tmp/upstream-final-macos-jit/runs/20261108T224504Z-ed672884/ssl/ct-logs/events.jsonl",
+          "read_prefix_sha256": "02f22e7d0f25799f0624df6a866cc5f88e1e28125c95d71a7921b0dbfcc9e8fc",
+          "events": [
+            {
+              "data": [
+                "openssl_cipher_suite_SUITE",
+                "chacha20_poly1305_sha256",
+                [
+                  "skipped",
+                  "Missing CHACHA20_POLY1305 OpenSSL support"
+                ]
+              ],
+              "node": "upstream_5827089f53fc@macbook",
+              "event": "tc_done",
+              "data_erlang": "{openssl_cipher_suite_SUITE,chacha20_poly1305_sha256,{skipped,\"Missing CHACHA20_POLY1305 OpenSSL support\"}}",
+              "monotonic_us": -576460682202655
+            },
+            {
+              "data": [
+                "openssl_cipher_suite_SUITE",
+                "chacha20_poly1305_sha256",
+                [
+                  "skipped",
+                  "Missing CHACHA20_POLY1305 OpenSSL support"
+                ]
+              ],
+              "node": "upstream_5827089f53fc@macbook",
+              "event": "tc_done",
+              "data_erlang": "{openssl_cipher_suite_SUITE,chacha20_poly1305_sha256,{skipped,\"Missing CHACHA20_POLY1305 OpenSSL support\"}}",
+              "monotonic_us": -576460635912851
+            }
+          ]
+        },
+        {
+          "kind": "unchanged-case-ct-proof",
+          "status": "passed",
+          "evidence": "tmp/chacha-case-proof/receipt.json",
+          "evidence_sha256": "1aae1b9f2ede578461af674f443bdc8ebf7be3695e17829e57b56ab6e760f33d",
+          "candidate_prefix": "/Users/intjutsu/Workspace/beam-erlang/tmp/utf8-otp-macos-jit",
+          "reference_prefix": "/Users/intjutsu/Workspace/beam-erlang/tmp/upstream-reference-validation/install-jit/lib/erlang",
+          "sdk_build_id": "d592d56189879785f8f455e274c26b12ff7594c4efa16217dbcd9704928be9a4",
+          "sdk_runtime_sha256": "0cefde2e8f74bd37b33ff0fb5659bca48342f9009b66b78a8e7eb294a5a6218b",
+          "inherited_nofile": [
+            1048575,
+            9223372036854775807
+          ],
+          "candidate_counts": {
+            "auto_skipped": 0,
+            "failed": 0,
+            "passed": 2,
+            "user_skipped": 0
+          },
+          "reference_counts": {
+            "auto_skipped": 0,
+            "failed": 0,
+            "passed": 2,
+            "user_skipped": 0
+          },
+          "original_group_paths": [
+            [
+              "openssl_server",
+              "tlsv1.3",
+              "ecdhe_1_3_rsa_cert"
+            ],
+            [
+              "openssl_client",
+              "tlsv1.3",
+              "ecdhe_1_3_rsa_cert"
+            ]
+          ],
+          "cleanup_audits": "Both ready, no errors; real selected-executable/UID/job-token SIGTERM adapter explicitly installed; raw events retained.",
+          "artifacts_unchanged": true,
+          "scope": "Bounded proof of unchanged testcase after guard correction; no full SSL/product qualification claim."
+        },
+        {
+          "kind": "unchanged-case-ct-proof-direct-owned-cleanup",
+          "status": "passed",
+          "evidence": "tmp/chacha-case-proof-v2/receipt.json",
+          "evidence_sha256": "87be705bf385a0e0a590e829a0ea33c364d1bf0743a84b4a9800aacb1d1a2dbe",
+          "sdk_build_id": "d592d56189879785f8f455e274c26b12ff7594c4efa16217dbcd9704928be9a4",
+          "sdk_runtime_sha256": "0cefde2e8f74bd37b33ff0fb5659bca48342f9009b66b78a8e7eb294a5a6218b",
+          "candidate_counts": {
+            "auto_skipped": 0,
+            "failed": 0,
+            "passed": 2,
+            "user_skipped": 0
+          },
+          "reference_counts": {
+            "auto_skipped": 0,
+            "failed": 0,
+            "passed": 2,
+            "user_skipped": 0
+          },
+          "original_group_paths": [
+            [
+              "openssl_server",
+              "tlsv1.3",
+              "ecdhe_1_3_rsa_cert"
+            ],
+            [
+              "openssl_client",
+              "tlsv1.3",
+              "ecdhe_1_3_rsa_cert"
+            ]
+          ],
+          "adapter_sha256": "3f9eb274d0586e79721f3b789f03faaec33b5f5fbb22ac7e4ac64fcb225869c1",
+          "helper_sha256": "e17f926e2d505d1bff4e6954c3fbc711725bb9f10deab2f8d568d684dc46570d",
+          "cleanup_audits": "Both ready/no errors, explicit absolute spawn_executable guard and begin/completion audit; no PATH interception.",
+          "artifacts_unchanged": true,
+          "scope": "Bounded proof of unchanged testcase and complete original groups; no full qualification claim."
+        }
+      ]
+    },
+    {
+      "id": "ssl-not-started-private-endpoint",
+      "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+      "path": "lib/ssl/test/ssl_api_SUITE.erl",
+      "upstream_sha256": "f809cc1ab5d7c8caf1f00509dfd627147b4ed3b07d7ea55ec0cc25d8e83e4b9e",
+      "modified_sha256": "ce417657850b61db9fd16bdfd8ba6234b7d08d7e2d229593c78f9b4a744d5926",
+      "category": "test-setup",
+      "changed_behavior": "Use a configured reachable loopback TCP endpoint, retaining the original default port22 and both protocol assertions.",
+      "rationale": "The original case assumes TCP localhost:22 is listening. Both exact-original and candidate return econnrefused for TLS when that endpoint is closed, before reaching the SSL-not-started guard. Accept ssl_not_started_port Common Test configuration with original default22; the private harness supplies an owned reachable loopback TCP listener. Retain both protocol choices, all ssl_not_started/ok assertions, startup/stop behavior and deadlines.",
+      "relevant_cases": [
+        "ssl_api_SUITE:ssl_not_started"
+      ],
+      "assertions_changed": false,
+      "deadlines_changed": false,
+      "validation": [
+        {
+          "kind": "original-closed-endpoint-reproducer",
+          "evidence": "tmp/ssl-not-started-endpoint-proof/receipt.json"
+        },
+        {
+          "kind": "adapted-case-body-original-and-candidate",
+          "evidence": "tmp/ssl-not-started-endpoint-proof/service/receipt.json",
+          "scope": "The adapted source was compiled by exact-original reference erlc; its actual ssl_not_started body passes on both original and candidate using only ct_config server, no CT controller. Private socket/session cleanup and explicit user config override preservation also pass.",
+          "full_suite_status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "sasl-final-measurement-helper-lifecycle",
+      "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+      "path": "lib/sasl/test/release_handler_SUITE.erl",
+      "upstream_sha256": "4a90fc93671856ece5635a40616b599183a880985c04a4cafb3e95374f885c5d",
+      "modified_sha256": "19344a4f32c0a83cd1c71bc565ee45b7c0316547b623ff829de18ff50bca61cf",
+      "category": "behavioral-cleanup-correction",
+      "changed_behavior": "Normally terminate the final linked scheduler-wall-time helper after the unchanged performance assertion and before existing node cleanup.",
+      "rationale": "The final scheduler-wall-time helper remained linked and alive when existing node cleanup stopped its node. Both exact-original reference and candidate emitted four end_per_testcase EXIT noconnection failures although raw CT counters reported passing case bodies. Name the final helper PID, then only after the unchanged X2<=X0 performance assertion monitor it, send its existing die message, and await the exact monitor normal DOWN before existing node-stop cleanup. This adds a lifecycle/normal-termination protocol step; it is not merely endpoint or build setup.",
+      "relevant_cases": [
+        "release_handler_SUITE:otp_9395_update_many_mods in absolute/relative groups",
+        "release_handler_SUITE:otp_9395_rm_many_mods in absolute/relative groups"
+      ],
+      "assertions_changed": false,
+      "deadlines_changed": false,
+      "protocol_changed": true,
+      "unchanged": "Performance measurements and assertions, authored groups/cases, helper implementation, existing node-stop cleanup, and all deadlines. No mailbox draining, unlinking or forced termination.",
+      "validation": [
+        {
+          "kind": "preserved-original-candidate-callback-failures",
+          "evidence": "tmp/upstream-final-macos-emu/runs/20261108T224533Z-989ebd53/sasl/ct-logs/events.jsonl"
+        },
+        {
+          "kind": "preserved-exact-original-reference-failures",
+          "evidence": "tmp/sasl-original-cleanup-emu/receipt.json"
+        },
+        {
+          "kind": "byte-identical-private-correction-candidate-and-reference",
+          "evidence": "tmp/sasl-private-lifecycle-source/comparison.json",
+          "source_receipt": "tmp/sasl-private-lifecycle-source/receipt.json",
+          "result": "Exact-original emu and latest utf8 candidate emu each four passed, zero failed/skipped, no failed_events, complete JSONL and matching statistics.",
+          "full_suite_status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "ssl-owned-openssl-cleanup",
+      "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+      "category": "test-process-ownership-setup-adapter",
+      "path": "lib/ssl/test/ssl_test_lib.erl",
+      "upstream_sha256": "708a9668019953cd6a4a9fedfcb9e8aa7bea40c38f7a192f82abe6ed56f17df8",
+      "modified_sha256": "1abed97603445179eb0b44136ddec5479341752b04d40df0302ed4c6fc588eba",
+      "rationale": "Pinned kill_openssl used global pkill openssl. A PATH-only wrapper can fall through to the real global pkill when removed or made non-executable. The explicit absolute harness dispatch prevents that fallback, and exact process identity/token checks preserve only job-owned cleanup. Unsupported calls, inspection/signal errors, incomplete attempts and artifact/mode drift independently make qualification nonpassing. The loopback isolation requirement also covers per-test native OpenSSL peers. Original numeric s_server -accept values leave the host unspecified; original OCSP logs explicitly report wildcard [::] listening. This cumulative helper restricts s_server listener addresses to loopback while preserving all other arguments and protocol options. The selected3.6.3 OCSP CLI has no responder bind-address input and validates -port as numeric, so its responder launch is visibly refused before spawning as a service-isolation prerequisite. Non-listening OCSP request/client commands stay unchanged. Other SSL coverage remains runnable; missing OCSP coverage is never NA/pass.",
+      "adapter": {
+        "path": "tests/upstream/support/upstream_processes.py",
+        "sha256": "3f9eb274d0586e79721f3b789f03faaec33b5f5fbb22ac7e4ac64fcb225869c1"
+      },
+      "relevant_cases": [
+        "openssl_ECC_SUITE:init_per_suite",
+        "openssl_ECC_SUITE:end_per_suite",
+        "openssl_alpn_SUITE:init_per_suite",
+        "openssl_alpn_SUITE:end_per_suite",
+        "openssl_cipher_suite_SUITE:init_per_suite",
+        "openssl_cipher_suite_SUITE:end_per_suite",
+        "openssl_client_cert_SUITE:init_per_suite",
+        "openssl_client_cert_SUITE:end_per_suite",
+        "openssl_key_update_SUITE:init_per_suite",
+        "openssl_key_update_SUITE:end_per_suite",
+        "openssl_mfl_SUITE:init_per_suite",
+        "openssl_mfl_SUITE:end_per_suite",
+        "openssl_npn_SUITE:init_per_suite",
+        "openssl_npn_SUITE:end_per_suite",
+        "openssl_reject_SUITE:init_per_suite",
+        "openssl_reject_SUITE:end_per_suite",
+        "openssl_renegotiate_SUITE:init_per_suite",
+        "openssl_renegotiate_SUITE:end_per_suite",
+        "openssl_server_cert_SUITE:init_per_suite",
+        "openssl_server_cert_SUITE:end_per_suite",
+        "openssl_session_SUITE:init_per_suite",
+        "openssl_session_SUITE:end_per_suite",
+        "openssl_session_ticket_SUITE:init_per_suite",
+        "openssl_session_ticket_SUITE:end_per_suite",
+        "openssl_sni_SUITE:init_per_suite",
+        "openssl_sni_SUITE:end_per_suite",
+        "openssl_stapling_SUITE:init_per_suite",
+        "openssl_stapling_SUITE:end_per_suite",
+        "openssl_tls_1_3_version_SUITE:init_per_suite",
+        "openssl_tls_1_3_version_SUITE:end_per_suite",
+        "ssl_mfl_SUITE:init_per_suite",
+        "ssl_mfl_SUITE:end_per_suite",
+        "ssl_test_lib:kill_openssl/0",
+        "ssl_test_lib:portable_open_port/2",
+        "ssl_test_lib:openssl_tls_version_support/2",
+        "openssl_reject_SUITE:erlang_client_bad_openssl_server/1",
+        "openssl_stapling_SUITE:init_per_testcase/2"
+      ],
+      "assertions_changed": false,
+      "deadlines_changed": false,
+      "source_helper_changed": true,
+      "validation": [
+        {
+          "kind": "actual-helper-positive-and-missing-nonexecutable-guard-negative",
+          "evidence": "tmp/owned-cleanup-helper-proof-v2/receipt.json",
+          "result": "Both frozen candidate and exact original reference: owned fixture SIGTERM/-15; different-job/tokenless same-UID fixtures survive; nonexec=eacces, missing=enoent, incomplete config raises setup error; all fixtures reaped."
+        },
+        {
+          "kind": "real-native-adapter-positive-and-unrelated-process-negative",
+          "evidence": "tmp/owned-cleanup-native-proof-v2/receipt.json",
+          "result": "Native SIGTERM targeting/survivor proof and unsupported-form failure propagation passed; superseded adapter version before explicit helper dispatch retained as historical evidence."
+        },
+        {
+          "kind": "focused-regression-tests",
+          "result": "9 cleanup and22 report methods passed, including incomplete audit and mode drift;22 runner tests passed with1 optional CT skipped."
+        },
+        {
+          "kind": "unchanged-original-case-and-authored-groups-final-dispatch",
+          "evidence": "tmp/chacha-case-proof-v2/receipt.json",
+          "result": "Candidate2/0/0 and exact original reference2/0/0; final absolute guard dispatch, clean begin/completion receipts, and VM/OpenSSL/helper/suite/adapter bytes unchanged."
+        },
+        {
+          "kind": "read-only-loopback-and-selected-OCSP-interface-audit",
+          "evidence": "tmp/ssl-loopback-launch-private-v2/proposal.json",
+          "status": "confirmed-source-and-historical-evidence",
+          "result": "Original eight s_server numeric accept expressions all use portable helper. Historical OCSP log reports ACCEPT [::]:63442. Exact selected3.6.3 primary source types-port as numeric and server initialization does not receive client-host. No legitimate hosted-port fix is claimed."
+        },
+        {
+          "kind": "cumulative-source-stage-execution-guard",
+          "evidence": "tmp/ssl-loopback-launch-private-v2/guard-proof.json",
+          "status": "five-inert-boundaries-passed",
+          "result": "New cumulative source and staged execution policy accepted; previous cleanup-only helper, original pinned helper, stale staged helper and stale execution policy rejected. Fixture/controller process spawning disabled; synthetic declared bytecode only."
+        },
+        {
+          "kind": "actual-helper-unit-native-binding-and-raw-prerequisite-classification",
+          "evidence": "tmp/ssl-loopback-launch-private-v2/openssl_loopback_args_tests.erl",
+          "status": "pending",
+          "result": "Twelve direct-helper EUnit methods are draft only. Future positive TCPIPv4/IPv6/DTLS s_server proof must inspect literal listener addresses by exact ownedPID. OCSP dispatch must refuse before any native process, and unchanged original responder cases must produce the exact source-derived prerequisite marker for closed classification. Existing cleanup regression and focused original cases remain pending."
+        },
+        {
+          "evidence": "tmp/slb/001/receipt.json",
+          "sha256": "497cbff89295070f10523c64c78f9f3a1d6013f4b78e1291555fd7d77799a034",
+          "kind": "actual-helper-and-native-loopback-original-callback",
+          "status": "validated-with-blocked-OCSP-coverage",
+          "result": "Candidate and exact reference each pass12 direct actual-helper units and normal-export no-spawn boundary. Six native IPv4TLS/IPv6TLS/IPv4DTLS handshakes with verify_peer pass; ownedPID+lsof show only requestedloopback addresses. Original staple_by_issuer on each runtime remains0passed/0failed/0user/1auto: exact loopback prerequisite marker before responder launch. All3owner-token inventories0survivors/errors; frozenprefix/input/profile/tool hashes unchanged. Earlier readiness/certificate/omittedhelper probe failures retained separately; not counted as product outcomes."
+        }
+      ],
+      "limitations": [
+        "Linux native backend remains untested until exported v4 run.",
+        "Only the pinned Unix OpenSSL cleanup form is supported; unsupported forms fail.",
+        "No full upstream qualification claim.",
+        "Selected OpenSSL3.6.3 exposes no supported public OCSP responder bind-address control. Responder-required coverage remains a service-isolation prerequisite gap; no wildcard fallback, responder replacement, loader interposition or acquisition is implied.",
+        "New cumulative helper has not yet been compiled or executed. Its source-scope guard proof is not native/binding/protocol validation. Only current macOS26+ emu follow-up is in scope; other configurations remain untested."
+      ],
+      "changed_behavior": "Within the harness, dispatch cleanup to the configured absolute executable using spawn_executable. Missing/non-executable guard and incomplete owner/guard configuration fail without PATH search. Outside the harness, retain the original command. The real adapter narrows SIGTERM to selected executable/current UID/job token and records completion; cases, groups, assertions and deadlines remain unchanged. Native s_server launches through portable_open_port now use family-compatible loopback listening, retaining literal compatible loopback values. Both literal and absolute-basename OpenSSL dispatch apply the same setup. Explicit wildcard/nonloopback or ambiguous address choices fail visibly rather than changing an address assertion. OCSP responder mode raises {openssl_loopback_prerequisite,ocsp_responder_loopback_bind_unavailable} before open_port; request/client/file commands are forwarded unchanged. Erlang SSL/DTLS address and multi-bind fixtures are untouched.",
+      "source_history": [
+        {
+          "previous_modified_sha256": "e17f926e2d505d1bff4e6954c3fbc711725bb9f10deab2f8d568d684dc46570d",
+          "meaning": "Previously validated cleanup-only helper. Existing cleanup implementation/adapter identity/rationale and all four prior validation records are retained; new loopback setup requires separate proof."
+        },
+        {
+          "rejected_private_design": "tmp/ssl-loopback-launch-private/rejection.json",
+          "meaning": "Uncompiled/unexecuted hosted OCSP-port proposal rejected from exact selected-version primary source; never applied or validated."
+        }
+      ],
+      "implementation_status": "source applied; actual helper/binding/original blocked-callback proof complete; fresh product/fullSSL rerun pending"
+    },
+    {
+      "id": "ssh-sftpd-suite-cleanup-contract",
+      "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+      "path": "lib/ssh/test/ssh_sftpd_SUITE.erl",
+      "upstream_sha256": "f11bcf0a23098c0fa97e7a74631e51bb2e983dbe1a2550e32928c4f41ed6cda3",
+      "modified_sha256": "f1dbefceb6320ba57f48e7297dc99b8d905e10a67c004ce41113a83c90407e5b",
+      "category": "callback-contract-correction",
+      "changed_behavior": "Return ok only when SSH app stop succeeds or it is exactly already stopped; reject every unexpected reply.",
+      "rationale": "Per-testcase cleanup already stops the SSH application. Both exact-original and candidate return {error,{not_started,ssh}} from end_per_suite, emitted as two raw callback failures although both selected case bodies pass. Accept only ok or the exact already-stopped SSH result and return ok; every unexpected reply still fails by case_clause. This explicitly corrects the cleanup callback contract and does not alter testcase assertions, wire/authentication protocols or deadlines.",
+      "relevant_cases": [
+        "ssh_sftpd_SUITE:end_per_suite",
+        "ssh_sftpd_SUITE:relative_root"
+      ],
+      "assertions_changed": false,
+      "deadlines_changed": false,
+      "protocol_changed": false,
+      "callback_contract_changed": true,
+      "validation": [
+        {
+          "kind": "preserved-original-callback-state",
+          "evidence": "tmp/upstream-reference-validation/ssh-cleanup-callback-proof/receipt.json"
+        },
+        {
+          "kind": "real-ct-baseline-and-private-correction",
+          "evidence": "tmp/ssh-private-cleanup-source/comparison.json",
+          "cases": [
+            "ssh_options_SUITE:server_password_option",
+            "ssh_sftpd_SUITE:relative_root"
+          ],
+          "result": "Each original/candidate baseline has two passing bodies plus two raw callback failures; each private correction is strict two passed, zero failures/skips and zero failed_events.",
+          "full_suite_status": "pending"
+        },
+        {
+          "kind": "actual-callback-states-and-unexpected-reply-rejection",
+          "evidence": "tmp/ssh-private-cleanup-source/reply-filter-proof.json",
+          "result": "Both actual callbacks accept started/already-stopped application states on original and candidate. Extracted actual compiled case AST has exactly two clauses and rejects five unexpected replies with case_clause."
+        }
+      ]
+    },
+    {
+      "assertions_changed": false,
+      "category": "test-setup",
+      "deadlines_changed": false,
+      "id": "hash-functional-group-valid-config",
+      "modified_sha256": "8645a0f54adc823daa45ec6be86893236d813fcb3c6900940eb78abc9c0e6273",
+      "path": "erts/emulator/test/hash_SUITE.erl",
+      "rationale": "The exact pinned Common Test callback validator rejects non-tuple Config elements. Original hash_SUITE group setup inserted a bare atom, causing all14 functional group cases to auto-skip before their assertions. The two-line correction preserves all expected hashes, all cases, one iteration and original deadlines.",
+      "relevant_cases": [
+        "hash_SUITE:phash2_benchmark_tests (all14 cases)"
+      ],
+      "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+      "upstream_sha256": "0a2f6788da86e4618f26f3ea8fef4f01a962d9b54cf0f06a6014a44f9e441b15",
+      "changed_behavior": "Represent the existing functional benchmark-group marker as a valid {phash2_benchmark_tests,true} proplist tuple and use proplists:get_bool to preserve the existing one-iteration behavior.",
+      "validation": [
+        {
+          "evidence": "tmp/otp21-linux-arm64/hash-private-proof.json",
+          "result": "Corrected-SDK candidates and exact original references in both jit/emu each reproduce14 original bad_return automatic skips; private proposed source then passes all14 cases with0 failures/skips. All retained source remains unchanged; overlay changes only this suite and its private exact-hash ledger."
+        }
+      ]
+    },
+    {
+      "id": "erl-call-localhost-startup-fallback",
+      "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+      "path": "lib/erl_interface/src/prog/erl_call.c",
+      "upstream_sha256": "4a498bb30e950a4778a93e920c4c5129698bd1370e5c0a3eaa81d4faca89cc67",
+      "modified_sha256": "d98d9602d406ccf1495a96fdd6e6f099ede6b28014c2b5af74307401c78773dd",
+      "category": "product-defect",
+      "assertions_changed": false,
+      "deadlines_changed": false,
+      "changed_behavior": "Honor erl_call\u2019s existing same-host localhost fallback when starting a node; carry that decision through the startup-address lookup, check lookup failure, and copy resolver-owned address bytes before fork/subsequent lookups. Unresolved other hosts still fail with a diagnostic. No public EI API change.",
+      "rationale": "On this macOS host the native hostname does not resolve. Original candidate and exact original-reference commands both terminate before starting a node; all six unchanged erl_call cases then fail their cleanup ping. Startup ignored the fallback already selected by main/ei_connect. After resolving that omission, borrowed resolver storage was observed as0.0.0.0 in the child; preserving an owned address fixes local startup without host resolver changes.",
+      "relevant_cases": [
+        "erl_call_SUITE:smoke",
+        "erl_call_SUITE:random_cnode_name",
+        "erl_call_SUITE:test_connect_to_host_port",
+        "erl_call_SUITE:unresolvable_hostname",
+        "erl_call_SUITE:timeout",
+        "erl_call_SUITE:test_fetch_stdout"
+      ],
+      "validation": [
+        {
+          "evidence": "tmp/ei-start-fallback-proof/baseline-comparison.json",
+          "result": "Unmodified candidate and exact original reference each reproduce six failures and a direct native exit by signal11; source and canonical installations remain unchanged."
+        },
+        {
+          "evidence": "tmp/ei-start-fallback-proof/connect-only-comparison.json",
+          "result": "First incomplete private correction preserves a further startup-address failure; not accepted as successful."
+        },
+        {
+          "evidence": "tmp/ei-start-fallback-proof/patched-comparison.json",
+          "result": "Carrying fallback to both lookup sites still exposes an address-lifetime failure; both six-case runs remain failing and are preserved."
+        },
+        {
+          "evidence": "tmp/ei-start-fallback-proof/candidate-local-start-debug/result.json",
+          "result": "Task-owned verbose startup records a wrong0.0.0.0 target after resolver storage reuse; loopback reply address remains127.0.0.1."
+        },
+        {
+          "evidence": "tmp/ei-start-fallback-proof/owned-address-comparison.json",
+          "result": "Final private candidate and corrected-reference experiment each pass all six unchanged cases, direct local startup succeeds, an unresolved other target fails without a signal, and owned cleanup reports no survivors."
+        },
+        {
+          "evidence": "tmp/ei-start-fallback-proof/native/owned-address/build-receipt.json",
+          "result": "Original candidate CMake and original-reference Make compiler/link flags and matching installed EI libraries recorded. No test assertions, deadlines, resolver settings or stable APIs changed. Linux and Windows validation of this native correction remain pending."
+        }
+      ]
+    },
+    {
+      "id": "ssl-reject-duplicate-stop-cleanup",
+      "path": "lib/ssl/test/ssl_reject_SUITE.erl",
+      "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+      "upstream_sha256": "e72de7790ae5884c3814d8a4848b2fadaba240cb614d6f8105b891614e4e8fed",
+      "modified_sha256": "0ca83e8e4b612e4c129e5ec4cfc0faedc0fd401d2eb44e76b0638326576e95da",
+      "rationale": "Preserve ssl:stop(), application:stop(crypto), then application:stop(ssl). ssl:stop/0 already stops SSL, so the final repeated stop returns exact {error,{not_started,ssl}} on both original and candidate runtimes. Accept only that benign duplicate-stop reply or ok; unexpected replies still fail. This corrects only the cleanup callback result, preserving case bodies, protocols, all three calls/order and deadlines.",
+      "relevant_cases": [
+        "ssl_reject_SUITE:end_per_suite/1",
+        "ssl_reject_SUITE TLS1.3 group: reject_prev, reject_sslv2, reject_sslv3, accept_sslv3_record_hello"
+      ],
+      "category": "test-cleanup",
+      "changed_behavior": "Return ok only for the original final SSL stop returning ok or exact {error,{not_started,ssl}}. Preserve every stop call and its order; reject unexpected final replies.",
+      "assertions_changed": false,
+      "deadlines_changed": false,
+      "protocols_changed": false,
+      "stop_calls_order_unchanged": true,
+      "validation": [
+        {
+          "evidence": "tmp/sr-cleanup/receipt.json",
+          "sha256": "a8421198cbb3ab3807fff5555214718fcf2368fa6b21e80836a61d5579020d57",
+          "result": "Original candidate and exact original reference each pass4 original TLS1.3 bodies but report one failed end_per_suite callback. Corrected private sources each pass4/0/0/0 with no failed callbacks; both started/already-stopped states and four unexpected reply rejections verified. Prefixes unchanged; every explicit owned OpenSSL cleanup audit ready with0signals."
+        }
+      ],
+      "full_suite_status": "pending"
+    },
+    {
+      "id": "ct-repeat-calibration-microseconds",
+      "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+      "path": "lib/common_test/test/ct_repeat_testrun_SUITE.erl",
+      "upstream_sha256": "f3882f6bce47020ad04631ab8b14e65e1384a0eac18e265266ea9f676c36fa57",
+      "modified_sha256": "e8716c20474bf0228b138a62af30fa1926a51f5b249967fab214a066c1821e1e",
+      "category": "behavioral-test-fixture-correction",
+      "changed_behavior": "Restore the pre-2020 26,000,000-microsecond calibration limit and its logging-overhead diagnostic. The original 5,000-microsecond limit skips every case before assertions run.",
+      "rationale": "Upstream commit 0acd20f80302b117c6a547d57abaf1c8477aedfd reduced fixture sleeps and changed the microsecond calibration limit without updating the authored duration/until expectations. Restore its parent timing design while retaining current pinned case bodies, event assertions and force-stop protocols. This is an explicit behavioral fixture correction, not a platform exemption.",
+      "relevant_cases": [
+        "ct_repeat_testrun_SUITE:repeat_n",
+        "ct_repeat_testrun_SUITE:duration",
+        "ct_repeat_testrun_SUITE:duration_force_stop",
+        "ct_repeat_testrun_SUITE:duration_force_stop_skip_rest",
+        "ct_repeat_testrun_SUITE:duration_force_stop_skip_rest_group",
+        "ct_repeat_testrun_SUITE:until",
+        "ct_repeat_testrun_SUITE:until_force_stop",
+        "ct_repeat_testrun_SUITE:until_force_stop_skip_rest",
+        "ct_repeat_testrun_SUITE:until_force_stop_skip_rest_group"
+      ],
+      "assertions_changed": false,
+      "case_selection_changed": false,
+      "case_deadlines_changed": false,
+      "calibration_limit_changed": true,
+      "fixture_sleep_changed": false,
+      "event_protocol_changed": false,
+      "historical_timing_parent": "c8b1f98b92f05a80a2ba8c9bcd9675f135f49f2d",
+      "validation": [
+        {
+          "scope": "Complete nine-case repeat suite, including both authored ct:run_test and ct_run:script_start interfaces; full Common Test application rerun pending",
+          "evidence": "tmp/rp-proof-v2/receipt.json",
+          "evidence_sha256": "821d112f1c3f8ed3b2de7d038ddeba7fcd6bc7a49e5f978715798bdbea030107",
+          "configuration": "macOS arm64 emu",
+          "input_profile_sha256": "59c6d8796cf8c0b4fc578b59902e44d5b795916e74747000dd2bc048d052f2aa",
+          "original_candidate_counts": {
+            "failed": 0,
+            "passed": 0,
+            "user_skipped": 9,
+            "auto_skipped": 0
+          },
+          "original_reference_counts": {
+            "failed": 0,
+            "passed": 0,
+            "user_skipped": 9,
+            "auto_skipped": 0
+          },
+          "corrected_candidate_counts": {
+            "failed": 0,
+            "passed": 9,
+            "user_skipped": 0,
+            "auto_skipped": 0
+          },
+          "corrected_reference_counts": {
+            "failed": 0,
+            "passed": 9,
+            "user_skipped": 0,
+            "auto_skipped": 0
+          },
+          "ownership_cleanup": "ready; zero remaining owned processes",
+          "artifacts_unchanged": true,
+          "calibration_boundary": "Accept 26000000us; reject 26000001us. Larger calibration remains a nonpassing gap."
+        }
+      ]
+    },
+    {
+      "id": "ct-repeat-original-fixture-timing",
+      "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+      "path": "lib/common_test/test/ct_repeat_testrun_SUITE_data/a_test/r1_SUITE.erl",
+      "upstream_sha256": "9a928e21e5bb6361b9944c1af9afcd625a54c91d79610e36555b7d7ad6ce0f93",
+      "modified_sha256": "de22f2fa1f4a76d8281619630d1a4988dfa4d38e3edbcd508a8d9ab8f1919d39",
+      "category": "behavioral-test-fixture-correction",
+      "changed_behavior": "Restore the pre-2020 ct:sleep(10000) fixture. The retained 30/9/19-second repeat budgets and event expectations require two ten-second sleeps per complete inner run.",
+      "rationale": "Upstream commit 0acd20f80302b117c6a547d57abaf1c8477aedfd reduced fixture sleeps and changed the microsecond calibration limit without updating the authored duration/until expectations. Restore its parent timing design while retaining current pinned case bodies, event assertions and force-stop protocols. This is an explicit behavioral fixture correction, not a platform exemption.",
+      "relevant_cases": [
+        "ct_repeat_testrun_SUITE:repeat_n",
+        "ct_repeat_testrun_SUITE:duration",
+        "ct_repeat_testrun_SUITE:duration_force_stop",
+        "ct_repeat_testrun_SUITE:duration_force_stop_skip_rest",
+        "ct_repeat_testrun_SUITE:duration_force_stop_skip_rest_group",
+        "ct_repeat_testrun_SUITE:until",
+        "ct_repeat_testrun_SUITE:until_force_stop",
+        "ct_repeat_testrun_SUITE:until_force_stop_skip_rest",
+        "ct_repeat_testrun_SUITE:until_force_stop_skip_rest_group"
+      ],
+      "assertions_changed": false,
+      "case_selection_changed": false,
+      "case_deadlines_changed": false,
+      "calibration_limit_changed": false,
+      "fixture_sleep_changed": true,
+      "event_protocol_changed": false,
+      "historical_timing_parent": "c8b1f98b92f05a80a2ba8c9bcd9675f135f49f2d",
+      "validation": [
+        {
+          "scope": "Complete nine-case repeat suite, including both authored ct:run_test and ct_run:script_start interfaces; full Common Test application rerun pending",
+          "evidence": "tmp/rp-proof-v2/receipt.json",
+          "evidence_sha256": "821d112f1c3f8ed3b2de7d038ddeba7fcd6bc7a49e5f978715798bdbea030107",
+          "configuration": "macOS arm64 emu",
+          "input_profile_sha256": "59c6d8796cf8c0b4fc578b59902e44d5b795916e74747000dd2bc048d052f2aa",
+          "original_candidate_counts": {
+            "failed": 0,
+            "passed": 0,
+            "user_skipped": 9,
+            "auto_skipped": 0
+          },
+          "original_reference_counts": {
+            "failed": 0,
+            "passed": 0,
+            "user_skipped": 9,
+            "auto_skipped": 0
+          },
+          "corrected_candidate_counts": {
+            "failed": 0,
+            "passed": 9,
+            "user_skipped": 0,
+            "auto_skipped": 0
+          },
+          "corrected_reference_counts": {
+            "failed": 0,
+            "passed": 9,
+            "user_skipped": 0,
+            "auto_skipped": 0
+          },
+          "ownership_cleanup": "ready; zero remaining owned processes",
+          "artifacts_unchanged": true,
+          "calibration_boundary": "Accept 26000000us; reject 26000001us. Larger calibration remains a nonpassing gap."
+        }
+      ]
+    },
+    {
+      "id": "public-key-bad-date-renew-expired-ancestor",
+      "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+      "path": "lib/public_key/test/public_key_SUITE_data/bad_date_certchain.pem",
+      "upstream_sha256": "cd626b621577cfab3b1b3651970a5b09c380f71480235b5fd50ce448fb652eae",
+      "modified_sha256": "1ff078d77b7c138d383fdc766e7a10ecf0e13e8953b666f9ce971227f2d13f09",
+      "category": "expired-test-fixture-correction",
+      "changed_behavior": "Renew the root validity through 2036-05-24, substitute the existing pinned RSA4096 test key, update root key identifiers and re-sign the first intermediate with its matching authority identifier. Certificate3 and the deliberately malformed leaf, including their complete original PEM tail, remain byte-identical.",
+      "rationale": "The original root expired on 2026-05-24 and now makes the unchanged bad-date case fail with cert_expired before reaching its intended invalid_validity_dates assertions. Two-certificate reissuance restores the original test purpose without changing the host clock, system trust, case code or verify_fun.",
+      "relevant_cases": [
+        "public_key_SUITE:pkix_path_validation_bad_date"
+      ],
+      "assertions_changed": false,
+      "case_source_changed": false,
+      "deadlines_changed": false,
+      "case_source_sha256": "9057a57a2a26ce37129f34747089d47b77c6dd5ef417304e25d776d48d5c96fe",
+      "test_key": {
+        "path": "lib/tools/test/crashdump_SUITE_data/rsa_key.pem",
+        "block": 1,
+        "source_sha256": "b154263c036396652f5a5bcc6c3c94313d893fa0da65e255fa6fde4d1a4592d2",
+        "private_block_sha256": "dca0e1b48d73d3ad9b89101f2f5a890291993f8fb96d60ab5f1fcbad92332ec6",
+        "spki_sha256": "f42552a63cee9a2ba670804e590ed4af05d2f939e85d82a8d2e035c0ab42608c",
+        "bits": 4096,
+        "source_matches_pin": true
+      },
+      "key_generation": false,
+      "system_trust_or_clock_changes": false,
+      "unchanged_downstream_der_sha256": [
+        "5be67caf70af550f6f93705a6cbd7cc22f6b4ec9415f96230045d59d47618458",
+        "e7f1a8258f17e0411e9f7c6c82dac07f82f75750b9253597abcd0820cd554c26"
+      ],
+      "unchanged_downstream_pem_tail": true,
+      "remaining_fixture_horizon": "The unchanged intermediates expire in April2029; the renewed root does not extend their validity.",
+      "recipe": {
+        "evidence": "tmp/upstream-reference-validation/bad-date-two-cert-proposal/reissue_two_certificates.py",
+        "sha256": "5033fe6dae62703f5e5dd6b4d2a1a8bf54f243557161e56d3d859f4aabc5f7c1",
+        "provenance_sha256": "f633f99d32c902ddc4a4aa6e058f60158e2b4e52936eb4815093077e69fdd177"
+      },
+      "validation": [
+        {
+          "scope": "Both original assertions and verify_fun, same original120000ms deadline; full PublicKey application rerun pending",
+          "evidence": "tmp/otp26-pkix-bad-date-two-cert-proof-v2/runs/receipt.json",
+          "evidence_sha256": "8ca479e00ea76f8db790e827e3a78074ba05c29c3c7414bddbecaf9f40f73a4d",
+          "configuration": "macOS arm64 emu",
+          "old_fixture_candidate_and_reference": "0pass/1rawfail/0skips; exact original cert_expired badmatch preserved",
+          "renewed_fixture_candidate_and_reference": "1pass/0fail/0skips; no failed callbacks or severe errors",
+          "artifact_hashes_unchanged": true,
+          "cleanup": "all six owned compiler/controller process groups independently verified empty"
+        }
+      ]
+    },
+    {
+      "id": "os-mon-cpu-sup-owned-port-pid",
+      "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+      "path": "lib/os_mon/test/cpu_sup_SUITE.erl",
+      "upstream_sha256": "6aa03b261b4094d0b94949c220daee3c8f3da9af3f82ef01ac96f7857d472e4d",
+      "modified_sha256": "f50b7e4210c78933ab935430dcbee9c8ddff9f417ade30ce2132b85b028fbf8c",
+      "category": "test-service-ownership-setup",
+      "changed_behavior": "Select the task VM registered OSMon service port rather than the first host ps/grep process name match; revalidate port identity immediately before the unchanged kill -9.",
+      "rationale": "Original Darwin-selected port case can signal an unrelated same-named host process. Only the exact port name, connected Erlang owner, unique live OS PID and pinned service ownership chain are eligible. Missing/ambiguous ownership remains nonpassing; no applicability exemption.",
+      "relevant_cases": [
+        "cpu_sup_SUITE:port"
+      ],
+      "assertions_changed": false,
+      "deadlines_changed": false,
+      "validation": [
+        {
+          "kind": "static-source-preservation",
+          "evidence": "/Users/intjutsu/Workspace/beam-erlang/tmp/os-mon-owned-port-private/static.stderr.log",
+          "result": "5 static checks pass; existing kill9, monitor/restart assertions and deadlines unchanged."
+        },
+        {
+          "kind": "runtime-owner-boundary-proof",
+          "evidence": "/Users/intjutsu/Workspace/beam-erlang/tmp/os-mon-owned-port-private/runtime-proof-summary.json",
+          "evidence_sha256": "2cecba418411d050af9397b63660ca5d6e734f260f48cb89b09ba69006bb6e30",
+          "raw_receipt": "/Users/intjutsu/Workspace/beam-erlang/tmp/os-mon-owned-port-private/runtime-attempt-003/receipt.json",
+          "raw_receipt_sha256": "9cd7356624308953c1ba1d87293de93b5ea91ac81fe79030ee56d4d57ff88711",
+          "result": "Candidate and exact original reference each2passed/0failed/0skipped;41 pure rejection checks each; same-name real witness helpers survive exact native identity checks; no failed callbacks, complete matching CT statistics, cleanup zero survivors/errors.",
+          "scope": "Two bounded cases, private observation-only CTH/+export_all; no full-suite qualification claim."
+        },
+        {
+          "kind": "preserved-original-CPU-postkill-timeout",
+          "evidence": "/Users/intjutsu/Workspace/beam-erlang/tmp/os-mon-owned-port-private/cpu-after-diagnostic-003/receipt.json",
+          "evidence_sha256": "b61204692e560b25424bca5866d4a33245e1fba933fe8ed10e31e5c4f3825df1",
+          "result": "Both originalcase bodies returnok while tracedN2 is{error,timeout}; originaltermcomparisonassertion unchanged. Async measurementreplacement explains immediate postselector absence; repeated selectors later succeed on the same newhelper. No assertion/productfix."
+        }
+      ]
+    },
+    {
+      "id": "os-mon-disksup-owned-port-pid",
+      "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+      "path": "lib/os_mon/test/disksup_SUITE.erl",
+      "upstream_sha256": "44fc0986913b3b26d45aaa528bb1e1939a3c258e4b835d8056d0d448dcbb6144",
+      "modified_sha256": "fefc00dbb9708c897e5d1a2c334ef09a34b4f51740e87c6566c2f6d74dbda4d7",
+      "category": "test-service-ownership-setup",
+      "changed_behavior": "Select the task VM registered OSMon service port rather than the first host ps/grep process name match; revalidate port identity immediately before the unchanged kill -9.",
+      "rationale": "Original Darwin-selected port case can signal an unrelated same-named host process. Only the exact port name, connected Erlang owner, unique live OS PID and pinned service ownership chain are eligible. Missing/ambiguous ownership remains nonpassing; no applicability exemption.",
+      "relevant_cases": [
+        "disksup_SUITE:port"
+      ],
+      "assertions_changed": false,
+      "deadlines_changed": false,
+      "validation": [
+        {
+          "kind": "static-source-preservation",
+          "evidence": "/Users/intjutsu/Workspace/beam-erlang/tmp/os-mon-owned-port-private/static.stderr.log",
+          "result": "5 static checks pass; existing kill9, monitor/restart assertions and deadlines unchanged."
+        },
+        {
+          "kind": "runtime-owner-boundary-proof",
+          "evidence": "/Users/intjutsu/Workspace/beam-erlang/tmp/os-mon-owned-port-private/runtime-proof-summary.json",
+          "evidence_sha256": "2cecba418411d050af9397b63660ca5d6e734f260f48cb89b09ba69006bb6e30",
+          "raw_receipt": "/Users/intjutsu/Workspace/beam-erlang/tmp/os-mon-owned-port-private/runtime-attempt-003/receipt.json",
+          "raw_receipt_sha256": "9cd7356624308953c1ba1d87293de93b5ea91ac81fe79030ee56d4d57ff88711",
+          "result": "Candidate and exact original reference each2passed/0failed/0skipped;41 pure rejection checks each; same-name real witness helpers survive exact native identity checks; no failed callbacks, complete matching CT statistics, cleanup zero survivors/errors.",
+          "scope": "Two bounded cases, private observation-only CTH/+export_all; no full-suite qualification claim."
+        },
+        {
+          "kind": "preserved-original-CPU-postkill-timeout",
+          "evidence": "/Users/intjutsu/Workspace/beam-erlang/tmp/os-mon-owned-port-private/cpu-after-diagnostic-003/receipt.json",
+          "evidence_sha256": "b61204692e560b25424bca5866d4a33245e1fba933fe8ed10e31e5c4f3825df1",
+          "result": "Both originalcase bodies returnok while tracedN2 is{error,timeout}; originaltermcomparisonassertion unchanged. Async measurementreplacement explains immediate postselector absence; repeated selectors later succeed on the same newhelper. No assertion/productfix."
+        }
+      ]
+    },
+    {
+      "id": "ssh-hybrid-preserve-raw-x25519-secret",
+      "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+      "path": "lib/ssh/src/ssh_transport.erl",
+      "upstream_sha256": "a28fbef9eda3296cd18700d83c4e467fbdfb3c8c3cdfec1830f921786fea1bd9",
+      "modified_sha256": "68e0fb653e0a837fd60f320230395686277d4c4594d58f3ed7452a22bf549bc3",
+      "category": "product-protocol-correction",
+      "changed_behavior": "In hybrid_common/4 only, concatenate the raw binary returned by crypto:compute_key(ecdh,...,x25519) with the post-quantum secret before the existing SHA-256 operation. Remove the lossy integer-to-SSH-mpint-and-last32 reconstruction from the hybrid path.",
+      "rationale": "The pinned generic compute_key/4 converts the raw 32-byte X25519 result to an unsigned integer. ssh_bits:mpint/1 then emits a minimal signed integer plus a 4-byte length. When a raw secret starts 0x00 and its next byte is below 0x80, its minimal content is shorter than 32 bytes; taking the last 32 bytes can incorporate the mpint length field. The deterministic example 000102...1f becomes1f0102...1f, so the hybrid KDF hashes different bytes. Keeping the original crypto binary avoids this conversion while preserving crypto validation/errors. Independent byte/ladders and actual installed Crypto evidence confirm this defect. Two old-runtime raw failures are preserved, and the private corrected helper passes identical assertions in both runtimes. The rebuilt product now passes the installed regression in ordinary, relocated and producer-isolated bounded checks. Full SSH and external interoperability remain pending.",
+      "preserved_behavior": [
+        "Generic compute_key/4 integer helper and all traditional DH/ECDH callers remain byte-identical.",
+        "Public exports and public API remain unchanged; hybrid_common/4 remains private.",
+        "Supported/default algorithms, key negotiation, KEM operations and existing SHA-256 selection remain unchanged.",
+        "Upstream suites, assertions, callbacks, case selection, deadlines and protocol options remain unchanged.",
+        "No BEAM/SDK/VM/native Crypto implementation or external-runtime boundary change."
+      ],
+      "assertions_changed": false,
+      "deadlines_changed": false,
+      "case_selection_changed": false,
+      "public_exports_changed": false,
+      "relevant_cases": [
+        "otp_probe_tests:ssh_hybrid_raw_secret_test (passed against the rebuilt installed product in ordinary, relocated and producer-isolated bounded checks; exact installed module origins are asserted)",
+        "mlkem768x25519-sha256 client/server key derivation and external OpenSSH interoperability (pending)",
+        "ssh_sftp_SUITE:pos_write under unicode/openssh_server/write_read_tests (observed real failure; connection to this defect is plausible but unproved)"
+      ],
+      "observed_full_run": {
+        "run_id": "1aea8488",
+        "source_tree_sha256": "cb7f0aa309c6c26b3fe94be67eed34e63267b9f2569024ab83b39b6984ce0d20",
+        "suite": "ssh_sftp_SUITE",
+        "case": "pos_write",
+        "groups": [
+          "unicode",
+          "openssh_server",
+          "write_read_tests"
+        ],
+        "failure": "init_per_testcase: {error,\"Key exchange failed\"}; ssh_transport:1017 Hybrid reply failed. Verify host key: {error,bad_signature}",
+        "endpoint": "task-owned OpenSSH 127.0.0.1:62152; client 127.0.0.1:51093",
+        "reported_local_wall_time": "2026-11-10 02:43:55.996847",
+        "attribution_limit": "The raw shared secret and negotiated host-signature algorithm were not logged. The exact hybrid source branch points to mlkem768x25519-sha256, but this alone does not prove this transform defect caused the observed bad_signature. It is not a prerequisite or not-applicable result and does not establish a VM/NIF defect.",
+        "raw_ssh_counts": {
+          "passed": 1572,
+          "failed": 0,
+          "user_skipped": 19,
+          "auto_skipped": 1
+        },
+        "full_suite_status": "nonpassing; real setup/KEX failure and remaining skips preserved"
+      },
+      "validation": [
+        {
+          "evidence": "tmp/ssh-hybrid-mpint-pure-reproducer/report.json",
+          "sha256": "bf267fe0bb90689f1a2a330b2e2a8712f7e3bab67940dcc741f77340975d927d",
+          "kind": "pure-source-byte-transform",
+          "status": "passed",
+          "result": "Eight pure Python tests pass. Exact pinned retained sources match. A65,536 first-two-byte grid with fixed tail has 128 mismatches; controls 0080... and nonzero first byte preserve raw bytes. This is a synthetic grid, not a measured native failure rate. No VM, cryptographic primitive, native tool, service or network probe executed."
+        },
+        {
+          "evidence": "tmp/ssh-hybrid-encoding-readonly-audit/report.json",
+          "sha256": "31c3d1c164284fa03148b08e0b593b2b4b7251851c24f26db41038285b58acd4",
+          "kind": "independent-source-math-review",
+          "status": "confirmed",
+          "result": "Independent review confirms unsigned conversion, full mpint length prefix, fixed suffix contamination and untouched generic-helper scope."
+        },
+        {
+          "evidence": "tmp/ssh-v7-current-readonly-audit/report.json",
+          "sha256": "3df45d71d5ff49df23a7f9ddc5d4d2e516094e02e3f48100eb85bd7a9b5ae2c5",
+          "kind": "full-upstream-ssh-file-only-audit",
+          "status": "nonpassing-outcomes-preserved",
+          "result": "All 112 prior econnrefused cases reached outcomes: 107 passed, 4 original Unicode-body skips, 1 different genuine KEX setup failure; no current econnrefused events.491 source, 504 staged and 50 generated inputs rehashed unchanged. This audit does not attribute the KEX failure to the proposed fix."
+        },
+        {
+          "evidence": "tmp/ssh-hybrid-regression-private/fixture.json",
+          "sha256": "0b78be67cdc088ba2fa058071fff5302a22eabcacd17773e8f1010982c316a17",
+          "kind": "pure-integer-x25519-fixture",
+          "status": "native-validated-by-matched-installed-helper-proof",
+          "result": "Independent pure Python RFC7748 ladder passes four published public/shared checks and derives a deterministic candidate raw secret starting 0018. Actual installed Crypto validation is recorded in the matched helper proof below."
+        },
+        {
+          "evidence": "tmp/ssh-hybrid-regression-private/proof-plan.json",
+          "sha256": "17c752a611a669946632ea54db232901486e539cc5942c3a90e00e885145c7d8",
+          "kind": "matched-installed-helper-baseline-and-proposal",
+          "status": "executed-with-v2-native-gate",
+          "result": "The original matched-helper plan was executed through the reviewed V2 native ready/go gate; the actual receipt below preserves both raw original failures and both private correction passes. Rebuilt product and external interoperability remain pending."
+        },
+        {
+          "kind": "native-external-interoperability",
+          "status": "pending",
+          "result": "Fresh task-owned OpenSSH hybrid client/server proof and affected full ordered SSH rerun remain required after source freeze and explicit runtime-slot release. No disabling hybrid algorithms, weakened assertions or deadline changes."
+        },
+        {
+          "evidence": "tmp/ssh-hybrid-regression-private/harness-v2/runs/attempt-001/receipt.json",
+          "sha256": "e56455ff407b64347f2dade6429a454a50a039a33f9985815d631370cbd31d6d",
+          "kind": "matched-real-installed-Crypto-and-private-helper",
+          "status": "confirmed-with-raw-original-failures",
+          "result": "Native identity gated before Crypto/tests. Candidate and exact-original reference each fail the original golden assertion: expected59c40f... vsactual507620... forraw0018... . The proposed single-helper replacement passes the unchanged assertions in both runtimes; RFC control and both ECDH directions pass. Two raw failures/two private passes, no ownership/cleanup errors or survivors, allselectedinputs unchanged. New installed product regression and fullSSH interoperability are still pending."
+        },
+        {
+          "evidence": "tmp/otp26-v8-macos-records/bounded-receipt.json",
+          "sha256": "5cc4087f937a69ebd2aa3fefdfac7f19a59bf1cdd68f08cfcd121da8634fd391",
+          "kind": "rebuilt-installed-product-bounded-regression",
+          "status": "passed-with-full-interoperability-pending",
+          "candidate_root": "tmp/otp26-v8-macos-emu",
+          "build_root": "tmp/otp26-v8-build-macos-emu",
+          "sdk_root": "tmp/docs-sdk-macos-emu",
+          "sdk_build_id": "e9df4d4f2e310e10bc093d08a3314100160311b3e44f3ffed7b37cdda6e15a79",
+          "runtime_archive_sha256": "46e8dbbbb090cffe1d91e9599c2a393c8418bcd8e2ab5480cfcfab07eb9f4216",
+          "product_source_sha256": "68e0fb653e0a837fd60f320230395686277d4c4594d58f3ed7452a22bf549bc3",
+          "project_fixture_sha256": "bc48c84cb725f5e2486e4eeec5edc1db9e125471bb278a865b64c20d682cd2c3",
+          "installed_runner_sha256": "36de2cc9e44f1de3730830bfa14291e877a73370bb9d2929162df0b2db70f6b4",
+          "ctest_xml": {
+            "path": "tmp/otp26-v8-macos-records/ctest.xml",
+            "sha256": "1a6e5ad82548bc6046fbe263a937f6b831b2b6543c335807c65e634f6e21eab5",
+            "passed": 17,
+            "failed": 0,
+            "skipped": 0
+          },
+          "regression_logs": {
+            "installed": {
+              "path": "tmp/otp26-v8-build-macos-emu/tests/logs/installed.log",
+              "sha256": "7fc73a60812e17787ca668fa90942dd6c982616b60575659f5a4ce75e8e2b2cf",
+              "installed_regressions": [
+                "otp_probe_tests:ssh_hybrid_raw_secret_test",
+                "otp_probe_tests:stdlib_stack_source_basename_test"
+              ],
+              "result": "all6EUnit tests passed"
+            },
+            "relocated": {
+              "path": "tmp/otp26-v8-build-macos-emu/tests/logs/relocated.log",
+              "sha256": "1a42916198d983353732a9e992b3e05df686ddfca1621d982e8d039c5d694154",
+              "installed_regressions": [
+                "otp_probe_tests:ssh_hybrid_raw_secret_test",
+                "otp_probe_tests:stdlib_stack_source_basename_test"
+              ],
+              "result": "all6EUnit tests passed"
+            },
+            "isolated": {
+              "path": "tmp/otp26-v8-build-macos-emu/tests/logs/isolated.log",
+              "sha256": "fc4cb6b702b57e10933acb77fc3241842011e6018924718538e3e022ea3e74dc",
+              "installed_regressions": [
+                "otp_probe_tests:ssh_hybrid_raw_secret_test",
+                "otp_probe_tests:stdlib_stack_source_basename_test"
+              ],
+              "result": "all6EUnit tests passed"
+            }
+          },
+          "result": "The actual installed ssh_transport forms, selected installed Crypto and fixed RFC/leading-zero secrets pass the unchanged project assertions in otp-installed, otp-relocated and otp-isolated; each saved log records all6 EUnit tests passing. All17 bounded CTests pass. otp-destdir passes its separate smoke path and does not dispatch the full EUnit fixture. Earlier pending-installation statements above describe historical proof stages and are superseded only for this bounded installed regression. No complete SSH rerun or external OpenSSH hybrid interoperability pass is claimed.",
+          "qualification": false
+        }
+      ],
+      "private_patch": {
+        "evidence": "tmp/ssh-hybrid-regression-private/hybrid-raw-secret.patch",
+        "sha256": "7180076d3a7ab947340114a5392416bd1006706751f6ed39d219293d44f75ad4",
+        "scope": "Reviewed two-file source/regression patch; now applied with a separate installed stack regression in the same project fixture. This entry covers only the retained SSH source; no upstream test changes."
+      },
+      "static_scope_check": {
+        "exact_pin_equals_current_base": true,
+        "proposed_change_is_exact_single_hybrid_common_body_replacement": true,
+        "live_source_changed": true
+      },
+      "implementation_status": "source applied; matched original/private helper proof and rebuilt installed-product regression passed; full SSH and external interoperability pending",
+      "protocol_changed": true,
+      "protocol_change_justification": "Correct the hybrid KDF input to the exact32 raw X25519 bytes; real installed Crypto fixtures prove the old integer/mpint transform corrupts leading-zero secrets in both candidate and original OTP. Negotiation and upstream test protocols remain unchanged."
+    },
+    {
+      "id": "zip-extended-timestamp-local-atime",
+      "category": "upstream-test-assertion-correction",
+      "path": "lib/stdlib/test/zip_SUITE.erl",
+      "upstream_commit": "550d7b7898706c7822362c42e7b93120c1d1f29a",
+      "upstream_sha256": "cb0ba5b431f2814cec74529f0c60863af8a4507b9666756ddac976de2607adf6",
+      "modified_sha256": "6f2a03ec198729531da7fd3f9d7eb732b49070db114fadf06e4f785b67e0ef65",
+      "assertions_changed": true,
+      "assertion_change": "Only extended_timestamp uses an exact archived local0x5455 access-time expectation when present, replacing its old mtime/ctime/1970 guess. Existing mtime equality, ctime ordering/platformguard, unemzip exemption and fallback assertion when no archiveATime are retained. No tolerance or any-value acceptance.",
+      "scope": {
+        "suite": "zip_SUITE",
+        "case": "extended_timestamp",
+        "groups": "All nine existing zip_group/{zip,ezip,emzip}/{unzip,unezip,unemzip} occurrences remain selected; modepropertiesunchanged",
+        "unchanged": [
+          "Other original testcase bodies including capped_timestamp",
+          "Existing assert_timestamp/3 bytes/behavior",
+          "Original suite/group/testcase setup/cleanup",
+          "Original two timer:sleep(1000) waits",
+          "Original CT deadlines",
+          "Product ZIP implementation and public API"
+        ]
+      },
+      "rationale": "Exact original reference failed after correctly restoring a real archived access time. Actual nativeZIP/unezip case stored localUTM1794263072/A1794263073, while pre-copy extraction metadata was A1794263073/M1794263072/C1794263074. Its strict old whitelist rejected the correct distinct A. This is a demonstrated assertion assumption defect, not an unavailable prerequisite or NA.",
+      "independent_reader": "Two bounded file:pread calls inspect this test's single testfile.txt local header. Validate signature, name, encryption bit, TLV lengths and one UT field; accept exact UT flags 1/3/5/7 layouts. Preserve fallback when access time is absent; malformed fields, duplicates, unknown flags and trailing bytes fail. This reader does not use the product ZIP parser.",
+      "observed_evidence": {
+        "baseline": {
+          "path": "/Users/intjutsu/Workspace/beam-erlang/tmp/zip-timestamp-proof-private/attempt-002/receipt.json",
+          "sha256": "73d6c70c259469f6ded52212903b1709b2804bd2baae90350d5915f01b1eeb24",
+          "candidate": {
+            "passed": 6,
+            "failed": 3
+          },
+          "reference": {
+            "passed": 9,
+            "failed": 0
+          }
+        },
+        "separate_postbody_capture": {
+          "path": "/Users/intjutsu/Workspace/beam-erlang/tmp/zip-timestamp-proof-private/attempt-003/receipt.json",
+          "sha256": "de4a44cc46cf4b8818f8dab24549f754fd852f56035be31178dc41dea921e8e7",
+          "candidate": {
+            "passed": 9,
+            "failed": 0
+          },
+          "reference": {
+            "passed": 8,
+            "failed": 1
+          },
+          "original_reference_failed_mode": [
+            "zip_group",
+            "zip",
+            "unezip"
+          ],
+          "archive": "/Users/intjutsu/Workspace/beam-erlang/tmp/zip-local-atime-correction-private/inputs/reference-failing.zip",
+          "archive_sha256": "4009448bdde868a8ce482f03c425dac29af66ff983b3164799d768be3080386d",
+          "independent_metadata_term_sha256": "8f642e27bc07766186ab66726c4188f55f05475b60662e1546b034b43585d4d3",
+          "archived_epoch": {
+            "mtime": 1794263072,
+            "atime": 1794263073
+          },
+          "extracted_epoch_before_archivecopy": {
+            "atime": 1794263073,
+            "mtime": 1794263072,
+            "ctime": 1794263074
+          },
+          "raw_assertion": "assert_timestamp/3 original line1620 atime whitelist; preceding mtime checkpassed"
+        },
+        "cleanup": "Both completed comparisons report ready cleanup,0survivors/errors and installedinputshashesunchanged"
+      },
+      "validation": {
+        "file_only": {
+          "methods": 5,
+          "passed": 5,
+          "failed": 0,
+          "skipped": 0
+        },
+        "actual_Erlang_controls": {
+          "status": "passed",
+          "methods_per_runtime": 10,
+          "runtimes": [
+            "candidate",
+            "exact original reference"
+          ],
+          "scope": "Actual proposed helper: real captured archive, matching access time, wrong access time, mtime and ctime failures, original whitelist reproducer, memory exemption, fallback and malformed fields."
+        },
+        "proposed_nine_mode_runs": {
+          "status": "passed",
+          "raw_counts_per_runtime": {
+            "passed": 9,
+            "failed": 0,
+            "user_skipped": 0,
+            "auto_skipped": 0
+          },
+          "receipt": "tmp/zip-local-atime-correction-private/runtime-proof/attempt-001/receipt.json",
+          "sha256": "e2988ee09f90fc1c3b06b2ae9ccab5b0cf06a2ed7bb931dd4fe1dbc1304eb198",
+          "full_stdlib": "pending",
+          "cleanup_errors": 0,
+          "survivors": 0,
+          "immutable_inputs_unchanged": true
+        }
+      },
+      "not_applicability": "No skips or failures are reclassified. Prior original failures remain raw nonpassing evidence.",
+      "relevant_cases": [
+        "zip_SUITE:extended_timestamp"
+      ],
+      "deadlines_changed": false,
+      "protocol_changed": false,
+      "selection_changed": false,
+      "implementation_status": "Source applied; focused correction validated on candidate and exact original reference; full Stdlib rerun pending."
+    }
+  ]
+}
