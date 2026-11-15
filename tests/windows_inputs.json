@@ -1,0 +1,37 @@
+[
+  {
+    "url": "https://api.nuget.org/v3-flatcontainer/microsoft.web.webview2/1.0.705.50/microsoft.web.webview2.1.0.705.50.nupkg",
+    "file": "webview2-1.0.705.50.zip",
+    "sha256": "6a34bb553e18cfac7297b4031f3eac2558e439f8d16a45945c22945ac404105d",
+    "size": 1037372
+  },
+  {
+    "url": "https://github.com/openssl/openssl/releases/download/openssl-3.5.9/openssl-3.5.9.tar.gz",
+    "file": "openssl-3.5.9.tar.gz",
+    "sha256": "603f5602e2eef00d77fbd429d34dcd5822bb301757a1bc9cdb24c670f1eb859a",
+    "size": 53279637
+  },
+  {
+    "url": "https://github.com/wxWidgets/wxWidgets/releases/download/v3.2.6/wxWidgets-3.2.6.zip",
+    "file": "wxWidgets-3.2.6.zip",
+    "sha256": "f2cf74ae278605d1b35f49dfa46c5e7f99b0bbe56a61f22dce6cc96cf1a73216",
+    "size": 40383073
+  },
+  {
+    "url": "https://github.com/lexxmark/winflexbison/releases/download/v2.5.25/win_flex_bison-2.5.25.zip",
+    "file": "win_flex_bison-2.5.25.zip",
+    "sha256": "8d324b62be33604b2c45ad1dd34ab93d722534448f55a16ca7292de32b6ac135",
+    "size": 1083989
+  },
+  {
+    "url": "https://prdownloads.sourceforge.net/nsis/nsis-3.11.zip",
+    "file": "nsis-3.11.zip",
+    "sha256": "c7d27f780ddb6cffb4730138cd1591e841f4b7edb155856901cdf5f214394fa1",
+    "size": 2361546
+  },
+  {
+    "url": "https://download.qt.io/official_releases/jom/jom_1_1_4.zip",
+    "file": "jom_1_1_4.zip",
+    "sha256": "d533c1ef49214229681e90196ed2094691e8c4a0a0bef0b2c901debcb562682b"
+  }
+]

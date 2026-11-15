@@ -29,8 +29,10 @@
 
 #include <erl_nif.h>
 #include "config.h"
+#if defined(USE_DYNAMIC_TRACE) || defined(USE_LTTNG)
 #include "sys.h"
 #include "dtrace-wrapper.h"
+#endif
 #if defined(USE_DYNAMIC_TRACE) && (defined(USE_DTRACE) || defined(USE_SYSTEMTAP))
 #  define HAVE_USE_DTRACE 1
 #endif

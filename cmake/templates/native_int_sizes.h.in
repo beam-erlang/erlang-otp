@@ -1,0 +1,14 @@
+/* Integer configuration for OTP's standalone command formatter. */
+/* Upstream headers save/undef these macros before including this file. */
+#undef SIZEOF_CHAR
+#define SIZEOF_CHAR @SIZEOF_CHAR@
+#undef SIZEOF_SHORT
+#define SIZEOF_SHORT @SIZEOF_SHORT@
+#undef SIZEOF_INT
+#define SIZEOF_INT @SIZEOF_INT@
+#undef SIZEOF_LONG
+#define SIZEOF_LONG @SIZEOF_LONG@
+#undef SIZEOF_LONG_LONG
+#define SIZEOF_LONG_LONG @SIZEOF_LONG_LONG@
+#undef SIZEOF_VOID_P
+#define SIZEOF_VOID_P @SIZEOF_VOID_P@

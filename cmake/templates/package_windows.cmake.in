@@ -1,0 +1,110 @@
+cmake_minimum_required(VERSION 3.25)
+if(NOT "@CMAKE_BUILD_TYPE@" STREQUAL "Release")
+    message(FATAL_ERROR "The redistributable Windows installer requires Release; Debug trees require the selected developer Debug CRT")
+endif()
+set(_nsis [==[@OTP_NSIS_EXECUTABLE@]==])
+set(_redist [==[@OTP_VC_REDIST_EXECUTABLE@]==])
+foreach(_tool IN ITEMS _nsis _redist)
+    if(NOT IS_ABSOLUTE "${${_tool}}" OR NOT EXISTS "${${_tool}}" OR IS_DIRECTORY "${${_tool}}")
+        message(FATAL_ERROR "Select OTP_NSIS_EXECUTABLE and OTP_VC_REDIST_EXECUTABLE explicitly before building otp_installer")
+    endif()
+endforeach()
+execute_process(COMMAND "${_nsis}" -VERSION OUTPUT_VARIABLE _version
+    OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY)
+if(NOT _version MATCHES "^v?3[.]([0-9]+)" OR CMAKE_MATCH_1 LESS 2)
+    message(FATAL_ERROR "Unsupported NSIS version '${_version}'; upstream requires NSIS 3.02 or newer")
+endif()
+set(_work [==[@OTP_PACKAGE_STAGE@/nsis]==])
+set(_tree "${_work}/release")
+set(_release [==[@PROJECT_BINARY_DIR@/release/@OTP_TARGET@]==])
+set(_build [==[@PROJECT_BINARY_DIR@]==])
+cmake_path(IS_PREFIX _build "${_work}" NORMALIZE _work_inside)
+if(NOT _work_inside OR _work STREQUAL _build)
+    message(FATAL_ERROR "Installer work directory escapes the binary tree")
+endif()
+set(_parent "${_work}")
+while(NOT _parent STREQUAL _build)
+    if(IS_SYMLINK "${_parent}")
+        message(FATAL_ERROR "Installer work directory ancestor is a directory link: ${_parent}")
+    endif()
+    get_filename_component(_parent "${_parent}" DIRECTORY)
+endwhile()
+file(MAKE_DIRECTORY "${_work}" [==[@OTP_PACKAGE_DIRECTORY@]==])
+file(LOCK "@OTP_PACKAGE_STAGE@/package.lock" GUARD PROCESS TIMEOUT 60)
+# All copies and removals are confined to this target's private staging tree.
+if(IS_SYMLINK "${_tree}")
+    message(FATAL_ERROR "Installer stage must not be a directory link")
+endif()
+file(REAL_PATH "${_work}" _resolved_work)
+set(_resolved_tree "${_resolved_work}/release")
+cmake_path(IS_PREFIX _resolved_work "${_resolved_tree}" NORMALIZE _inside)
+if(NOT _inside OR _resolved_tree STREQUAL _resolved_work)
+    message(FATAL_ERROR "Installer stage escapes its private packaging directory")
+endif()
+file(REMOVE_RECURSE "${_tree}")
+file(MAKE_DIRECTORY "${_tree}")
+file(MAKE_DIRECTORY "${_work}/temp")
+set(ENV{TEMP} "${_work}/temp")
+set(ENV{TMP} "${_work}/temp")
+foreach(_path Install.exe Install.ini lib usr releases "erts-@OTP_ERTS_VERSION@")
+    if(NOT EXISTS "${_release}/${_path}")
+        message(FATAL_ERROR "Release is incomplete: ${_path}")
+    endif()
+    file(COPY "${_release}/${_path}" DESTINATION "${_tree}")
+endforeach()
+# Omit documentation even when packaging a release left by an older build.
+file(GLOB _documentation_dirs
+    "${_tree}/lib/*/man" "${_tree}/lib/*/html"
+    "${_tree}/erts-@OTP_ERTS_VERSION@/doc"
+    "${_tree}/erts-@OTP_ERTS_VERSION@/man"
+    "${_tree}/erts-@OTP_ERTS_VERSION@/html"
+    "${_tree}/usr/doc" "${_tree}/usr/man" "${_tree}/usr/html"
+    "${_tree}/usr/share/doc" "${_tree}/usr/share/man" "${_tree}/usr/share/html")
+file(GLOB _application_docs "${_tree}/lib/*/doc")
+foreach(_doc IN LISTS _application_docs)
+    file(GLOB _contents "${_doc}/*")
+    # wx installs runnable examples here as part of its ordinary product.
+    list(REMOVE_ITEM _contents "${_doc}/examples")
+    list(APPEND _documentation_dirs ${_contents})
+endforeach()
+if(_documentation_dirs)
+    file(REMOVE_RECURSE ${_documentation_dirs})
+endif()
+file(COPY_FILE "${_redist}" "${_tree}/@OTP_PACKAGE_REDIST_NAME@" ONLY_IF_DIFFERENT)
+file(COPY [==[@PROJECT_SOURCE_DIR@/erts/etc/win32/nsis/erlang20.nsi]==]
+    [==[@PROJECT_SOURCE_DIR@/erts/etc/win32/nsis/erlang_inst.ico]==]
+    [==[@PROJECT_SOURCE_DIR@/erts/etc/win32/nsis/erlang_uninst.ico]==]
+    DESTINATION "${_work}")
+# Use the standard NSIS UI. The historical custom_modern.exe is optional upstream.
+set(_redist_version [==[@OTP_VC_REDIST_DLL_VERSION@]==])
+if(_redist_version STREQUAL "")
+    set(ENV{OTP_SELECTED_REDIST_FILE} "${_redist}")
+    execute_process(COMMAND powershell.exe -NoProfile -NonInteractive -Command
+        "[Diagnostics.FileVersionInfo]::GetVersionInfo($env:OTP_SELECTED_REDIST_FILE).FileVersion"
+        OUTPUT_VARIABLE _redist_version OUTPUT_STRIP_TRAILING_WHITESPACE
+        COMMAND_ERROR_IS_FATAL ANY)
+endif()
+if(NOT _redist_version MATCHES "^[0-9]+[.][0-9]+[.][0-9]+[.][0-9]+$")
+    message(FATAL_ERROR "Cannot determine four-component redistributable version; set OTP_VC_REDIST_DLL_VERSION")
+endif()
+set(_header "")
+foreach(_definition IN ITEMS "OTP_RELEASE=@PROJECT_VERSION_MAJOR@" "OTP_VERSION=@PROJECT_VERSION@"
+        "OTP_VERSION_LONG=@OTP_PACKAGE_VERSION_LONG@" "ERTS_VERSION=@OTP_ERTS_VERSION@"
+        "TESTROOT=${_tree}" "OUTFILEDIR=@OTP_PACKAGE_DIRECTORY@" "WINTYPE=@OTP_PACKAGE_WINTYPE@"
+        "YEAR=@OTP_PACKAGE_YEAR@" "REDIST_DLL_VERSION=${_redist_version}"
+        "REDIST_DLL_NAME=@OTP_VC_REDIST_DLL_NAME@" "REDIST_EXECUTABLE=@OTP_PACKAGE_REDIST_NAME@")
+    string(FIND "${_definition}" "=" _separator)
+    string(SUBSTRING "${_definition}" 0 ${_separator} _key)
+    math(EXPR _separator "${_separator} + 1")
+    string(SUBSTRING "${_definition}" ${_separator} -1 _value)
+    string(REPLACE "$" "$$" _value "${_value}")
+    string(REPLACE "\"" "$\\\"" _value "${_value}")
+    string(APPEND _header "!define ${_key} \"${_value}\"\n")
+endforeach()
+string(APPEND _header "!define HAVE_REDIST_FILE 1\n")
+file(WRITE "${_work}/erlang.nsh" "${_header}")
+execute_process(COMMAND "${_nsis}" /V2 erlang20.nsi WORKING_DIRECTORY "${_work}" COMMAND_ERROR_IS_FATAL ANY)
+set(_installer "@OTP_PACKAGE_DIRECTORY@/otp_@OTP_PACKAGE_WINTYPE@_@PROJECT_VERSION@.exe")
+file(SHA256 "${_installer}" _sha256)
+file(WRITE "${_installer}.sha256" "${_sha256}  otp_@OTP_PACKAGE_WINTYPE@_@PROJECT_VERSION@.exe\n")
+message(STATUS "Produced ${_installer}")

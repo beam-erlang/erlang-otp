@@ -24,13 +24,13 @@
 #
 
 # Translate v2 IMPORTs to their v1 equivalents
-$[ = 1;			# set array base to 1
 $, = ' ';		# set output field separator
 $\ = "\n";		# set output record separator
 
 line: while (<>) {
     chomp;	# strip record separator
     @Fld = split(' ', $_, 9999);
+    unshift @Fld, undef;
     if (/IMPORT/) {
 	$import = 1;
 	$isave = 0;
@@ -55,7 +55,7 @@ line: while (<>) {
     }
 
     # str is 1 if we're inside a string, and 0 otherwise.
-    if (/\"/) {
+    if (/\"/ && (!/^--/ || $str == 1)) {
 	$str = 1;
     }
     if ($Fld[$#Fld] =~ /\"$/) {

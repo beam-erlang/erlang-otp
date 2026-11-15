@@ -1,0 +1,606 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 25,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "linux-x86_64-emu",
+      "displayName": "Linux x86_64 (emu, Release)",
+      "description": "Native Linux x86_64, emu flavor, Release.",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
+        "OTP_BEAM_FLAVOR": "emu",
+        "BEAM_SDK_ROOT": "$env{BEAM_SDK_ROOT}",
+        "OPENSSL_ROOT_DIR": "$env{OPENSSL_ROOT_DIR}",
+        "OTP_WX_CONFIG": "$env{OTP_WX_CONFIG}",
+        "JAVA_HOME": "$env{JAVA_HOME}",
+        "ODBC_CONFIG": "$env{ODBC_CONFIG}",
+        "FLEX_EXECUTABLE": "$env{FLEX_EXECUTABLE}"
+      }
+    },
+    {
+      "name": "linux-x86_64-jit",
+      "displayName": "Linux x86_64 (jit, Release)",
+      "description": "Native Linux x86_64, jit flavor, Release.",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
+        "OTP_BEAM_FLAVOR": "jit",
+        "BEAM_SDK_ROOT": "$env{BEAM_SDK_ROOT}",
+        "OPENSSL_ROOT_DIR": "$env{OPENSSL_ROOT_DIR}",
+        "OTP_WX_CONFIG": "$env{OTP_WX_CONFIG}",
+        "JAVA_HOME": "$env{JAVA_HOME}",
+        "ODBC_CONFIG": "$env{ODBC_CONFIG}",
+        "FLEX_EXECUTABLE": "$env{FLEX_EXECUTABLE}"
+      }
+    },
+    {
+      "name": "linux-aarch64-emu",
+      "displayName": "Linux aarch64 (emu, Release)",
+      "description": "Native Linux aarch64, emu flavor, Release.",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
+        "OTP_BEAM_FLAVOR": "emu",
+        "BEAM_SDK_ROOT": "$env{BEAM_SDK_ROOT}",
+        "OPENSSL_ROOT_DIR": "$env{OPENSSL_ROOT_DIR}",
+        "OTP_WX_CONFIG": "$env{OTP_WX_CONFIG}",
+        "JAVA_HOME": "$env{JAVA_HOME}",
+        "ODBC_CONFIG": "$env{ODBC_CONFIG}",
+        "FLEX_EXECUTABLE": "$env{FLEX_EXECUTABLE}"
+      }
+    },
+    {
+      "name": "linux-aarch64-jit",
+      "displayName": "Linux aarch64 (jit, Release)",
+      "description": "Native Linux aarch64, jit flavor, Release.",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
+        "OTP_BEAM_FLAVOR": "jit",
+        "BEAM_SDK_ROOT": "$env{BEAM_SDK_ROOT}",
+        "OPENSSL_ROOT_DIR": "$env{OPENSSL_ROOT_DIR}",
+        "OTP_WX_CONFIG": "$env{OTP_WX_CONFIG}",
+        "JAVA_HOME": "$env{JAVA_HOME}",
+        "ODBC_CONFIG": "$env{ODBC_CONFIG}",
+        "FLEX_EXECUTABLE": "$env{FLEX_EXECUTABLE}"
+      }
+    },
+    {
+      "name": "macos-arm64-emu",
+      "displayName": "macOS arm64 (emu, Release)",
+      "description": "Native macOS arm64, emu flavor, Release.",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      },
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
+        "CMAKE_C_COMPILER": "/usr/bin/clang",
+        "CMAKE_CXX_COMPILER": "/usr/bin/clang++",
+        "CMAKE_OSX_ARCHITECTURES": "arm64",
+        "CMAKE_OSX_DEPLOYMENT_TARGET": "26.0",
+        "CMAKE_OSX_SYSROOT": "macosx",
+        "OTP_BEAM_FLAVOR": "emu",
+        "BEAM_SDK_ROOT": "$env{BEAM_SDK_ROOT}",
+        "OPENSSL_ROOT_DIR": "$env{OPENSSL_ROOT_DIR}",
+        "OTP_WX_CONFIG": "$env{OTP_WX_CONFIG}",
+        "JAVA_HOME": "$env{JAVA_HOME}",
+        "ODBC_CONFIG": "$env{ODBC_CONFIG}",
+        "FLEX_EXECUTABLE": "$env{FLEX_EXECUTABLE}"
+      }
+    },
+    {
+      "name": "macos-arm64-jit",
+      "displayName": "macOS arm64 (jit, Release)",
+      "description": "Native macOS arm64, jit flavor, Release.",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      },
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
+        "CMAKE_C_COMPILER": "/usr/bin/clang",
+        "CMAKE_CXX_COMPILER": "/usr/bin/clang++",
+        "CMAKE_OSX_ARCHITECTURES": "arm64",
+        "CMAKE_OSX_DEPLOYMENT_TARGET": "26.0",
+        "CMAKE_OSX_SYSROOT": "macosx",
+        "OTP_BEAM_FLAVOR": "jit",
+        "BEAM_SDK_ROOT": "$env{BEAM_SDK_ROOT}",
+        "OPENSSL_ROOT_DIR": "$env{OPENSSL_ROOT_DIR}",
+        "OTP_WX_CONFIG": "$env{OTP_WX_CONFIG}",
+        "JAVA_HOME": "$env{JAVA_HOME}",
+        "ODBC_CONFIG": "$env{ODBC_CONFIG}",
+        "FLEX_EXECUTABLE": "$env{FLEX_EXECUTABLE}"
+      }
+    },
+    {
+      "name": "linux-x86_64-emu-debug",
+      "inherits": "linux-x86_64-emu",
+      "displayName": "Linux x86_64 (emu, Debug)",
+      "description": "Native Linux x86_64, emu flavor, Debug.",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "linux-x86_64-jit-debug",
+      "inherits": "linux-x86_64-jit",
+      "displayName": "Linux x86_64 (jit, Debug)",
+      "description": "Native Linux x86_64, jit flavor, Debug.",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "linux-aarch64-emu-debug",
+      "inherits": "linux-aarch64-emu",
+      "displayName": "Linux aarch64 (emu, Debug)",
+      "description": "Native Linux aarch64, emu flavor, Debug.",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "linux-aarch64-jit-debug",
+      "inherits": "linux-aarch64-jit",
+      "displayName": "Linux aarch64 (jit, Debug)",
+      "description": "Native Linux aarch64, jit flavor, Debug.",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "macos-arm64-emu-debug",
+      "inherits": "macos-arm64-emu",
+      "displayName": "macOS arm64 (emu, Debug)",
+      "description": "Native macOS arm64, emu flavor, Debug.",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "macos-arm64-jit-debug",
+      "inherits": "macos-arm64-jit",
+      "displayName": "macOS arm64 (jit, Debug)",
+      "description": "Native macOS arm64, jit flavor, Debug.",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "windows-x86_64-emu",
+      "displayName": "Windows x64 MSVC (emu, Release)",
+      "description": "Native Windows x64, MSVC, emu flavor, Release.",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
+        "OTP_BEAM_FLAVOR": "emu",
+        "BEAM_SDK_ROOT": "$env{BEAM_SDK_ROOT}",
+        "OPENSSL_ROOT_DIR": "$env{OPENSSL_ROOT_DIR}",
+        "OTP_WX_ROOT": "$env{OTP_WX_ROOT}",
+        "JAVA_HOME": "$env{JAVA_HOME}",
+        "FLEX_EXECUTABLE": "$env{FLEX_EXECUTABLE}",
+        "OTP_NSIS_EXECUTABLE": "$env{OTP_NSIS_EXECUTABLE}",
+        "OTP_VC_REDIST_EXECUTABLE": "$env{OTP_VC_REDIST_EXECUTABLE}",
+        "OPENSSL_USE_STATIC_LIBS": "ON",
+        "OTP_WINDOWS_RUNTIME_DLLS": "$env{OTP_WINDOWS_RUNTIME_DLLS}"
+      }
+    },
+    {
+      "name": "windows-x86_64-emu-debug",
+      "inherits": "windows-x86_64-emu",
+      "displayName": "Windows x64 MSVC (emu, Debug)",
+      "description": "Native Windows x64, MSVC, emu flavor, Debug.",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "windows-x86_64-jit",
+      "displayName": "Windows x64 MSVC (jit, Release)",
+      "description": "Native Windows x64, MSVC, jit flavor, Release.",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
+        "OTP_BEAM_FLAVOR": "jit",
+        "BEAM_SDK_ROOT": "$env{BEAM_SDK_ROOT}",
+        "OPENSSL_ROOT_DIR": "$env{OPENSSL_ROOT_DIR}",
+        "OTP_WX_ROOT": "$env{OTP_WX_ROOT}",
+        "JAVA_HOME": "$env{JAVA_HOME}",
+        "FLEX_EXECUTABLE": "$env{FLEX_EXECUTABLE}",
+        "OTP_NSIS_EXECUTABLE": "$env{OTP_NSIS_EXECUTABLE}",
+        "OTP_VC_REDIST_EXECUTABLE": "$env{OTP_VC_REDIST_EXECUTABLE}",
+        "OPENSSL_USE_STATIC_LIBS": "ON",
+        "OTP_WINDOWS_RUNTIME_DLLS": "$env{OTP_WINDOWS_RUNTIME_DLLS}"
+      }
+    },
+    {
+      "name": "windows-x86_64-jit-debug",
+      "inherits": "windows-x86_64-jit",
+      "displayName": "Windows x64 MSVC (jit, Debug)",
+      "description": "Native Windows x64, MSVC, jit flavor, Debug.",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "linux-x86_64-emu",
+      "configurePreset": "linux-x86_64-emu",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "linux-x86_64-jit",
+      "configurePreset": "linux-x86_64-jit",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "linux-aarch64-emu",
+      "configurePreset": "linux-aarch64-emu",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "linux-aarch64-jit",
+      "configurePreset": "linux-aarch64-jit",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "macos-arm64-emu",
+      "configurePreset": "macos-arm64-emu",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      }
+    },
+    {
+      "name": "macos-arm64-jit",
+      "configurePreset": "macos-arm64-jit",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      }
+    },
+    {
+      "name": "linux-x86_64-emu-debug",
+      "configurePreset": "linux-x86_64-emu-debug",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "linux-x86_64-jit-debug",
+      "configurePreset": "linux-x86_64-jit-debug",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "linux-aarch64-emu-debug",
+      "configurePreset": "linux-aarch64-emu-debug",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "linux-aarch64-jit-debug",
+      "configurePreset": "linux-aarch64-jit-debug",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "macos-arm64-emu-debug",
+      "configurePreset": "macos-arm64-emu-debug",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      }
+    },
+    {
+      "name": "macos-arm64-jit-debug",
+      "configurePreset": "macos-arm64-jit-debug",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      }
+    },
+    {
+      "name": "windows-x86_64-emu",
+      "configurePreset": "windows-x86_64-emu",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "windows-x86_64-emu-debug",
+      "configurePreset": "windows-x86_64-emu-debug",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "windows-x86_64-jit",
+      "configurePreset": "windows-x86_64-jit",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "windows-x86_64-jit-debug",
+      "configurePreset": "windows-x86_64-jit-debug",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "distribution",
+      "hidden": true,
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "jobs": 1,
+        "noTestsAction": "error"
+      },
+      "filter": {
+        "exclude": {
+          "label": "^(full|erts|suite)$"
+        }
+      }
+    },
+    {
+      "name": "linux-x86_64-emu",
+      "inherits": "distribution",
+      "configurePreset": "linux-x86_64-emu",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "linux-x86_64-jit",
+      "inherits": "distribution",
+      "configurePreset": "linux-x86_64-jit",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "linux-aarch64-emu",
+      "inherits": "distribution",
+      "configurePreset": "linux-aarch64-emu",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "linux-aarch64-jit",
+      "inherits": "distribution",
+      "configurePreset": "linux-aarch64-jit",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "macos-arm64-emu",
+      "inherits": "distribution",
+      "configurePreset": "macos-arm64-emu",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      }
+    },
+    {
+      "name": "macos-arm64-jit",
+      "inherits": "distribution",
+      "configurePreset": "macos-arm64-jit",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      }
+    },
+    {
+      "name": "linux-x86_64-emu-debug",
+      "inherits": "distribution",
+      "configurePreset": "linux-x86_64-emu-debug",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "linux-x86_64-jit-debug",
+      "inherits": "distribution",
+      "configurePreset": "linux-x86_64-jit-debug",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "linux-aarch64-emu-debug",
+      "inherits": "distribution",
+      "configurePreset": "linux-aarch64-emu-debug",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "linux-aarch64-jit-debug",
+      "inherits": "distribution",
+      "configurePreset": "linux-aarch64-jit-debug",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "macos-arm64-emu-debug",
+      "inherits": "distribution",
+      "configurePreset": "macos-arm64-emu-debug",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      }
+    },
+    {
+      "name": "macos-arm64-jit-debug",
+      "inherits": "distribution",
+      "configurePreset": "macos-arm64-jit-debug",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      }
+    },
+    {
+      "name": "windows-x86_64-emu",
+      "inherits": "distribution",
+      "configurePreset": "windows-x86_64-emu",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "windows-x86_64-emu-debug",
+      "inherits": "distribution",
+      "configurePreset": "windows-x86_64-emu-debug",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "windows-x86_64-jit",
+      "inherits": "distribution",
+      "configurePreset": "windows-x86_64-jit",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "windows-x86_64-jit-debug",
+      "inherits": "distribution",
+      "configurePreset": "windows-x86_64-jit-debug",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    }
+  ]
+}

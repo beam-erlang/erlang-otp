@@ -921,15 +921,14 @@ static void stop_select(ErlDrvEvent event, void* _)
 /*
 ** Set socket nonblocking, keep this at end of file.
 */
-#undef ERRNO_BLOCK
-#undef ASSERT
-#ifndef WANT_NONBLOCKING
-#define WANT_NONBLOCKING
-#endif
-#include "sys.h"
 static int set_nonblocking(SOCKET sock)
 {
-    SET_NONBLOCKING(sock);
+#ifdef __WIN32__
+    unsigned long nonblocking = 1;
+    ioctlsocket(sock, FIONBIO, &nonblocking);
+#else
+    fcntl(sock, F_SETFL, fcntl(sock, F_GETFL, 0) | O_NONBLOCK);
+#endif
     return 0;
 }
 
