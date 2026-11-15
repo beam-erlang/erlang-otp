@@ -1,0 +1,140 @@
+name: Linux
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: linux-amd64-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    name: ${{ matrix.preset }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        preset:
+          - linux-x86_64-emu
+          - linux-x86_64-jit
+          - linux-x86_64-emu-debug
+          - linux-x86_64-jit-debug
+    env:
+      CMAKE_PRESET: ${{ matrix.preset }}
+    steps:
+      - name: Check out Erlang/OTP
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Check out the BEAM/Erlang SDK source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: beam-erlang/beam-erlang
+          ref: sdk-bootstrap-dirty
+          path: beam-sdk
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install and select native dependencies
+        run: |
+          set -euo pipefail
+          test "$(uname -m)" = x86_64
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+            build-essential cmake ninja-build perl pkg-config flex \
+            libncurses-dev libssl-dev libwxgtk3.2-dev libgl1-mesa-dev \
+            libglu1-mesa-dev libiodbc2-dev xvfb xauth \
+            bubblewrap util-linux iproute2 openssh-client openssh-server
+          {
+            printf 'OPENSSL_ROOT_DIR=/usr\n'
+            printf 'OTP_WX_CONFIG=/usr/bin/wx-config\n'
+            printf 'ODBC_CONFIG=/usr/bin/iodbc-config\n'
+            printf 'FLEX_EXECUTABLE=/usr/bin/flex\n'
+          } >> "$GITHUB_ENV"
+          printf 'BEAM_SDK_ROOT=%s/../tmp/sdk-install\n' "$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
+          printf 'OTP_INSTALL_DIR=%s/../tmp/otp-install\n' "$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
+          git rev-parse HEAD
+          git -C beam-sdk rev-parse HEAD
+          cmake --version
+          df -h .
+      - name: Build and install the BEAM/Erlang SDK
+        run: |
+          set -euo pipefail
+          cmake --preset "$CMAKE_PRESET" -S beam-sdk -B ../tmp/sdk-build \
+            "-DCMAKE_INSTALL_PREFIX=$BEAM_SDK_ROOT" -DBUILD_TESTING=OFF
+          cmake --build ../tmp/sdk-build --parallel 2
+          cmake --install ../tmp/sdk-build
+      - name: Configure and build Erlang/OTP
+        run: |
+          set -euo pipefail
+          cmake --preset "$CMAKE_PRESET" -B ../tmp/otp-build \
+            "-DCMAKE_INSTALL_PREFIX=$OTP_INSTALL_DIR" -DBUILD_TESTING=ON
+          cmake --build ../tmp/otp-build --parallel 2
+      - name: Test the distribution and installed boundaries
+        run: xvfb-run --auto-servernum ctest --test-dir ../tmp/otp-build --output-on-failure --no-tests=error -j1
+      - name: Install and assemble the distribution
+        run: |
+          cmake --install ../tmp/otp-build
+          cmake --build ../tmp/otp-build --target otp_release
+      - name: Package and smoke test the installed distribution
+        run: |
+          set -euo pipefail
+          version="$(cat OTP_VERSION)"
+          archive="erlang-otp-$version-$CMAKE_PRESET.tar.gz"
+          mkdir -p ../tmp/packages ../tmp/packaged-otp
+          cp LICENSE.txt "$OTP_INSTALL_DIR/LICENSE.txt"
+          tar -czf "../tmp/packages/$archive" -C "$OTP_INSTALL_DIR" .
+          (cd ../tmp/packages && shasum -a 256 "$archive" > "$archive.sha256")
+          tar -xzf "../tmp/packages/$archive" -C ../tmp/packaged-otp
+          packaged="$GITHUB_WORKSPACE/../tmp/packaged-otp"
+          printf '%s\n' '-module(otp_ci_smoke).' '-export([run/0]).' 'run() -> ok.' > "$packaged/otp_ci_smoke.erl"
+          "$packaged/bin/erlc" -o "$packaged" "$packaged/otp_ci_smoke.erl"
+          "$packaged/bin/erl" -noshell -noinput -pa "$packaged" -eval \
+            'ok = otp_ci_smoke:run(), {ok,_} = application:ensure_all_started(crypto), 16 = byte_size(crypto:strong_rand_bytes(16)), io:format("OTP ~s / ERTS ~s / ~p / ~p~n", [erlang:system_info(otp_release), erlang:system_info(version), erlang:system_info(emu_flavor), erlang:system_info(build_type)]), halt().'
+          printf 'main(_) -> io:format("OTP_PACKAGE_OK~n").\n' > "$packaged/smoke.escript"
+          "$packaged/bin/escript" "$packaged/smoke.escript"
+      - name: Package source
+        if: matrix.preset == 'linux-x86_64-jit'
+        run: |
+          set -euo pipefail
+          version="$(cat OTP_VERSION)"
+          git archive --format=tar.gz --prefix="otp_src_$version/" \
+            -o "../tmp/packages/otp_src_$version.tar.gz" HEAD
+          (cd ../tmp/packages && shasum -a 256 "otp_src_$version.tar.gz" > OTP_SOURCE.sha256)
+      - name: Upload distribution artifacts
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: otp-${{ matrix.preset }}
+          path: ../tmp/packages/
+          if-no-files-found: error
+          overwrite: true
+      - name: Preserve failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: otp-${{ matrix.preset }}-diagnostics
+          path: |
+            ../tmp/sdk-build/CMakeFiles/CMakeConfigureLog.yaml
+            ../tmp/otp-build/CMakeFiles/CMakeConfigureLog.yaml
+            ../tmp/otp-build/sdk-selection.txt
+            ../tmp/otp-build/Testing/Temporary/
+            ../tmp/otp-build/tests/logs/
+          if-no-files-found: warn
+          overwrite: true

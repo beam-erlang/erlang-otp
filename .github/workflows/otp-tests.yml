@@ -1,0 +1,187 @@
+name: Original OTP tests (one native configuration)
+
+on:
+  workflow_dispatch:
+    inputs:
+      preset:
+        description: One native configuration; this invocation does not accept a full platform matrix
+        required: true
+        default: linux-x86_64-emu
+        type: choice
+        options:
+          - linux-x86_64-emu
+          - linux-x86_64-jit
+          - linux-x86_64-emu-debug
+          - linux-x86_64-jit-debug
+          - linux-aarch64-emu
+          - linux-aarch64-jit
+          - linux-aarch64-emu-debug
+          - linux-aarch64-jit-debug
+          - macos-arm64-emu
+          - macos-arm64-jit
+          - macos-arm64-emu-debug
+          - macos-arm64-jit-debug
+          - windows-x86_64-emu
+          - windows-x86_64-jit
+          - windows-x86_64-emu-debug
+          - windows-x86_64-jit-debug
+      runner:
+        description: JSON labels for the explicitly provisioned native self-hosted runner
+        required: true
+        default: '["self-hosted","Linux","X64"]'
+        type: string
+      sdk_root:
+        description: Absolute installed public SDK prefix on that runner
+        required: true
+        type: string
+      reference_git:
+        description: Absolute original OTP Git repository containing the pinned commit
+        required: true
+        type: string
+      configured_source:
+        description: Absolute matching configured original OTP source tree
+        required: true
+        type: string
+      prerequisites:
+        description: Absolute input-profile JSON path with real selected prerequisites and task-owned services
+        required: true
+        type: string
+      cmake:
+        description: Absolute native CMake executable path
+        required: true
+        type: string
+      cmake_selectors:
+        description: JSON object of explicit CMake dependency/tool selectors; see .github/README.md
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: otp-tests-${{ inputs.preset }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  selected-configuration:
+    runs-on: ${{ fromJSON(inputs.runner) }}
+    timeout-minutes: 2880
+    env:
+      OTP_CI_PRESET: ${{ inputs.preset }}
+      OTP_CI_SDK: ${{ inputs.sdk_root }}
+      OTP_CI_REFERENCE_GIT: ${{ inputs.reference_git }}
+      OTP_CI_CONFIGURED_SOURCE: ${{ inputs.configured_source }}
+      OTP_CI_INPUTS: ${{ inputs.prerequisites }}
+      OTP_CI_CMAKE: ${{ inputs.cmake }}
+      OTP_CI_SELECTORS: ${{ inputs.cmake_selectors }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and test the selected native configuration
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('node:fs');
+            const path = require('node:path');
+            const {spawnSync} = require('node:child_process');
+            const preset = process.env.OTP_CI_PRESET;
+            const host = preset.startsWith('windows-') ? 'win32' : preset.startsWith('macos-') ? 'darwin' : 'linux';
+            const arch = preset.includes('x86_64') ? 'x64' : 'arm64';
+            if (process.platform !== host || process.arch !== arch) throw new Error('Preset requires a matching native runner');
+            const selectors = JSON.parse(process.env.OTP_CI_SELECTORS);
+            if (!selectors || Array.isArray(selectors) || typeof selectors !== 'object') throw new Error('cmake_selectors must be an object');
+            const managed = new Set(['BEAM_SDK_ROOT', 'CMAKE_INSTALL_PREFIX', 'CMAKE_BUILD_TYPE', 'OTP_BEAM_FLAVOR', 'BUILD_TESTING',
+              'CMAKE_TOOLCHAIN_FILE', 'CMAKE_SYSTEM_NAME', 'CMAKE_SYSTEM_PROCESSOR', 'OTP_ENABLE_TEST_SUITES', 'OTP_ENABLE_ERTS_TESTS',
+              'OTP_ENABLE_INDIVIDUAL_SUITES', 'OTP_TEST_CANDIDATE', 'OTP_TEST_CANDIDATE_BUILD', 'OTP_TEST_WORK_ROOT',
+              'OTP_TEST_REFERENCE_GIT', 'OTP_TEST_CONFIGURED_SOURCE', 'OTP_TEST_INPUTS']);
+            for (const [key, value] of Object.entries(selectors)) {
+              if (!/^[A-Z][A-Z0-9_]*$/.test(key) || typeof value !== 'string' || managed.has(key)) throw new Error(`Invalid or managed selector: ${key}`);
+            }
+            for (const key of ['CMAKE_C_COMPILER', 'CMAKE_CXX_COMPILER', 'PERL_EXECUTABLE', 'OTP_TEST_MAKE',
+              'OTP_TEST_GIT', 'OTP_TEST_TAR', 'OTP_TEST_CLANG', 'OTP_TEST_BASH']) {
+              if (!path.isAbsolute(selectors[key] || '') || !fs.statSync(selectors[key]).isFile()) throw new Error(`Select an absolute installed ${key}`);
+            }
+            for (const key of ['OTP_CI_SDK', 'OTP_CI_REFERENCE_GIT', 'OTP_CI_CONFIGURED_SOURCE', 'OTP_CI_INPUTS', 'OTP_CI_CMAKE']) {
+              if (!path.isAbsolute(process.env[key]) || !fs.existsSync(process.env[key])) throw new Error(`Missing absolute ${key}`);
+            }
+            const scratch = path.resolve(process.env.GITHUB_WORKSPACE, '..', 'tmp');
+            fs.mkdirSync(scratch, {recursive: true});
+            const root = fs.mkdtempSync(path.join(scratch, 'ot-'));
+            core.exportVariable('OTP_CI_ROOT', root);
+            core.exportVariable('OTP_CI_TAR', selectors.OTP_TEST_TAR);
+            const build = path.join(root, 'build'), install = path.join(root, 'install'), work = path.join(root, 'tests');
+            fs.mkdirSync(path.join(work, 'home'), {recursive: true});
+            fs.mkdirSync(path.join(work, 'tmp'));
+            fs.writeFileSync(path.join(root, 'input-selection.json'), JSON.stringify({preset, sdk: process.env.OTP_CI_SDK,
+              reference_git: process.env.OTP_CI_REFERENCE_GIT, configured_source: process.env.OTP_CI_CONFIGURED_SOURCE,
+              prerequisites: process.env.OTP_CI_INPUTS, cmake: process.env.OTP_CI_CMAKE, selectors}, null, 2) + '\n');
+            const configure = ['--preset', preset, '-B', build, ...Object.entries(selectors).map(([key, value]) => `-D${key}=${value}`),
+              `-DBEAM_SDK_ROOT=${process.env.OTP_CI_SDK}`, `-DCMAKE_INSTALL_PREFIX=${install}`, '-DBUILD_TESTING=ON',
+              '-DOTP_ENABLE_TEST_SUITES=ON', '-DOTP_ENABLE_ERTS_TESTS=OFF', '-DOTP_ENABLE_INDIVIDUAL_SUITES=OFF',
+              `-DOTP_TEST_CANDIDATE=${install}`, `-DOTP_TEST_CANDIDATE_BUILD=${build}`, `-DOTP_TEST_WORK_ROOT=${work}`,
+              `-DOTP_TEST_REFERENCE_GIT=${process.env.OTP_CI_REFERENCE_GIT}`, `-DOTP_TEST_CONFIGURED_SOURCE=${process.env.OTP_CI_CONFIGURED_SOURCE}`,
+              `-DOTP_TEST_INPUTS=${process.env.OTP_CI_INPUTS}`];
+            const cmake = process.env.OTP_CI_CMAKE;
+            const ctest = path.join(path.dirname(cmake), process.platform === 'win32' ? 'ctest.exe' : 'ctest');
+            const commands = [[cmake, configure], [cmake, ['--build', build, '--parallel', '3']], [cmake, ['--install', build]],
+              [ctest, ['--test-dir', build, '--output-on-failure', '--no-tests=error', '-j1', '-LE', '^(full|erts|suite)$']],
+              [cmake, ['--build', build, '--target', 'otp-tests']]];
+            for (const [program, args] of commands) {
+              core.startGroup(JSON.stringify([program, ...args]));
+              const result = spawnSync(program, args, {cwd: process.env.GITHUB_WORKSPACE, stdio: 'inherit', shell: false});
+              core.endGroup();
+              if (result.error || result.status !== 0) throw result.error || new Error(`${program} exited ${result.status}`);
+            }
+      - name: Archive owned reports and raw execution evidence
+        if: always() && env.OTP_CI_ROOT != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('node:fs');
+            const path = require('node:path');
+            const crypto = require('node:crypto');
+            const {spawnSync} = require('node:child_process');
+            const root = process.env.OTP_CI_ROOT, tar = process.env.OTP_CI_TAR;
+            const entries = [];
+            const add = relative => { if (fs.existsSync(path.join(root, relative))) entries.push(relative); };
+            ['input-selection.json', 'build/CMakeCache.txt', 'build/sdk-selection.txt', 'build/Testing',
+              'build/CMakeFiles/CMakeConfigureLog.yaml', 'tests/reports', 'tests/test-session.json'].forEach(add);
+            const runs = path.join(root, 'tests/runs');
+            if (fs.existsSync(runs)) for (const id of fs.readdirSync(runs)) {
+              if (!/^[0-9a-f]+$/.test(id)) throw new Error('Unexpected owned run name');
+              for (const name of ['commands', 'ct', 'tests/test_server/variables']) add(`tests/runs/${id}/${name}`);
+              for (const entry of fs.readdirSync(path.join(runs, id), {withFileTypes: true})) {
+                if (entry.isFile() && /\.(json|jsonl|log)$/.test(entry.name)) add(`tests/runs/${id}/${entry.name}`);
+              }
+            }
+            const archive = path.join(process.env.GITHUB_WORKSPACE, 'otp-tests-evidence.tar.gz');
+            const args = ['--format=pax', '-czf', archive, '-C', root];
+            if (process.platform === 'linux') {
+              const version = spawnSync(tar, ['--version'], {encoding: 'utf8', shell: false});
+              if (version.status !== 0 || !version.stdout.includes('GNU tar')) throw new Error('Linux raw/sparse evidence requires selected GNU tar');
+              args.unshift('--sparse');
+            }
+            const result = spawnSync(tar, [...args, ...entries], {stdio: 'inherit', shell: false});
+            if (result.error || result.status !== 0) throw result.error || new Error(`Evidence archive exited ${result.status}`);
+            const hash = crypto.createHash('sha256');
+            for await (const chunk of fs.createReadStream(archive)) hash.update(chunk);
+            fs.writeFileSync(archive + '.sha256', hash.digest('hex') + '  otp-tests-evidence.tar.gz\n');
+      - uses: actions/upload-artifact@v4
+        if: always() && env.OTP_CI_ROOT != ''
+        with:
+          name: otp-tests-${{ inputs.preset }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            otp-tests-evidence.tar.gz
+            otp-tests-evidence.tar.gz.sha256
+            ${{ env.OTP_CI_ROOT }}/tests/reports/*.json
+          if-no-files-found: error
+      - name: Remove successful owned outputs
+        if: success() && env.OTP_CI_ROOT != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('node:fs');
+            const path = require('node:path');
+            const root = process.env.OTP_CI_ROOT;
+            const scratch = path.resolve(process.env.GITHUB_WORKSPACE, '..', 'tmp');
+            if (path.dirname(root) !== scratch || !/^ot-[A-Za-z0-9]{6}$/.test(path.basename(root))) throw new Error('Refusing unowned cleanup path');
+            fs.rmSync(root, {recursive: true});

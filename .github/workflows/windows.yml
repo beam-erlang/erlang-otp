@@ -1,0 +1,178 @@
+name: Windows
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      beam_ref:
+        description: BEAM SDK source revision containing the public Windows SDK
+        type: string
+        default: master
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.preset }}
+    runs-on: windows-2025
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        preset:
+          - windows-x86_64-emu
+          - windows-x86_64-jit
+          - windows-x86_64-emu-debug
+          - windows-x86_64-jit-debug
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      OTP_PRESET: ${{ matrix.preset }}
+      OTP_FLAVOR: ${{ contains(matrix.preset, '-jit') && 'jit' || 'emu' }}
+      OTP_BUILD_TYPE: ${{ contains(matrix.preset, '-debug') && 'Debug' || 'Release' }}
+      WORK_ROOT: ${{ github.workspace }}/../tmp
+
+    steps:
+      - name: Check out OTP
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Check out the BEAM SDK source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: beam-erlang/beam-erlang
+          ref: ${{ inputs.beam_ref || 'master' }}
+          path: beam-sdk
+          persist-credentials: false
+
+      - name: Select Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: '3.12'
+
+      - name: Select Java
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Load native x64 MSVC and Windows SDK
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          if ($env:PROCESSOR_ARCHITECTURE -ne 'AMD64') { throw 'A native amd64 runner is required.' }
+          $vswhere = "${env:ProgramFiles(x86)}/Microsoft Visual Studio/Installer/vswhere.exe"
+          $vs = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (-not $vs) { throw 'The x64 MSVC toolset is required.' }
+          $vcvars = Join-Path $vs 'VC/Auxiliary/Build/vcvarsall.bat'
+          cmd.exe /d /c "call `"$vcvars`" x64 >nul && set" | ForEach-Object {
+            if ($_ -match '^([A-Za-z_][A-Za-z0-9_]*)=(.*)$' -and $Matches[1] -ne 'PROMPT') {
+              Add-Content $env:GITHUB_ENV "$($Matches[1])=$($Matches[2])"
+            }
+          }
+          if ($env:OTP_BUILD_TYPE -eq 'Debug') {
+            $crt = @(Get-ChildItem "$vs/VC/Redist/MSVC/*/debug_nonredist/x64/*.DebugCRT" -Directory)
+            if (-not $crt) { throw 'The x64 MSVC Debug CRT is required.' }
+            $crt.FullName | ForEach-Object { Add-Content $env:GITHUB_PATH $_ }
+          }
+          Get-PSDrive -PSProvider FileSystem | Format-Table Name, Used, Free, Root
+
+      - name: Build pinned portable dependencies
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          python -B tests/windows_dependencies.py --workspace "$env:GITHUB_WORKSPACE/.." `
+            --build-type "$env:OTP_BUILD_TYPE" --github-env "$env:GITHUB_ENV"
+
+      - name: Build and install the selected BEAM SDK
+        working-directory: beam-sdk
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          cmake --preset "$env:OTP_PRESET" -B "$env:WORK_ROOT/sdk-build" `
+            "-DCMAKE_INSTALL_PREFIX=$env:WORK_ROOT/sdk-install" -DBUILD_TESTING=OFF
+          cmake --build "$env:WORK_ROOT/sdk-build" --parallel 3
+          cmake --install "$env:WORK_ROOT/sdk-build"
+
+      - name: Configure and build OTP
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          cmake --preset "$env:OTP_PRESET" -B "$env:WORK_ROOT/otp-build" `
+            "-DCMAKE_INSTALL_PREFIX=$env:WORK_ROOT/otp-install" "-DBEAM_SDK_ROOT=$env:WORK_ROOT/sdk-install" `
+            -DBUILD_TESTING=ON -DOPENSSL_USE_STATIC_LIBS=TRUE `
+            "-DOPENSSL_ROOT_DIR=$env:OPENSSL_ROOT_DIR" "-DOTP_WX_ROOT=$env:OTP_WX_ROOT" `
+            "-DODBC_INCLUDE_DIR=$env:ODBC_INCLUDE_DIR" "-DODBC_LIBRARY=$env:ODBC_LIBRARY" `
+            "-DJAVA_HOME=$env:JAVA_HOME" "-DFLEX_EXECUTABLE=$env:FLEX_EXECUTABLE" `
+            "-DOTP_WINDOWS_RUNTIME_DLLS=$env:OTP_WINDOWS_RUNTIME_DLLS" `
+            "-DOTP_NSIS_EXECUTABLE=$env:OTP_NSIS_EXECUTABLE" `
+            "-DOTP_VC_REDIST_EXECUTABLE=$env:OTP_VC_REDIST_EXECUTABLE"
+          cmake --build "$env:WORK_ROOT/otp-build" --parallel 3
+
+      - name: Test, install and assemble the OTP release
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          ctest --test-dir "$env:WORK_ROOT/otp-build" --output-on-failure --no-tests=error -j1
+          cmake --install "$env:WORK_ROOT/otp-build"
+          cmake --build "$env:WORK_ROOT/otp-build" --target otp_release
+
+      - name: Package and test the installed ZIP
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          $version = (Get-Content OTP_VERSION -Raw).Trim()
+          Add-Content $env:GITHUB_ENV "OTP_VERSION=$version"
+          $packages = "$env:WORK_ROOT/packages"
+          New-Item -ItemType Directory -Force $packages | Out-Null
+          Copy-Item LICENSE.txt "$env:WORK_ROOT/otp-install/LICENSE.txt"
+          $archive = "$packages/erlang-otp-$version-windows-amd64-$env:OTP_FLAVOR-$env:OTP_BUILD_TYPE.zip"
+          Compress-Archive -Path "$env:WORK_ROOT/otp-install/*" -DestinationPath $archive
+          (Get-FileHash $archive -Algorithm SHA256).Hash.ToLower() + '  ' + (Split-Path $archive -Leaf) | Set-Content "$archive.sha256"
+          $unpacked = "$env:WORK_ROOT/unpacked OTP"
+          Expand-Archive -LiteralPath $archive -DestinationPath $unpacked
+          $runtimeType = if ($env:OTP_BUILD_TYPE -eq 'Debug') { 'debug' } else { 'opt' }
+          $check = "{$env:OTP_FLAVOR,$runtimeType}={erlang:system_info(emu_flavor),erlang:system_info(build_type)}, io:format(`"~s~n`", [erlang:system_info(system_version)]), ok=application:start(crypto), halt()."
+          & "$unpacked/bin/erl.exe" -noshell -eval $check
+          Set-Content "$env:WORK_ROOT/hello.erl" '-module(hello). -export([run/0]). run() -> ok.'
+          & "$unpacked/bin/erlc.exe" -o "$env:WORK_ROOT" "$env:WORK_ROOT/hello.erl"
+          & "$unpacked/bin/erl.exe" -noshell -pa "$env:WORK_ROOT" -s hello run -s init stop
+
+      - name: Build the primary Windows installer
+        if: matrix.preset == 'windows-x86_64-jit'
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          cmake --build "$env:WORK_ROOT/otp-build" --target otp_installer
+          $installer = "otp_win64_$($env:OTP_VERSION).exe"
+          Copy-Item "$env:WORK_ROOT/otp-build/packages/$installer" "$env:WORK_ROOT/packages/$installer"
+          $hash = (Get-FileHash "$env:WORK_ROOT/packages/$installer" -Algorithm SHA256).Hash.ToLower()
+          "$hash  $installer" | Set-Content "$env:WORK_ROOT/packages/$installer.sha256"
+
+      - name: Upload packages
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: otp-${{ matrix.preset }}
+          path: ../tmp/packages/
+          if-no-files-found: error
+          overwrite: true
+
+      - name: Upload failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: otp-diagnostics-${{ matrix.preset }}
+          path: |
+            ../tmp/otp-build/Testing/Temporary/
+            ../tmp/otp-build/tests/logs/
+            ../tmp/otp-build/CMakeFiles/CMakeConfigureLog.yaml
+            ../tmp/otp-build/sdk-selection.txt
+            ../tmp/sdk-build/CMakeFiles/CMakeConfigureLog.yaml
+            ../tmp/windows-ci-dependencies-*/logs/
+            ../tmp/windows-ci-dependencies-*/receipt.json
+            erl_crash.dump
+          if-no-files-found: warn
+          overwrite: true
